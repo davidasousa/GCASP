@@ -1,0 +1,8 @@
+# Ignore The Needed Dependencies
+node_modules
+
+# Ignore Log Files
+*.log
+
+# Ingore Env Files
+*.env
