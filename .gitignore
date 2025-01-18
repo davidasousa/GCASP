@@ -6,3 +6,10 @@ node_modules
 
 # Ingore Env Files
 *.env
+
+# Ignore Eslint Config Files
+eslint.config.mjs
+
+# Ignore Swap & SWO Files
+*.swp
+*.swo
