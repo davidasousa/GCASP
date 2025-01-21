@@ -1,6 +1,9 @@
 # Ignore The Needed Dependencies
 node_modules
 
+# Ignore Windows Dependencies
+windowsDependencies
+
 # Ignore Log Files
 *.log
 

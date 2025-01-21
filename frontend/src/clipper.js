@@ -1,28 +1,18 @@
 // Frontend Source File For Clipping Raw Recordings
-const ffmpeg = require('fluent-ffmpeg');
+const ffmpegPath = 'windowsDependencies/ffmpegDir/bin/ffmpeg.exe';
+const { spawn } = require('child_process');
 
 // Defining Recording Object Function
 const createClipper = function() {
-	// Specifying Input
-	const recording = ffmpeg()
-		.input(':0.0')
-		.inputFormat('x11grab')
-		.audioBitrate('128k')
-		.fps(30)
-		.size('640x480')
-		.output('output.mp4')
-		.duration('5')
-		.on('start', () => {
-			console.log('Recording started...')
-		  })
-		  .on('end', () => {
-			console.log('Recording finished.')
-		  })
-		  .on('error', (err) => {
-			console.error('Error:', err.message)
-		  })
-	
-	recording.run(); // Starts the recording process
+	const args = [
+		'-t', '2',
+		'-f', 'gdigrab',
+		'-i', 'desktop',
+		'-framerate', '25',
+		'-video_size', '640x480',
+		'output.mp4'
+	];
+	const ffmpeg = spawn(ffmpegPath, args);	
 };
 
 // Defining Exports
