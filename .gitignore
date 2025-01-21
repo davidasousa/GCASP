@@ -1,6 +1,9 @@
 # Ignore The Needed Dependencies
 node_modules
 
+# Ignore Windows Dependencies
+windowsDependencies
+
 # Ignore Log Files
 *.log
 
@@ -10,3 +13,6 @@ node_modules
 # Ignore Swap & SWO Files
 *.swp
 *.swo
+
+# Ignore Output File Formats
+*.mp4
