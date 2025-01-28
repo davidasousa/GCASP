@@ -2,9 +2,9 @@
   "name": "gcasp",
   "version": "1.0.0",
   "description": "GCASP Senior Design",
-  "main": "app.js",
   "scripts": {
-    "test": "start"
+    "test": "jest",
+    "lint": "npx eslint apps/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -17,7 +17,13 @@
   },
   "homepage": "https://github.com/davidasousa/GCASP#readme",
   "dependencies": {
+    "jest": "^29.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.19.0",
+    "eslint-plugin-react": "^7.37.4",
+    "globals": "^15.14.0"
   }
 }
