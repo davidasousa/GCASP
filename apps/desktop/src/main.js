@@ -2,6 +2,9 @@ import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
+// Importing IPC
+import { ipcMain } from 'electron';
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
@@ -13,7 +16,10 @@ const createWindow = () => {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      preload: './renderer.js',
+      //preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      nodeIntegration: false,
+      contextIsolation: true,
     },
   });
 
@@ -23,6 +29,13 @@ const createWindow = () => {
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
 };
+
+// Listen For IPC Message From Renderer Process
+ipcMain.handle('trigger', async () => {
+  console.log("IPC Worked");
+  return { message: "Triggered!" };
+});
+// End IPC Listen
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
