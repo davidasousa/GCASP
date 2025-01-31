@@ -33,7 +33,7 @@ app.whenReady().then(() => {
 
   // Listen For IPC Message From Renderer Process
   ipcMain.handle('trigger-channel', async () => {
-    console.log("IPC Worked");
+    console.log('Calling FFMPEG');
     return;
   });
 });
