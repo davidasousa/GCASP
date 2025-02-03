@@ -26,7 +26,7 @@ module.exports = [
         presets: ['@babel/preset-react']
       }
     }
-  }
+  },
   // ... existing loader config ...
   // Put your webpack loader rules in this array.  This is where you would put
   // your ts-loader configuration for instance:
@@ -44,4 +44,14 @@ module.exports = [
    *   }]
    * }
    */
+    // Loader for image files
+    {
+      test: /\.(png|jpe?g|gif|svg)$/i,
+      type: 'asset/resource'
+    },
+    // Loader for video files
+    {
+      test: /\.(mp4|webm|ogg)$/i,
+      type: 'asset/resource'
+    }
 ];
