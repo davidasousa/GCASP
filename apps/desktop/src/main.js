@@ -4,6 +4,7 @@ import started from 'electron-squirrel-startup';
 
 // Getting Recorder Script
 import { runRecord } from './recorder.js';
+import { loadMP4File } from './loadVideo.js';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) { 
@@ -41,9 +42,10 @@ app.whenReady().then(() => {
   });
 	
 	// Listen For Fetch Video Message
-  ipcMain.handle('trigger-video-fetch', async () => {
-		console.log("FETCH");
-    return;
+  ipcMain.handle('trigger-video-fetch', (event, filePath) => {
+		console.log("Fetch");
+    const video = loadMP4File(filePath);
+		return video;
   });
 });
 

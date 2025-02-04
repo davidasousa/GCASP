@@ -4,19 +4,19 @@ import VideoGrid from './components/VideoGrid';
 import './app.css';
 
 // Importing IPC Handler
-import { triggerIPC } from './triggerIPC';
+import { triggerIPC, triggerFetchVideo } from './triggerIPC';
 
 const App = () => {
   const [currentView, setCurrentView] = useState('home');
   const [videos, setVideos] = useState([]);
 
 	// Loading Videos From Memory - Node IPC
-	triggerIPC('trigger-video-fetch');
+	var video = triggerFetchVideo('./videos/output.mp4');
 
 	// Use Effect For Playing Videos
 	useEffect(() => {
 		const loadVideos = [
-			{ id: 1, title: 'Video 1', videoUrl: './videos/output.mp4'},
+			{ id: 1, title: 'Video 1', videoUrl: video},
 		];
 
 		// Loading The Videos Into The Use State
