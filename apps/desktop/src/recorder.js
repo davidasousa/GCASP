@@ -6,13 +6,18 @@ const binaryFilePath = path.join(
 	'ffmpeg.exe'
 	);
 
+const outputPath = path.join(
+	'videos',
+	'output.mp4'
+	);
+
 // Record Via Windows Binary
 export const runRecord = () => {
   const args = [
     '-f', 'gdigrab',
     '-i', 'desktop',
 		'-t', '2',
-    'videos/output.mp4'
+		outputPath
   ];
 
   const ffmpegProcess = spawn(binaryFilePath, args);

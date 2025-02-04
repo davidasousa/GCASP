@@ -4,7 +4,7 @@
 export const triggerIPC = async (trigger) => {
 	try {
 		// Call the method exposed in preload.js to trigger the IPC
-		await window.electron.execTrigger('trigger-record');
+		await window.electron.execTrigger(trigger);
 	} catch (error) {
 		console.error('Failed to trigger IPC:', error);
 	}

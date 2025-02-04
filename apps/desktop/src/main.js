@@ -34,9 +34,15 @@ app.whenReady().then(() => {
   // Create The Display Window
   createWindow();
 
-  // Listen For IPC Message From Renderer Process
+  // Listen For Record Message From Renderer Process
   ipcMain.handle('trigger-record', async () => {
 		runRecord(); // Records Via Windows Binary
+    return;
+  });
+	
+	// Listen For Fetch Video Message
+  ipcMain.handle('trigger-video-fetch', async () => {
+		console.log("FETCH");
     return;
   });
 });
