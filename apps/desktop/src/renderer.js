@@ -26,7 +26,15 @@
  * ```
  */
 
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import App from './app.jsx';
 import './index.css';
-import './app.jsx';
 
-console.log('👋 This message is being logged by "renderer.js", included via webpack');
+const container = document.getElementById('root');
+
+const root = createRoot(container);
+root.render(<App />);
+
+console.log('React app has been mounted.');
+
