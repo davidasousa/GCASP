@@ -2,9 +2,12 @@ import { app, BrowserWindow, ipcMain } from 'electron'; // Added IPC Import
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
+// Getting Recorder Script
+import { runRecord } from './recorder.js';
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
-  app.quit();
+if (started) { 
+	app.quit(); 
 }
 
 const createWindow = () => {
@@ -32,8 +35,8 @@ app.whenReady().then(() => {
   createWindow();
 
   // Listen For IPC Message From Renderer Process
-  ipcMain.handle('trigger-channel', async () => {
-    console.log('Calling FFMPEG');
+  ipcMain.handle('trigger-record', async () => {
+		runRecord(); // Records Via Windows Binary
     return;
   });
 });
