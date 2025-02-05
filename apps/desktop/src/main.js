@@ -44,8 +44,7 @@ app.whenReady().then(() => {
 	// Listen For Fetch Video Message
   ipcMain.handle('trigger-video-fetch', (event, filePath) => {
 		console.log("Fetch");
-    const video = loadMP4File(filePath);
-		return video;
+    return loadMP4File(filePath);
   });
 });
 

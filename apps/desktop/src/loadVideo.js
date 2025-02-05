@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'node:path';
 
-export const loadMP4File = (path) => {
+export const loadMP4File = (req, res, path) => {
 	try {
 			const videoBuffer = fs.readFileSync(path);
-			const videoBlob = Buffer.from(videoBuffer); // Convert to a usable buffer
+			const videoBlob = new Blob([videoBuffer], { type: 'video/mp4' });
 			return videoBlob;
 		} catch (error) {
 			console.error('Error loading video:', error);

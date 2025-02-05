@@ -12,6 +12,8 @@ const App = () => {
 
 	// Loading Videos From Memory - Node IPC
 	var video = triggerFetchVideo('./videos/output.mp4');
+	var videoUrl = URL.createObjectURL(video);
+	
 
 	// Use Effect For Playing Videos
 	useEffect(() => {
