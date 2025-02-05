@@ -2,9 +2,21 @@ import { app, BrowserWindow, ipcMain } from 'electron'; // Added IPC Import
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 
+// Getting Recorder Script
+import { runRecord } from './recorder.js';
+import { loadMP4File } from './loadVideo.js';
+
+// Starting Express Server For Backend Communication
+import express from 'express';
+import cors from 'cors';
+
+const server = express();
+server.use(cors());
+const port = 3001;
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
-  app.quit();
+if (started) { 
+	app.quit(); 
 }
 
 const createWindow = () => {
@@ -31,10 +43,16 @@ app.whenReady().then(() => {
   // Create The Display Window
   createWindow();
 
-  // Listen For IPC Message From Renderer Process
-  ipcMain.handle('trigger-channel', async () => {
-    console.log('Calling FFMPEG');
+  // Listen For Record Message From Renderer Process
+  ipcMain.handle('trigger-record', async () => {
+		runRecord(); // Records Via Windows Binary
     return;
+  });
+	
+	// Listen For Fetch Video Message
+  ipcMain.handle('trigger-video-fetch', (event, filePath) => {
+    loadMP4File(filePath, server, port); // Triggers Express JS
+		return;
   });
 });
 
