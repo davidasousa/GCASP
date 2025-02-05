@@ -4,7 +4,7 @@
   "description": "GCASP Senior Design",
   "scripts": {
     "test": "jest",
-    "lint": "npx eslint apps/**/*.js",
+    "lint": "npx eslint apps/**/*.{js,jsx}",
     "build": "cd apps/desktop && npm ci && npm run make"
   },
   "repository": {

@@ -12,6 +12,14 @@ export default [
         ...globals.jest,
         ...globals.node
       }
+    },
+    settings: {
+      react: {
+        version: "detect"
+      }
+    },
+    rules: {
+      "react/prop-types": "off"
     }
   },
   {
@@ -27,7 +35,22 @@ export default [
         beforeEach: true,
         afterEach: true
       }
+    },
+    settings: {
+      react: {
+        version: "detect"
+      }
     }
   },
-  pluginReact.configs.flat.recommended,
+  {
+    ...pluginReact.configs.flat.recommended,
+    settings: {
+      react: {
+        version: "detect"
+      }
+    },
+    rules: {
+      "react/prop-types": "off"
+    }
+  }
 ];
