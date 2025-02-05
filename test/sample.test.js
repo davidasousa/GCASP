@@ -1,5 +1,5 @@
-function exampleTest() {
-	expect(2 == 2).toBe(true);
-}
+import { test, expect } from '@jest/globals';
 
-test('Example Test', exampleTest);
+test('Example Test', () => {
+    expect(2).toBe(2);
+});
