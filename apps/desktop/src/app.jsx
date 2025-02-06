@@ -12,20 +12,14 @@ const videoPath = 'videos/output.mp4';
 const App = () => {
 	const [currentView, setCurrentView] = useState('home');
 	const [videos, setVideos] = useState([]);
-	var videoFound = true;
 	
 	useEffect(() => {
 		const loadVideos = async () => {
-			try {
-				const videoURL = await fetchVideo(videoPath);
-				const loadVideos = [ 
-					{ id: 1, title: 'Video 1', videoUrl: videoURL }, 
-				];
-				setVideos(loadVideos);
-			} catch(error) {
-				console.log(error);
-				setVideos(null);
-			}
+			const videoURL = await fetchVideo(videoPath);
+			const videoArray = [ 
+				{ id: 1, title: 'Video 1', videoUrl: videoURL }, 
+			];
+			setVideos(videoArray);
 		}
 
 		loadVideos();

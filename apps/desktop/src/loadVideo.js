@@ -14,7 +14,6 @@ export const loadMP4File = (filepath, server, port) => {
 		}
 		res.setHeader('Content-Type', 'video/mp4');
 		res.sendFile(filepath);
-		return res.status(200).send('Video Found & Sent');
 	});
 
 	// Log To Console
