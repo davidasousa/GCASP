@@ -15,11 +15,16 @@ const App = () => {
 	
 	useEffect(() => {
 		const loadVideos = async () => {
-			const videoURL = await fetchVideo(videoPath);
-			const videoArray = [ 
-				{ id: 1, title: 'Video 1', videoUrl: videoURL }, 
-			];
-			setVideos(videoArray);
+			try {
+				const videoURL = await fetchVideo(videoPath);
+				const videoArray = [ 
+					{ id: 1, title: 'Video 1', videoUrl: videoURL }, 
+				];
+				setVideos(videoArray);
+			} catch(error) {
+				console.log(error);
+				setVideos(null);
+			}
 		}
 
 		loadVideos();
