@@ -4,7 +4,7 @@ import electron, { contextBridge, ipcRenderer } from 'electron';
 
 // Exposing IPC API To Electron React
 contextBridge.exposeInMainWorld('electron', {
-	// Call Generic Trigger Without Arguments
+	// Call Generic Trigger Main -> Renderer
   execTrigger: (channel) => ipcRenderer.invoke(channel),
 
 	// Call Fetch Video API With Filepath Argument
