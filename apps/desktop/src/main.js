@@ -1,21 +1,32 @@
-import { app, BrowserWindow, ipcMain } from 'electron'; // Added IPC Import
+import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
-// Getting Recorder Script
-import { runRecord } from './recorder.js';
-import { loadMP4File } from './loadVideo.js';
-// Starting Express Server For Backend Communication
+import fs from 'fs';
+
+// Backend Server
 import express from 'express';
 import cors from 'cors';
 
+// Getting Recorder Script
+import { runRecord } from './recorder.js';
+import { loadMP4File, isFileDone } from './loadVideo.js';
+
+// Starting Express Server For Backend Communication
 const server = express();
 const fileTransferPort = 3001; // Configured In Forge Config JS File
 server.use(cors()); // For Sending & Transfer With Multiple Ports
 
+// Importing File Monitoring
+import chokidar from 'chokidar';
+const videoPath = path.join(__dirname, '../../videos');
+const watcher = chokidar.watch(videoPath, {
+		persistent: true,
+		ignoreInitial: true,
+});
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) { 
-	app.quit(); 
-}
+if (started) { app.quit(); }
+
 
 const createWindow = () => {
   // Create the browser window.
@@ -34,31 +45,35 @@ const createWindow = () => {
   mainWindow.webContents.openDevTools();
 };
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Create The Display Window
   createWindow();
+
 	// Handeling IPC Requests
   ipcMain.handle('trigger-record', async () => {
 		runRecord(); // Records Via Windows Binary
     return;
   });	
+
   ipcMain.handle('trigger-video-fetch', (event, filePath) => {
     loadMP4File(filePath, server, fileTransferPort);
 		return;
   });
+
+	// Monitor For Changes To The Videos Folder
+	watcher
+	.on('add', filePath => {
+		console.log('File Created');
+		isFileDone(filePath)
+			.then(() => {
+				console.log('File Done Writing');
+			})
+	})
+
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
