@@ -25,6 +25,11 @@ const App = () => {
 				console.log(error);
 				setVideos(null);
 			}
+
+			window.electron.onTriggerVideoFetch((value) => {
+				console.log("!!!");
+			});
+
 		}
 
 		loadVideos();

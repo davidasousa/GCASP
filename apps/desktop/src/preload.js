@@ -1,12 +1,17 @@
-// See the Electron documentation for details on how to use preload scripts:
-// https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
+// File For Exposing IPC Functions
 import electron, { contextBridge, ipcRenderer } from 'electron';
+
+// Invoke - Send Events
 
 // Exposing IPC API To Electron React
 contextBridge.exposeInMainWorld('electron', {
-	// Call Generic Trigger Main -> Renderer
+	// Generic Event Main, -> Renderer
   execTrigger: (channel) => ipcRenderer.invoke(channel),
 
-	// Call Fetch Video API With Filepath Argument
+	// Fetch Video Event, With Filepath Argument
 	fetchVideo: (filePath) => ipcRenderer.invoke('trigger-video-fetch', filePath),
+
+	// Exposing IPC Renderer
+	onTriggerVideoFetch: (callback) => ipcRenderer.on('trigger-new-video', (event, value) => callback(value))
+
 });

@@ -43,6 +43,18 @@ const createWindow = () => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+
+	// Monitor For Changes To The Videos Folder
+	watcher
+	.on('add', filePath => {
+		console.log('File Created');
+		isFileDone(filePath)
+			.then(() => {
+				console.log('File Done Writing');
+				mainWindow.webContents.send('trigger-new-video');
+			})
+	})
+
 };
 
 app.whenReady().then(() => {
@@ -59,16 +71,6 @@ app.whenReady().then(() => {
     loadMP4File(filePath, server, fileTransferPort);
 		return;
   });
-
-	// Monitor For Changes To The Videos Folder
-	watcher
-	.on('add', filePath => {
-		console.log('File Created');
-		isFileDone(filePath)
-			.then(() => {
-				console.log('File Done Writing');
-			})
-	})
 
 });
 
