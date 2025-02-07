@@ -8,36 +8,41 @@ import { triggerIPC } from './triggerIPC';
 import { fetchVideo } from './fetchVideo';
 
 var videoPath = 'videos/output.mp4';
+var videoID = 1;
 
 const App = () => {
 	const [currentView, setCurrentView] = useState('home');
-	const [videos, setVideos] = useState([]);
-	const [isPresent, setPresence] = useState(false);
+	const [videos, setVideos] = useState(null);
+	// Trigger For Handeling New Videos
+	const [isReady, setReadiness] = useState(false);
 	
 	useEffect(() => {
+		// Load Video & Add To The Videos Array
 		const loadVideos = async () => {
 			try {
 				const videoURL = await fetchVideo(videoPath);	
-				const videoArray = [ 
-					{ id: 1, title: 'Video 1', videoUrl: videoURL }, 
-				];
-				setVideos(videoArray);
+				const videoArray = [{ id: videoID, title: 'Video {videoID}', videoUrl: videoURL }];		
+				setVideos((videos) => videos ? videos.concat(videoArray) : videoArray);	
+				setReadiness(false);
 			} catch(error) {
+				// Catch Errors & Set Null
 				console.log(error);
 				setVideos(null);
 			}
-
-			window.electron.onTriggerVideoFetch((value) => {
-				console.log(value);
-				videoPath = value;
-				setPresence(true);
-			});
-
 		}
 
 		loadVideos();
-	}, [isPresent]); 
+	}, [isReady]); 
 
+	// Defining The Video Listener Anonymous Function
+	const videoFetchListener = (value) => {
+    videoPath = value; // Get the new video path from backend
+    setReadiness(true); // Trigger the useEffect by updating newVideo
+    console.log('new video');
+  };
+  window.electron.onTriggerVideoFetch(videoFetchListener);
+
+	// Defining The UI JSX
 	const frontPageUI = (
 		<div className="app-container">
 			<Sidebar currentView={currentView} onChangeView={setCurrentView} />

@@ -2,10 +2,11 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
-
-// Backend Server
+// Backend Server - File Transfer
 import express from 'express';
 import cors from 'cors';
+// Directory Monitoring
+import chokidar from 'chokidar';
 
 // Getting Recorder Script
 import { runRecord } from './recorder.js';
@@ -17,16 +18,18 @@ const fileTransferPort = 3001; // Configured In Forge Config JS File
 server.use(cors()); // For Sending & Transfer With Multiple Ports
 
 // Importing File Monitoring
-import chokidar from 'chokidar';
-const videoPath = path.join(__dirname, '../../videos');
+const videoPath = path.join(__dirname, '../../videos'); // Directory Being Watched
 const watcher = chokidar.watch(videoPath, {
 		persistent: true,
 		ignoreInitial: true,
 });
 
+/* 
+ * Here Is Where The Actual Rendering Process Begins
+ */
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) { app.quit(); }
-
 
 const createWindow = () => {
   // Create the browser window.
@@ -45,16 +48,11 @@ const createWindow = () => {
   mainWindow.webContents.openDevTools();
 
 	// Monitor For Changes To The Videos Folder
-	// Send File Name & Trigger
-	watcher
-	.on('add', filePath => {
-		isFileDone(filePath)
-			.then(() => {
-				mainWindow.webContents.send(
-					'trigger-new-video', 
-					filePath
-				);
-			})
+	watcher.on('add', async (filePath) => {
+		// Await File Write + Send
+		console.log('new file {filePath}');
+		await isFileDone(filePath); 
+		await mainWindow.webContents.send('trigger-new-video', filePath);
 	})
 };
 
@@ -68,11 +66,11 @@ app.whenReady().then(() => {
     return;
   });	
 
+	// Handle Video Fetch Requests
   ipcMain.handle('trigger-video-fetch', (event, filePath) => {
     loadMP4File(filePath, server, fileTransferPort);
 		return;
   });
-
 });
 
 app.on('window-all-closed', () => {

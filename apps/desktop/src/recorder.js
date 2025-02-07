@@ -14,6 +14,7 @@ const outputPath = path.join(
 // Record Via Windows Binary
 export const runRecord = () => {
   const args = [
+		'-y', // Force Overwrite
     '-f', 'gdigrab',
     '-i', 'desktop',
 		'-t', '2',

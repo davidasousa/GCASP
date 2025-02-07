@@ -1,9 +1,9 @@
 // File For Exposing IPC Functions
 import electron, { contextBridge, ipcRenderer } from 'electron';
 
-// Invoke - Send Events
+// Invoke - Send Events From Main To Renderer
+// On - Listen From Events From Renderer In Main
 
-// Exposing IPC API To Electron React
 contextBridge.exposeInMainWorld('electron', {
 	// Generic Event Main, -> Renderer
   execTrigger: (channel) => ipcRenderer.invoke(channel),
@@ -11,7 +11,8 @@ contextBridge.exposeInMainWorld('electron', {
 	// Fetch Video Event, With Filepath Argument
 	fetchVideo: (filePath) => ipcRenderer.invoke('trigger-video-fetch', filePath),
 
-	// Exposing IPC Renderer
-	onTriggerVideoFetch: (callback) => ipcRenderer.on('trigger-new-video', (event, value) => callback(value))
-
+	// IPC Listener For New Filewrites
+	onTriggerVideoFetch: (callback) => ipcRenderer.on(
+		'trigger-new-video', (event, value) => callback(value)
+	)
 });
