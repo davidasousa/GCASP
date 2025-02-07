@@ -45,16 +45,17 @@ const createWindow = () => {
   mainWindow.webContents.openDevTools();
 
 	// Monitor For Changes To The Videos Folder
+	// Send File Name & Trigger
 	watcher
 	.on('add', filePath => {
-		console.log('File Created');
 		isFileDone(filePath)
 			.then(() => {
-				console.log('File Done Writing');
-				mainWindow.webContents.send('trigger-new-video');
+				mainWindow.webContents.send(
+					'trigger-new-video', 
+					filePath
+				);
 			})
 	})
-
 };
 
 app.whenReady().then(() => {

@@ -7,16 +7,17 @@ import './app.css';
 import { triggerIPC } from './triggerIPC';
 import { fetchVideo } from './fetchVideo';
 
-const videoPath = 'videos/output.mp4';
+var videoPath = 'videos/output.mp4';
 
 const App = () => {
 	const [currentView, setCurrentView] = useState('home');
 	const [videos, setVideos] = useState([]);
+	const [isPresent, setPresence] = useState(false);
 	
 	useEffect(() => {
 		const loadVideos = async () => {
 			try {
-				const videoURL = await fetchVideo(videoPath);
+				const videoURL = await fetchVideo(videoPath);	
 				const videoArray = [ 
 					{ id: 1, title: 'Video 1', videoUrl: videoURL }, 
 				];
@@ -27,13 +28,15 @@ const App = () => {
 			}
 
 			window.electron.onTriggerVideoFetch((value) => {
-				console.log("!!!");
+				console.log(value);
+				videoPath = value;
+				setPresence(true);
 			});
 
 		}
 
 		loadVideos();
-	}, []); 
+	}, [isPresent]); 
 
 	const frontPageUI = (
 		<div className="app-container">
