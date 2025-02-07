@@ -49,10 +49,13 @@ const createWindow = () => {
 
 	// Monitor For Changes To The Videos Folder
 	watcher.on('add', async (filePath) => {
-		// Await File Write + Send
-		console.log('new file {filePath}');
-		await isFileDone(filePath); 
-		await mainWindow.webContents.send('trigger-new-video', filePath);
+		isFileDone(filePath)
+			.then(() => {
+				mainWindow.webContents.send(
+					'trigger-new-video', 
+					filePath
+				);
+			});
 	})
 };
 

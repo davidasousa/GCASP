@@ -13,33 +13,30 @@ var videoID = 1;
 const App = () => {
 	const [currentView, setCurrentView] = useState('home');
 	const [videos, setVideos] = useState(null);
-	// Trigger For Handeling New Videos
-	const [isReady, setReadiness] = useState(false);
 	
-	useEffect(() => {
+	const loaderFunc = () => {
 		// Load Video & Add To The Videos Array
 		const loadVideos = async () => {
 			try {
 				const videoURL = await fetchVideo(videoPath);	
-				const videoArray = [{ id: videoID, title: 'Video {videoID}', videoUrl: videoURL }];		
+				const videoArray = [{ id: videoID++, title: 'Video', videoUrl: videoURL }];			
 				setVideos((videos) => videos ? videos.concat(videoArray) : videoArray);	
-				setReadiness(false);
 			} catch(error) {
 				// Catch Errors & Set Null
 				console.log(error);
 				setVideos(null);
 			}
 		}
-
 		loadVideos();
-	}, [isReady]); 
+	}
 
 	// Defining The Video Listener Anonymous Function
-	const videoFetchListener = (value) => {
-    videoPath = value; // Get the new video path from backend
-    setReadiness(true); // Trigger the useEffect by updating newVideo
+	const videoFetchListener = (videoPath) => {
+	
+		loaderFunc();
     console.log('new video');
   };
+
   window.electron.onTriggerVideoFetch(videoFetchListener);
 
 	// Defining The UI JSX
