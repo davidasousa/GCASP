@@ -6,7 +6,7 @@ import electron, { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electron', {
 	// Generic Event Main, -> Renderer
-  execTrigger: (channel) => ipcRenderer.invoke(channel),
+  recordVideo: (channel) => ipcRenderer.invoke(channel),
 
 	// Fetch Video Event, With Filepath Argument
 	fetchVideo: (filePath) => ipcRenderer.invoke('trigger-video-fetch', filePath),

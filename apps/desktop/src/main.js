@@ -64,7 +64,7 @@ app.whenReady().then(() => {
   createWindow();
 
 	// Handeling IPC Requests
-  ipcMain.handle('trigger-record', async () => {
+  ipcMain.handle('trigger-record', async (event, fileName) => {
 		runRecord(); // Records Via Windows Binary
     return;
   });	

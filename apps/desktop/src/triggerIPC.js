@@ -2,9 +2,9 @@
 // This File Runs In Electron/Forge
 
 // Anonymous Function To Send Triggers To Main.JS
-export const triggerIPC = async (trigger) => {
+export const triggerRecordVideo = async (trigger, filename) => {
 	try {
-		await window.electron.execTrigger(trigger);
+		await window.electron.recordVideo(trigger);
 	} catch (error) {
 		console.error('Failed to trigger IPC:', error);
 	}

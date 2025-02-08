@@ -4,7 +4,7 @@ import VideoGrid from './components/VideoGrid';
 import './app.css';
 
 // Importing IPC Handler
-import { triggerIPC } from './triggerIPC';
+import { triggerRecordVideo } from './triggerIPC';
 import { fetchVideo } from './fetchVideo';
 
 var videoPath = 'videos/output.mp4';
@@ -31,8 +31,7 @@ const App = () => {
 	}
 
 	// Defining The Video Listener Anonymous Function
-	const videoFetchListener = (videoPath) => {
-	
+	const videoFetchListener = (videoPath) => {	
 		loaderFunc();
     console.log('new video');
   };
@@ -49,8 +48,8 @@ const App = () => {
 						{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
 				</div>
 				<div className="record-button">
-				<button onClick={() => triggerIPC('trigger-record')}>
-					Trigger IPC 
+				<button onClick={() => triggerRecordVideo('trigger-record')}>
+					Record Screen
 				</button>
 			</div>
 		</div>
