@@ -27,6 +27,7 @@ const App = () => {
 				setVideos(null);
 			}
 		}
+
 		loadVideos();
 	}
 

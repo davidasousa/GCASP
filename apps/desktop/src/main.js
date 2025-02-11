@@ -49,12 +49,9 @@ const createWindow = () => {
 
 	// Monitor For Changes To The Videos Folder
 	watcher.on('add', async (filePath) => {
-		isFileDone(filePath)
+		await isFileDone(filePath)
 			.then(() => {
-				mainWindow.webContents.send(
-					'trigger-new-video', 
-					filePath
-				);
+				mainWindow.webContents.send('trigger-new-video', filePath);
 			});
 	})
 };
