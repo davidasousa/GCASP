@@ -7,9 +7,6 @@ import './app.css';
 import { triggerRecordVideo } from './triggerIPC';
 import { fetchVideo } from './fetchVideo';
 
-/*
-var videoPath = 'videos/output.mp4';
-*/
 var videoID = 1;
 
 const App = () => {
@@ -32,14 +29,11 @@ const App = () => {
 
 		loadVideos();
 	}
-
-	// Defining The Video Listener Anonymous Function
-	const videoFetchListener = (videoPath) => {	
+	
+	// Video Fetch Listener
+  window.electron.onTriggerVideoFetch((videoPath) => {
 		loaderFunc(videoPath);
-    console.log('new video ' + videoPath);
-  };
-
-  window.electron.onTriggerVideoFetch(videoFetchListener);
+	});
 
 	// Defining The UI JSX
 	const frontPageUI = (
@@ -51,7 +45,7 @@ const App = () => {
 						{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
 				</div>
 				<div className="record-button">
-				<button onClick={() => triggerRecordVideo('trigger-record')}>
+				<button onClick={() => triggerRecordVideo()}>
 					Record Screen
 				</button>
 			</div>

@@ -1,14 +1,11 @@
 // File For Exposing IPC Functions
 import electron, { contextBridge, ipcRenderer } from 'electron';
 
-// Invoke - Send Events From Main To Renderer
-// On - Listen From Events From Renderer In Main
-
 contextBridge.exposeInMainWorld('electron', {
-	// Generic Event Main, -> Renderer
-  recordVideo: (channel) => ipcRenderer.invoke(channel),
+	// Invoke Record
+  recordVideo: () => ipcRenderer.invoke('trigger-record'),
 
-	// Fetch Video Event, With Filepath Argument
+	// Invoke Fetch Video With Given Filepath
 	fetchVideo: (filePath) => ipcRenderer.invoke('trigger-video-fetch', filePath),
 
 	// IPC Listener For New Filewrites

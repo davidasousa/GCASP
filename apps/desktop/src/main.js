@@ -5,28 +5,20 @@ import fs from 'fs';
 // Backend Server - File Transfer
 import express from 'express';
 import cors from 'cors';
-// Directory Monitoring
-import chokidar from 'chokidar';
-
 // Getting Recorder Script
 import { runRecord } from './recorder.js';
-import { loadMP4File, isFileDone } from './loadVideo.js';
+import { loadMP4File, isFileDone, createVideoWatcher } from './loadVideo.js';
 
 // Starting Express Server For Backend Communication
 const server = express();
-const fileTransferPort = 3001; // Configured In Forge Config JS File
-server.use(cors()); // For Sending & Transfer With Multiple Ports
+server.use(cors());
 
-// Importing File Monitoring
-const videoPath = path.join(__dirname, '../../videos'); // Directory Being Watched
-const watcher = chokidar.watch(videoPath, {
-		persistent: true,
-		ignoreInitial: true,
-});
+const fileTransferPort = 3001;
 
-/* 
- * Here Is Where The Actual Rendering Process Begins
- */
+/* Here Is Where The Actual Rendering Process Begins */
+
+var videoNum = 1;
+const watcher = createVideoWatcher();
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) { app.quit(); }
@@ -62,7 +54,7 @@ app.whenReady().then(() => {
 
 	// Handeling IPC Requests
   ipcMain.handle('trigger-record', async (event, fileName) => {
-		runRecord(); // Records Via Windows Binary
+		runRecord(videoNum++); // Records Via Windows Binary
     return;
   });	
 
