@@ -3,7 +3,7 @@ import path from 'node:path';
 import express from 'express';
 import chokidar from 'chokidar';
 
-export const loadMP4File = (filepath, server, port) => {
+export const loadMP4File = (filepath, server) => {
 	// Send File With Title Video
 	server.get('/video', (req, res) => {
 		if(!fs.existsSync(filepath)) {
@@ -11,11 +11,6 @@ export const loadMP4File = (filepath, server, port) => {
 		}
 		res.setHeader('Content-Type', 'video/mp4');
 		res.sendFile(filepath);
-	});
-
-	// Log To Console
-	server.listen(port, () => {
-		console.log(`Server running at http://localhost:${port}`);
 	});
 }
 

@@ -2,9 +2,11 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
+
 // Backend Server - File Transfer
 import express from 'express';
 import cors from 'cors';
+
 // Getting Recorder Script
 import { runRecord } from './recorder.js';
 import { loadMP4File, isFileDone, createVideoWatcher } from './loadVideo.js';
@@ -12,11 +14,9 @@ import { loadMP4File, isFileDone, createVideoWatcher } from './loadVideo.js';
 // Starting Express Server For Backend Communication
 const server = express();
 server.use(cors());
-
-const fileTransferPort = 3001;
+const port = 3001;
 
 /* Here Is Where The Actual Rendering Process Begins */
-
 var videoNum = 1;
 const watcher = createVideoWatcher();
 
@@ -40,12 +40,17 @@ const createWindow = () => {
   mainWindow.webContents.openDevTools();
 
 	// Monitor For Changes To The Videos Folder
-	watcher.on('add', async (filePath) => {
-		await isFileDone(filePath)
+	watcher.on('add', async (path) => {
+		await isFileDone(path)
 			.then(() => {
-				mainWindow.webContents.send('trigger-new-video', filePath);
+				mainWindow.webContents.send('trigger-new-video', path);
 			});
 	})
+	
+	// Starting Server
+	server.listen(port, () => {
+		console.log(`Server running at http://localhost:${port}`);
+	});
 };
 
 app.whenReady().then(() => {
@@ -61,7 +66,7 @@ app.whenReady().then(() => {
 	// Handle Video Fetch Requests
   ipcMain.handle('trigger-video-fetch', (event, filePath) => {
 		// Load The Video & Send On Server
-    loadMP4File(filePath, server, fileTransferPort);
+    loadMP4File(filePath, server);
 		return;
   });
 });

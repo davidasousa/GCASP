@@ -3,23 +3,28 @@ import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
 import './app.css';
 
-// Importing IPC Handler
-import { triggerRecordVideo } from './triggerIPC';
 import { fetchVideo } from './fetchVideo';
+
+const recordVideo = async () => {
+	try { await window.electron.triggerRecordVideo(); } 
+	catch (error) { console.error('Failed to trigger IPC:', error); }
+};
 
 var videoID = 1;
 
 const App = () => {
 	const [currentView, setCurrentView] = useState('home');
-	const [videos, setVideos] = useState(null);
+	const [videos, setVideos] = useState([]);
 	
 	const loaderFunc = (videoPath) => {
 		// Load Video & Add To The Videos Array
 		const loadVideos = async () => {
 			try {
+				console.log(videoPath);
 				const videoURL = await fetchVideo(videoPath);	
-				const videoArray = [{ id: videoID++, title: 'Video', videoUrl: videoURL }];			
-				setVideos((videos) => videos ? videos.concat(videoArray) : videoArray);	
+				const newVideo = [{ id: videoID++, title: 'Video', videoUrl: videoURL }];			
+
+				setVideos(videos.concat(newVideo));
 			} catch(error) {
 				// Catch Errors & Set Null
 				console.log(error);
@@ -40,12 +45,12 @@ const App = () => {
 		<div className="app-container">
 			<Sidebar currentView={currentView} onChangeView={setCurrentView} />
 					<div className="main-content">
-						{currentView === 'home' && videos != null && <VideoGrid videos={videos}/>}
+						{currentView === 'home' && videos != [] && <VideoGrid videos={videos}/>}
 						{currentView === 'shared' && <div>Shared Clips(Coming Soon)</div>}
 						{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
 				</div>
 				<div className="record-button">
-				<button onClick={() => triggerRecordVideo()}>
+				<button onClick={() => recordVideo()}>
 					Record Screen
 				</button>
 			</div>
