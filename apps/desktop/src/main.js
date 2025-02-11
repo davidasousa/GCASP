@@ -68,11 +68,13 @@ app.whenReady().then(() => {
 
 	// Handle Video Fetch Requests
   ipcMain.handle('trigger-video-fetch', (event, filePath) => {
+		// Load The Video & Send On Server
     loadMP4File(filePath, server, fileTransferPort);
 		return;
   });
 });
 
+// Closing The Program
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();

@@ -7,14 +7,16 @@ import './app.css';
 import { triggerRecordVideo } from './triggerIPC';
 import { fetchVideo } from './fetchVideo';
 
+/*
 var videoPath = 'videos/output.mp4';
+*/
 var videoID = 1;
 
 const App = () => {
 	const [currentView, setCurrentView] = useState('home');
 	const [videos, setVideos] = useState(null);
 	
-	const loaderFunc = () => {
+	const loaderFunc = (videoPath) => {
 		// Load Video & Add To The Videos Array
 		const loadVideos = async () => {
 			try {
@@ -33,8 +35,8 @@ const App = () => {
 
 	// Defining The Video Listener Anonymous Function
 	const videoFetchListener = (videoPath) => {	
-		loaderFunc();
-    console.log('new video');
+		loaderFunc(videoPath);
+    console.log('new video ' + videoPath);
   };
 
   window.electron.onTriggerVideoFetch(videoFetchListener);

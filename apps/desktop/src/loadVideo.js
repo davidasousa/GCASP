@@ -4,7 +4,7 @@ import express from 'express';
 
 export const loadMP4File = (filepath, server, port) => {
 	// Serve video file
-	filepath = path.resolve(__dirname,'../../', filepath);
+	//filepath = path.resolve(__dirname,'../../', filepath);
 	console.log(filepath);
 
 	// Send File As Video

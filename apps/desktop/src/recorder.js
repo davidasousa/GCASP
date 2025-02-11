@@ -4,12 +4,14 @@ import path from 'node:path';
 const binaryFilePath = path.join(
 	'windowsDependencies/ffmpegDir/bin',
 	'ffmpeg.exe'
-	);
+);
+
+var videoNum = 1;
 
 const outputPath = path.join(
 	'videos',
-	'output.mp4'
-	);
+	'output' + String(videoNum) + '.mp4'
+);
 
 // Record Via Windows Binary
 export const runRecord = () => {
