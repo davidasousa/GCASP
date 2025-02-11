@@ -17,8 +17,8 @@ server.use(cors());
 const port = 3001;
 
 /* Here Is Where The Actual Rendering Process Begins */
-var videoNum = 1;
 const watcher = createVideoWatcher();
+var videoNum = 1;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) { app.quit(); }

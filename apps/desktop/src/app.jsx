@@ -20,15 +20,15 @@ const App = () => {
 		// Load Video & Add To The Videos Array
 		const loadVideos = async () => {
 			try {
-				console.log(videoPath);
 				const videoURL = await fetchVideo(videoPath);	
-				const newVideo = [{ id: videoID++, title: 'Video', videoUrl: videoURL }];			
+				const newVideo = [{ id: videoID, title: 'Video', videoUrl: videoURL }];			
+				videoID++;
 
 				setVideos(videos.concat(newVideo));
 			} catch(error) {
 				// Catch Errors & Set Null
 				console.log(error);
-				setVideos(null);
+				setVideos([]);
 			}
 		}
 
