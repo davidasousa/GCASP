@@ -13,10 +13,7 @@ export const runRecord = (videoNum) => {
     '-f', 'gdigrab',
     '-i', 'desktop',
 		'-t', '2',
-		path.join(
-			'videos', 
-			'output' + String(videoNum) + '.mp4'
-		)
+		path.join('videos', 'output' + String(videoNum) + '.mp4')
   ];
 
   const ffmpegProcess = spawn(binaryFilePath, args);
@@ -32,6 +29,6 @@ export const runRecord = (videoNum) => {
 
   // Listen for exit
   ffmpegProcess.on('close', (code) => {
-    console.log(`FFmpeg process exited with code ${code}`);
+  	console.log(`FFmpeg process exited with code ${code}`);
   });
 };

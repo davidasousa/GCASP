@@ -34,12 +34,12 @@ const App = () => {
 
 		loadVideos();
 	}
-	
-	// Video Fetch Listener
-  window.electron.onTriggerVideoFetch((videoPath) => {
-		loaderFunc(videoPath);
-	});
 
+	// Video Fetch Listener
+	window.electron.onTriggerVideoFetch((videoPath) => {
+			loaderFunc(videoPath);
+	});
+	
 	// Defining The UI JSX
 	const frontPageUI = (
 		<div className="app-container">

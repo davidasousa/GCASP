@@ -9,7 +9,7 @@ contextBridge.exposeInMainWorld('electron', {
 	triggerFetchVideo: (filePath) => ipcRenderer.invoke('trigger-video-fetch', filePath),
 
 	// IPC Listener For New Filewrites
-	onTriggerVideoFetch: (callback) => ipcRenderer.on(
+	onTriggerVideoFetch: (callback) => ipcRenderer.once(
 		'trigger-new-video', (event, value) => callback(value)
 	)
 });

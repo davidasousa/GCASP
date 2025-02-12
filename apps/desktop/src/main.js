@@ -57,9 +57,10 @@ app.whenReady().then(() => {
   // Create The Display Window
   createWindow();
 
-	// Handeling IPC Requests
+	// Handle Invoke Record
   ipcMain.handle('trigger-record', async (event, fileName) => {
-		runRecord(videoNum++); // Records Via Windows Binary
+		runRecord(videoNum); // Records Via Windows Binary
+		videoNum++;
     return;
   });	
 
