@@ -3,14 +3,20 @@ import path from 'node:path';
 import express from 'express';
 import chokidar from 'chokidar';
 
-export const loadMP4File = (filepath, server) => {
+export function loadMP4File(_path, server) {
 	// Send File With Title Video
-	server.get('/video', (req, res) => {
-		if(!fs.existsSync(filepath)) {
+	server.get(`/video/:videoID`, (req, res) => {
+		if(!fs.existsSync(_path)) {
 			return res.status(404).send('Video Not Found');
 		}
+
+		const videoID = req.params.videoID;
+		const newpath = path.join(__dirname, `../../videos/output${videoID}.mp4`);
+		console.log(newpath);
+
 		res.setHeader('Content-Type', 'video/mp4');
-		res.sendFile(filepath);
+		res.sendFile(newpath);
+
 	});
 }
 

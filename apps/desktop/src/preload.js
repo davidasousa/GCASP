@@ -3,10 +3,10 @@ import electron, { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electron', {
 	// Invoke Record
-  triggerRecordVideo: () => ipcRenderer.invoke('trigger-record'),
+  triggerRecordVideo: (videoID) => ipcRenderer.invoke('trigger-record', videoID),
 
 	// Invoke Fetch Video With Given Filepath
-	triggerFetchVideo: (filePath) => ipcRenderer.invoke('trigger-video-fetch', filePath),
+	triggerFetchVideo: (path, videoID) => ipcRenderer.invoke('trigger-video-fetch', path, videoID),
 
 	// IPC Listener For New Filewrites
 	onTriggerVideoFetch: (callback) => ipcRenderer.once(

@@ -2,15 +2,14 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
 import './app.css';
-
 import { fetchVideo } from './fetchVideo';
 
-const recordVideo = async () => {
-	try { await window.electron.triggerRecordVideo(); } 
+let videoID = 1;
+
+const recordVideo = async (video_number) => {
+	try { await window.electron.triggerRecordVideo(video_number); } 
 	catch (error) { console.error('Failed to trigger IPC:', error); }
 };
-
-var videoID = 1;
 
 const App = () => {
 	const [currentView, setCurrentView] = useState('home');
@@ -20,11 +19,12 @@ const App = () => {
 		// Load Video & Add To The Videos Array
 		const loadVideos = async () => {
 			try {
-				const videoURL = await fetchVideo(videoPath);	
-				const newVideo = [{ id: videoID, title: 'Video', videoUrl: videoURL }];			
+				const videoURL = await fetchVideo(videoPath, videoID);	
+				const newVideo = [{ id: videoID, title: `Video${videoID}`, videoUrl: videoURL }];			
 				videoID++;
+				console.log(videoPath);
 
-				setVideos(videos.concat(newVideo));
+				setVideos(newVideo);
 			} catch(error) {
 				// Catch Errors & Set Null
 				console.log(error);
@@ -37,7 +37,7 @@ const App = () => {
 
 	// Video Fetch Listener
 	window.electron.onTriggerVideoFetch((videoPath) => {
-			loaderFunc(videoPath);
+			loaderFunc(videoPath, videoID);
 	});
 	
 	// Defining The UI JSX
@@ -50,7 +50,7 @@ const App = () => {
 						{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
 				</div>
 				<div className="record-button">
-				<button onClick={() => recordVideo()}>
+				<button onClick={() => recordVideo(videoID)}>
 					Record Screen
 				</button>
 			</div>

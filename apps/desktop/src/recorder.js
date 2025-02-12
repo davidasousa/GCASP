@@ -7,13 +7,13 @@ const binaryFilePath = path.join(
 );
 
 // Record Via Windows Binary
-export const runRecord = (videoNum) => {
+export const runRecord = (videoID) => {
   const args = [
 		'-y', // Force Overwrite
     '-f', 'gdigrab',
     '-i', 'desktop',
 		'-t', '2',
-		path.join('videos', 'output' + String(videoNum) + '.mp4')
+		path.join('videos', 'output' + String(videoID) + '.mp4')
   ];
 
   const ffmpegProcess = spawn(binaryFilePath, args);

@@ -1,10 +1,10 @@
-export const fetchVideo = async (path) => {
+export const fetchVideo = async (path, videoID) => {
 	try {
 		// Trigger The Video Being Sent -> Preload IPC
-		await window.electron.triggerFetchVideo(path);
+		await window.electron.triggerFetchVideo(path, videoID);
 		
 		// Fetch the video from the server
-		const response = await fetch('http://localhost:3001/video');
+		const response = await fetch(`http://localhost:3001/video/${videoID}`);
 
 		console.log('Status Code', response.status);
 
