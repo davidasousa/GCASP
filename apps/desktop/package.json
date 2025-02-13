@@ -38,6 +38,7 @@
     "@babel/preset-react": "^7.26.3",
     "babel-loader": "^9.2.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
     "electron-squirrel-startup": "^1.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
