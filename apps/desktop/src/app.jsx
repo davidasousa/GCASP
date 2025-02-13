@@ -24,7 +24,7 @@ const App = () => {
 				videoID++;
 				console.log(videoPath);
 
-				setVideos(newVideo);
+				setVideos(videos.concat(newVideo));
 			} catch(error) {
 				// Catch Errors & Set Null
 				console.log(error);
