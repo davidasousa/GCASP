@@ -1,23 +1,26 @@
-import { app, BrowserWindow, ipcMain } from 'electron'; // Added IPC Import
+import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import fs from 'fs';
 
-// Getting Recorder Script
-import { runRecord } from './recorder.js';
-import { loadMP4File } from './loadVideo.js';
-
-// Starting Express Server For Backend Communication
+// Backend Server - File Transfer
 import express from 'express';
 import cors from 'cors';
 
+// Getting Recorder Script
+import { runRecord } from './recorder.js';
+import { loadMP4File, isFileDone, createVideoWatcher } from './loadVideo.js';
+
+// Starting Express Server For Backend Communication
 const server = express();
 server.use(cors());
 const port = 3001;
 
+/* Here Is Where The Actual Rendering Process Begins */
+const watcher = createVideoWatcher();
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) { 
-	app.quit(); 
-}
+if (started) { app.quit(); }
 
 const createWindow = () => {
   // Create the browser window.
@@ -34,36 +37,42 @@ const createWindow = () => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+
+	// Monitor For Changes To The Videos Folder
+	watcher.on('add', async (path) => {
+		await isFileDone(path)
+			.then(() => {
+				mainWindow.webContents.send('trigger-new-video', path);
+			});
+	})
+	
+	// Starting Server
+	server.listen(port, () => {
+		console.log(`Server running at http://localhost:${port}`);
+	});
 };
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Create The Display Window
   createWindow();
 
-  // Listen For Record Message From Renderer Process
-  ipcMain.handle('trigger-record', async () => {
-		runRecord(); // Records Via Windows Binary
+	// Handle Invoke Record
+  ipcMain.handle('trigger-record', async (event, videoID) => {
+		runRecord(videoID); // Records Via Windows Binary
     return;
-  });
-	
-	// Listen For Fetch Video Message
-  ipcMain.handle('trigger-video-fetch', (event, filePath) => {
-    loadMP4File(filePath, server, port); // Triggers Express JS
+  });	
+
+	// Handle Video Fetch Requests
+  ipcMain.handle('trigger-video-fetch', (event, path, videoID) => {
+		// Load The Video & Send On Server
+    loadMP4File(path, server, videoID);
 		return;
   });
 });
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+// Closing The Program
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.

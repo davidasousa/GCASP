@@ -2,65 +2,60 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
 import './app.css';
+import { fetchVideo } from './fetchVideo';
 
-// Importing IPC Handler
-import { triggerIPC, triggerFetchVideo } from './triggerIPC';
+let videoID = 1;
 
+const recordVideo = async (video_number) => {
+	try { await window.electron.triggerRecordVideo(video_number); } 
+	catch (error) { console.error('Failed to trigger IPC:', error); }
+};
 
 const App = () => {
 	const [currentView, setCurrentView] = useState('home');
 	const [videos, setVideos] = useState([]);
-
-
-	const getVideo = async (path) => {
-		try {
-			// Trigger the video fetch (if necessary)
-			triggerFetchVideo(path);
-			// Fetch the video from the server
-			const response = await fetch('http://localhost:3001/video');
-			const contentType = response.headers.get('Content-Type');
-			if (!contentType || !contentType.includes('video/mp4')) {
-				throw new Error('Invalid video format. Expected video/mp4 but received ' + contentType);
-			} else {
-				console.log('Valid video');
-			}
-			// Convert the response into a Blob and create an object URL
-			const videoBlob = await response.blob();
-			const videoURL = URL.createObjectURL(videoBlob); 
-			return videoURL; // Return the video URL
-		} catch (error) {
-			console.error('Error fetching video:', error);
-		}
-	};
-	useEffect(() => {
+	
+	const loaderFunc = (videoPath) => {
+		// Load Video & Add To The Videos Array
 		const loadVideos = async () => {
-		const videoURL = await getVideo('videos/output.mp4'); // Pass the appropriate path here
-		const loadVideos = [
-				{ id: 1, title: 'Video 1', videoUrl: videoURL },
-			];
-			setVideos(loadVideos);
-		};
+			try {
+				const videoURL = await fetchVideo(videoPath, videoID);	
+				const newVideo = [{ id: videoID, title: `Video${videoID}`, videoUrl: videoURL }];			
+				videoID++;
+				console.log(videoPath);
+
+				setVideos(videos.concat(newVideo));
+			} catch(error) {
+				// Catch Errors & Set Null
+				console.log(error);
+				setVideos([]);
+			}
+		}
+
 		loadVideos();
-	}, []); // This runs only once on mount
+	}
 
-
-
+	// Video Fetch Listener
+	window.electron.onTriggerVideoFetch((videoPath) => {
+			loaderFunc(videoPath, videoID);
+	});
+	
+	// Defining The UI JSX
 	const frontPageUI = (
-			<div className="app-container">
+		<div className="app-container">
 			<Sidebar currentView={currentView} onChangeView={setCurrentView} />
-			<div className="main-content">
-			{currentView === 'home' && <VideoGrid videos={videos}/>}
-			{currentView === 'shared' && <div>Shared Clips(Coming Soon)</div>}
-			{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
+					<div className="main-content">
+						{currentView === 'home' && videos != [] && <VideoGrid videos={videos}/>}
+						{currentView === 'shared' && <div>Shared Clips(Coming Soon)</div>}
+						{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
+				</div>
+				<div className="record-button">
+				<button onClick={() => recordVideo(videoID)}>
+					Record Screen
+				</button>
 			</div>
-			<div className="record-button">
-			<button onClick={() => triggerIPC('trigger-record')}>
-			Trigger IPC
-			</button>
-			</div>
-			</div>
-			);
-
+		</div>
+	);
 	return frontPageUI;
 };
 

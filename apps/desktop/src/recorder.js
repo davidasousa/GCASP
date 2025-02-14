@@ -1,18 +1,22 @@
 import { spawn } from 'child_process';
 import path from 'node:path';
 
-const outputPath = path.join('videos', 'output.mp4');
+import dotenv from 'dotenv';
+dotenv.config();
 
-export const runRecord = () => {
+export const runRecord = (videoID) => {
+
+	const outputPath = path.join('videos', `output${videoID}.mp4`);
 
   const args = [
+		'-y',
     '-f', 'gdigrab',
     '-i', 'desktop',
     '-t', '2',
     outputPath
   ];
 
-  const ffmpegExecutable = 'ffmpeg'; 
+  const ffmpegExecutable = process.env.FFMPEG_EXECUTABLE_NAME; 
   const ffmpegProcess = spawn(ffmpegExecutable, args);
 
   // Listen to stdout and stderr
