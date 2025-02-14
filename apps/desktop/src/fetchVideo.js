@@ -1,6 +1,6 @@
+// Trigger The Video Being Sent -> Preload IPC
 export const fetchVideo = async (path, videoID) => {
 	try {
-		// Trigger The Video Being Sent -> Preload IPC
 		await window.electron.triggerFetchVideo(path, videoID);
 		
 		// Fetch the video from the server
@@ -13,8 +13,6 @@ export const fetchVideo = async (path, videoID) => {
 			const videoBlob = await response.blob();
 			const videoURL = URL.createObjectURL(videoBlob); 
 			return videoURL; // Return the video URL
-		} else {
-			throw new Error('BLANK');
 		}
 	} catch (error) {
 		console.error('Error fetching video:', error);

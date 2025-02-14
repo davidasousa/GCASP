@@ -6,8 +6,10 @@ import { fetchVideo } from './fetchVideo';
 
 let videoID = 1;
 
-const recordVideo = async (video_number) => {
-	try { await window.electron.triggerRecordVideo(video_number); } 
+// Call The Record Video IPC Function -> In Preload.JS
+// Sends Message To Handler In Main
+const recordVideo = async (_videoID) => {
+	try { await window.electron.triggerRecordVideo(_videoID); } 
 	catch (error) { console.error('Failed to trigger IPC:', error); }
 };
 

@@ -3,19 +3,16 @@ import path from 'node:path';
 import express from 'express';
 import chokidar from 'chokidar';
 
-export function loadMP4File(_path, server) {
-	// Send File With Title Video
-	server.get(`/video/:videoID`, (req, res) => {
-		if(!fs.existsSync(_path)) {
-			return res.status(404).send('Video Not Found');
+export async function loadMP4File(_path, server) {
+	server.get(`/video/:videoID`, async (req, res) => {
+		try {
+			const newpath = path.join(__dirname, `../../videos/output${req.params.videoID}.mp4`);
+			console.log(newpath);
+			// await fs.access(newpath);
+			res.sendFile(newpath);
+		} catch (error) {
+			res.status(404).send("Video Not Found");
 		}
-
-		const videoID = req.params.videoID;
-		const newpath = path.join(__dirname, `../../videos/output${videoID}.mp4`);
-		console.log(newpath);
-
-		res.setHeader('Content-Type', 'video/mp4');
-		res.sendFile(newpath);
 
 	});
 }
@@ -24,7 +21,6 @@ export function loadMP4File(_path, server) {
 export function isFileDone(filePath) {
   return new Promise((resolve, reject) => {
     let previousSize = -1;
-
     // Check file size every second
     const checkInterval = setInterval(() => {
       fs.stat(filePath, (err, stats) => {

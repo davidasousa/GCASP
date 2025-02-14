@@ -16,8 +16,13 @@ const server = express();
 server.use(cors());
 const port = 3001;
 
-/* Here Is Where The Actual Rendering Process Begins */
+// Creating File Watcher
 const watcher = createVideoWatcher();
+
+/* 
+ * Here Is Where The Actual Rendering Process Begins 
+ */
+
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) { app.quit(); }
@@ -52,12 +57,14 @@ const createWindow = () => {
 	});
 };
 
+
+// App Rendering Cycle
 app.whenReady().then(() => {
   // Create The Display Window
   createWindow();
 
 	// Handle Invoke Record
-  ipcMain.handle('trigger-record', async (event, videoID) => {
+  ipcMain.handle('trigger-record', (event, videoID) => {
 		runRecord(videoID); // Records Via Windows Binary
     return;
   });	
@@ -69,6 +76,7 @@ app.whenReady().then(() => {
 		return;
   });
 });
+
 
 // Closing The Program
 app.on('window-all-closed', () => {
