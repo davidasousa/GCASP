@@ -12,4 +12,5 @@ contextBridge.exposeInMainWorld('electron', {
 	onTriggerVideoFetch: (callback) => ipcRenderer.once(
 		'trigger-new-video', (event, value) => callback(value)
 	)
+
 });
