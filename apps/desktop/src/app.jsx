@@ -37,46 +37,45 @@ const frontend = () => {
 	}
 
 	useEffect(() => {
-			if(videoPath !== null) {
+		if(videoPath !== null) {
 			loaderFunc(videoPath, videoID);
-			}
-			}, [videoPath]);
+		}
+	}, [videoPath]);
 
 	// Video Fetch Listener
 	window.electron.onTriggerVideoFetch((videoPath) => {
-			setVideoPath(videoPath);
-			});
+		setVideoPath(videoPath);
+	});
 
 	// Defining The UI JSX
 	const frontPageUI = (
-			<div className="app-container">
+		<div className="app-container">
 			<Sidebar currentView={currentView} onChangeView={setCurrentView} />
-			<div className="main-content">
+		<div className="main-content">
 			{currentView == 'home' && videos.length > 0 ? (
-			videos.map((video) => (
+				videos.map((video) => (
 						<div key={video.id} className="video-item">
-						<h3>{video.title}</h3>
-						<video width="400" controls>
-						<source src={video.videoUrl} type="video/mp4" />
-						Your browser does not support the video tag.
-						</video>
+							<h3>{video.title}</h3>
+							<video width="400" controls>
+							<source src={video.videoUrl} type="video/mp4" />
+							Your browser does not support the video tag.
+							</video>
 						</div>
-						)) 
-			) : (
-				<p>No</p>
-				)}
-			}}
-{currentView === 'shared' && <div>Shared Clips(Coming Soon)</div>}
-{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
-</div>
-<div className="record-button">
-<button onClick={() => recordVideo(videoID)}>
-Record Screen
-</button>
-</div>
-</div>
-);
-return frontPageUI;
+					)) 
+				) : (
+					<p>No Videos Currently</p>
+			)}
+			{currentView === 'shared' && <div>Shared Clips(Coming Soon)</div>}
+			{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
+		</div>
+		<div className="record-button">
+			<button onClick={() => recordVideo(videoID)}>
+				Record Screen
+			</button>
+		</div>
+	</div>
+	);
+	return frontPageUI;
 };
 
 export default frontend;

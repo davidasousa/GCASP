@@ -4,7 +4,24 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 dotenv.config();
 
+function getTimestamp() {
+	const now = new Date();
+
+	const timestamp = now.getFullYear() + '-' 
+    + String(now.getMonth() + 1).padStart(2, '0') + '-' 
+    + String(now.getDate()).padStart(2, '0') + '-' 
+    + String(now.getHours()).padStart(2, '0') + '-' 
+    + String(now.getMinutes()).padStart(2, '0') + '-' 
+    + String(now.getSeconds()).padStart(2, '0');
+
+	return timestamp;
+}
+
 export const runRecord = (videoID) => {
+
+	// Get The Time Stamp For The Recording
+
+	console.log(getTimestamp());
 
 	const outputPath = path.join('videos', `output${videoID}.mp4`);
 
