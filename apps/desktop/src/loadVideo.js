@@ -13,7 +13,6 @@ export async function loadMP4File(_path, server) {
 		} catch (error) {
 			res.status(404).send("Video Not Found");
 		}
-
 	});
 }
 

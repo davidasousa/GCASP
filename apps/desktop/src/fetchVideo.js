@@ -11,8 +11,8 @@ export const fetchVideo = async (path, videoID) => {
 		if(response.ok) {
 			// Convert the response into a Blob and create an object URL
 			const videoBlob = await response.blob();
-			const videoURL = URL.createObjectURL(videoBlob); 
-			return videoURL; // Return the video URL
+			const videoURL = URL.createObjectURL(videoBlob);
+			return videoURL;
 		}
 	} catch (error) {
 		console.error('Error fetching video:', error);
