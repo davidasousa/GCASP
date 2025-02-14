@@ -15,14 +15,14 @@ const recordVideo = async (_videoID) => {
 const frontend = () => {
 	const [currentView, setCurrentView] = useState('home');
 	const [videos, setVideos] = useState([]);
-	const [videoPath, setVideoPath] = useState(null);
-	const [videoID, setVideoID] = useState(0);
+	const [videoTimestamp, setVideoTimestamp] = useState(null);
+	const [videoID, setVideoID] = useState(1);
 
-	const loaderFunc = (videoPath) => {
+	const loaderFunc = (videoTimestamp) => {
 		// Load Video & Add To The Videos Array
 		const loadVideos = async () => {
 			try {
-				const videoURL = await fetchVideo(videoPath, videoID);	
+				const videoURL = await fetchVideo(videoTimestamp);	
 				const newVideo = { id: videoID, title: `Video${videoID}`, videoUrl: videoURL };			
 
 				setVideos((prevVideos) => [...prevVideos, newVideo]);
@@ -32,19 +32,18 @@ const frontend = () => {
 				setVideos([]);
 			}
 		}
-
 		loadVideos();
 	}
 
 	useEffect(() => {
-		if(videoPath !== null) {
-			loaderFunc(videoPath, videoID);
+		if(videoTimestamp !== null) {
+			loaderFunc(videoTimestamp);
 		}
-	}, [videoPath]);
+	}, [videoTimestamp]);
 
 	// Video Fetch Listener
-	window.electron.onTriggerVideoFetch((videoPath) => {
-		setVideoPath(videoPath);
+	window.electron.onTriggerVideoFetch((timestamp) => {
+		setVideoTimestamp(timestamp);
 	});
 
 	// Defining The UI JSX
@@ -69,7 +68,7 @@ const frontend = () => {
 			{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
 		</div>
 		<div className="record-button">
-			<button onClick={() => recordVideo(videoID)}>
+			<button onClick={() => recordVideo()}>
 				Record Screen
 			</button>
 		</div>

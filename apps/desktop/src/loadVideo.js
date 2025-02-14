@@ -3,18 +3,20 @@ import path from 'node:path';
 import express from 'express';
 import chokidar from 'chokidar';
 
-export async function loadMP4File(_path, server) {
-	server.get(`/video/:videoID`, async (req, res) => {
-		try {
-			const newpath = path.join(__dirname, `../../videos/output${req.params.videoID}.mp4`);
-			console.log(newpath);
-			// await fs.access(newpath);
+export async function loadMP4File(server) {
+	// Server Side File Sending
+	server.get(`/video/:videoTimestamp`, async (req, res) => {
+		const newpath = path.join(__dirname, `../../videos/output${req.params.videoTimestamp}.mp4`);
+		fs.access(newpath, fs.constants.F_OK, (err) => {
+			if (err) { 
+				console.log(newpath);
+				res.status(404).send("Video Not Found"); 
+			}
 			res.sendFile(newpath);
-		} catch (error) {
-			res.status(404).send("Video Not Found");
-		}
+		});
 	});
 }
+	
 
 // Helper Function To Check If A File Is Done Being Written By FFMPEG
 export function isFileDone(filePath) {

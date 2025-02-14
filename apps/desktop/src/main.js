@@ -19,6 +19,9 @@ const port = 3001;
 // Creating File Watcher
 const watcher = createVideoWatcher();
 
+// Timeshamp
+import { getTimestamp } from './timestamp.js';
+
 /* 
  * Here Is Where The Actual Rendering Process Begins 
  */
@@ -26,6 +29,8 @@ const watcher = createVideoWatcher();
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) { app.quit(); }
+
+let timestamp = null;
 
 const createWindow = () => {
   // Create the browser window.
@@ -47,7 +52,7 @@ const createWindow = () => {
 	watcher.on('add', async (path) => {
 		await isFileDone(path)
 			.then(() => {
-				mainWindow.webContents.send('trigger-new-video', path);
+				mainWindow.webContents.send('trigger-new-video', timestamp);
 			});
 	})
 	
@@ -64,15 +69,15 @@ app.whenReady().then(() => {
   createWindow();
 
 	// Handle Invoke Record
-  ipcMain.handle('trigger-record', (event, videoID) => {
-		runRecord(videoID); // Records Via Windows Binary
+  ipcMain.handle('trigger-record', (event) => {
+		timestamp = getTimestamp();
+		runRecord(timestamp);
     return;
   });	
 
-	// Handle Video Fetch Requests
-  ipcMain.handle('trigger-video-fetch', (event, path, videoID) => {
-		// Load The Video & Send On Server
-    loadMP4File(path, server, videoID);
+	// Handle Video Fetch Requests From Client
+  ipcMain.handle('trigger-video-fetch', (event) => {
+    loadMP4File(server);
 		return;
   });
 });
