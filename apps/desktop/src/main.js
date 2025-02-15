@@ -2,33 +2,26 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'fs';
-
+import { spawn } from 'node:child_process';
 // Backend Server - File Transfer
 import express from 'express';
 import cors from 'cors';
 
-// Getting Recorder Script
 import { runRecord } from './recorder';
-import { loadMP4File, isFileDone, createVideoWatcher } from './loadVideo';
+import { loadMP4File } from './serverSideReq'; 
+import { isFileDone, createVideoWatcher, getTimestamp } from './utilities';
 
 // Starting Express Server For Backend Communication
 const server = express();
-server.use(cors());
 const port = 3001;
+server.use(cors());
 
 // Creating File Watcher
 const watcher = createVideoWatcher();
 
-// Timeshamp
-import { getTimestamp } from './timestamp';
-
-// Child Process
-import { spawn } from 'node:child_process';
-
 /* 
  * Here Is Where The Actual Rendering Process Begins 
  */
-
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) { app.quit(); }
@@ -63,7 +56,6 @@ const createWindow = () => {
 	});
 };
 
-
 // App Rendering Cycle
 app.whenReady().then(() => {
   // Create The Display Window
@@ -77,10 +69,16 @@ app.whenReady().then(() => {
   });	
 
 	// Handle Video Fetch Requests From Client
-  ipcMain.handle('trigger-video-fetch', (event) => {
+  ipcMain.handle('trigger-recording-fetch', (event) => {
     loadMP4File(server);
 		return;
   });
+	
+	// Handle Fetch All Previous Videos
+	ipcMain.handle('trigger-fetch-prev-videos', (event) => {
+		return;
+	})
+
 });
 
 

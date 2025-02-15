@@ -1,17 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
-import { fetchVideo } from './fetchVideo';
 
 // Import CSS
 import './app.css';
 
-// Call The Record Video IPC Function -> In Preload.JS
-// Sends Message To Handler In Main
-const recordVideo = async (videoID) => {
-	try { await window.electron.triggerRecordVideo(videoID); } 
-	catch (error) { console.error('Failed to trigger IPC:', error); }
-};
+// Importing Client Side Requests
+import { fetchVideo, recordVideo, fetchPrevVideos } from './clientSideReq';
 
 const frontend = () => {
 	const [currentView, setCurrentView] = useState('home');
