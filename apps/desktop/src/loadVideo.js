@@ -5,13 +5,13 @@ import chokidar from 'chokidar';
 
 export async function loadMP4File(server) {
 	// Server Side File Sending
-	server.get(`/video/:videoTimestamp`, async (req, res) => {
-		const newpath = path.join(__dirname, `../../videos/output${req.params.videoTimestamp}.mp4`);
+	server.get(`/videos/:videoTimestamp`, async (req, res) => {
+		const newpath = path.join(
+			__dirname, 
+			`../../currentVideos/output${req.params.videoTimestamp}.mp4`
+		);
 		fs.access(newpath, fs.constants.F_OK, (err) => {
-			if (err) { 
-				console.log(newpath);
-				res.status(404).send("Video Not Found"); 
-			}
+			if (err) { res.status(404).send("Video Not Found"); }
 			res.sendFile(newpath);
 		});
 	});
@@ -43,7 +43,7 @@ export function isFileDone(filePath) {
 
 // Video Directory Watcher
 export function createVideoWatcher() {
-	const videoPath = path.join(__dirname, '../../videos');
+	const videoPath = path.join(__dirname, '../../currentVideos');
 	const watcher = chokidar.watch(videoPath, {
 			persistent: true,
 			ignoreInitial: true,

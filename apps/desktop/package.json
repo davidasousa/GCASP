@@ -9,7 +9,7 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "echo \"No linting configured\""
+		"clean": "rm prevVideos/*"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.6.0",

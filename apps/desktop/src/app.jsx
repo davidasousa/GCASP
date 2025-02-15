@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
-import './app.css';
 import { fetchVideo } from './fetchVideo';
+
+// Import CSS
+import './app.css';
 
 // Call The Record Video IPC Function -> In Preload.JS
 // Sends Message To Handler In Main
-const recordVideo = async (_videoID) => {
-	try { await window.electron.triggerRecordVideo(_videoID); } 
+const recordVideo = async (videoID) => {
+	try { await window.electron.triggerRecordVideo(videoID); } 
 	catch (error) { console.error('Failed to trigger IPC:', error); }
 };
-
 
 const frontend = () => {
 	const [currentView, setCurrentView] = useState('home');
@@ -32,6 +33,7 @@ const frontend = () => {
 				setVideos([]);
 			}
 		}
+
 		loadVideos();
 	}
 
@@ -50,9 +52,9 @@ const frontend = () => {
 	const frontPageUI = (
 		<div className="app-container">
 			<Sidebar currentView={currentView} onChangeView={setCurrentView} />
-		<div className="main-content">
-			{currentView == 'home' && videos.length > 0 ? (
-				videos.map((video) => (
+			<div className="main-content">
+				{currentView == 'home' && videos.length > 0 ? (
+					videos.map((video) => (
 						<div key={video.id} className="video-item">
 							<h3>{video.title}</h3>
 							<video width="400" controls>
@@ -60,19 +62,19 @@ const frontend = () => {
 							Your browser does not support the video tag.
 							</video>
 						</div>
-					)) 
-				) : (
-					<p>No Videos Currently</p>
-			)}
-			{currentView === 'shared' && <div>Shared Clips(Coming Soon)</div>}
-			{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
-		</div>
-		<div className="record-button">
-			<button onClick={() => recordVideo()}>
+						)) 
+					) : (
+						<p>No Videos Currently</p>
+				)}
+				{currentView === 'shared' && <div>Shared Clips(Coming Soon)</div>}
+				{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
+			</div>
+			<div className="record-button">
+				<button onClick={() => recordVideo()}>
 				Record Screen
-			</button>
+				</button>
+			</div>
 		</div>
-	</div>
 	);
 	return frontPageUI;
 };

@@ -6,7 +6,10 @@ dotenv.config();
 
 export const runRecord = (timestamp) => {
 	
-	const outputPath = path.join('videos', `output${timestamp}.mp4`);
+	const outputPath = path.join(
+		'currentVideos', 
+		`output${timestamp}.mp4`
+	);
 
   const args = [
 		'-y',

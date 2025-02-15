@@ -8,8 +8,8 @@ import express from 'express';
 import cors from 'cors';
 
 // Getting Recorder Script
-import { runRecord } from './recorder.js';
-import { loadMP4File, isFileDone, createVideoWatcher } from './loadVideo.js';
+import { runRecord } from './recorder';
+import { loadMP4File, isFileDone, createVideoWatcher } from './loadVideo';
 
 // Starting Express Server For Backend Communication
 const server = express();
@@ -20,7 +20,10 @@ const port = 3001;
 const watcher = createVideoWatcher();
 
 // Timeshamp
-import { getTimestamp } from './timestamp.js';
+import { getTimestamp } from './timestamp';
+
+// Child Process
+import { spawn } from 'node:child_process';
 
 /* 
  * Here Is Where The Actual Rendering Process Begins 
@@ -43,9 +46,7 @@ const createWindow = () => {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },
   });
-  // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-  // Open the DevTools.
   mainWindow.webContents.openDevTools();
 
 	// Monitor For Changes To The Videos Folder
@@ -85,6 +86,24 @@ app.whenReady().then(() => {
 
 // Closing The Program
 app.on('window-all-closed', () => {
+	const srcDir = path.join(__dirname, '../../currentVideos');
+	const dstDir = path.join(__dirname, '../../prevVideos');
+
+	fs.readdir(srcDir, (err, files) => {
+		files.forEach((file) => {
+			const srcFilePath = path.join(srcDir, file);
+			const dstFilePath = path.join(dstDir, file);
+
+			fs.rename(srcFilePath, dstFilePath, (err) => {
+				if(err) {
+					console.error(`Error moving file ${file}:`, err);
+				} else {
+					console.log(`Moved file: ${file}`);
+				}
+			});
+		});
+	});
+
   if (process.platform !== 'darwin') {
     app.quit();
   }
