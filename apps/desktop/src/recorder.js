@@ -4,15 +4,18 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 dotenv.config();
 
-export const runRecord = (videoID) => {
-
-	const outputPath = path.join('videos', `output${videoID}.mp4`);
+export const runRecord = (timestamp) => {
+	
+	const outputPath = path.join(
+		'currentVideos', 
+		`output${timestamp}.mp4`
+	);
 
   const args = [
 		'-y',
     '-f', 'gdigrab',
     '-i', 'desktop',
-    '-t', '2',
+    '-t', '5',
     outputPath
   ];
 
