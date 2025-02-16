@@ -7,7 +7,7 @@ export const fetchVideo = async (videoTimestamp) => {
 		await window.electron.triggerFetchRecording(videoTimestamp);
 		
 		// Client Side Reception
-		const response = await fetch(`http://localhost:3001/videos/${videoTimestamp}`);
+		const response = await fetch(`http://localhost:4000/videos/${videoTimestamp}`);
 
 		console.log('Status Code', response.status);
 

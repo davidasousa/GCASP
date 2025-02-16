@@ -13,7 +13,7 @@ import { isFileDone, createVideoWatcher, getTimestamp } from './utilities';
 
 // Starting Express Server For Backend Communication
 const server = express();
-const port = 3001;
+const port = 4000;
 server.use(cors());
 
 // Creating File Watcher

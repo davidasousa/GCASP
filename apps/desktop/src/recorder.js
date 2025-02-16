@@ -15,7 +15,7 @@ export const runRecord = (timestamp) => {
 		'-y',
     '-f', 'gdigrab',
     '-i', 'desktop',
-    '-t', '2',
+    '-t', '5',
     outputPath
   ];
 

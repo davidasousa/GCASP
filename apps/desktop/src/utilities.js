@@ -17,23 +17,34 @@ export function createVideoWatcher() {
 export function isFileDone(filePath) {
   return new Promise((resolve, reject) => {
     let previousSize = -1;
-    // Check file size every second
+    let unchangedCount = 0;
+    const maxUnchangedCount = 3;
+
+    const timeout = setTimeout(() => reject(new Error('File check timeout exceeded.')), 30000);
     const checkInterval = setInterval(() => {
       fs.stat(filePath, (err, stats) => {
         if (err) {
           clearInterval(checkInterval);
+          clearTimeout(timeout);
           return reject(err);
         }
+
         const currentSize = stats.size;
-        // If the file size hasn't changed, assume it's done
         if (currentSize === previousSize) {
-          clearInterval(checkInterval); // Stop checking
-          resolve(); // File is done being written
+          unchangedCount++;
+          if (unchangedCount >= maxUnchangedCount) {
+            clearInterval(checkInterval);
+            clearTimeout(timeout);
+            resolve();
+          }
+        } else {
+          unchangedCount = 0;
         }
+
         previousSize = currentSize;
       });
     }, 1000);
-	});
+  });
 }
 
 // Get Time Stamp

@@ -19,6 +19,10 @@ const frontend = () => {
 		const loadVideos = async () => {
 			try {
 				const videoURL = await fetchVideo(videoTimestamp);	
+				if(!videoURL) {
+					console.error("ERROR LOADING");
+					return;
+				}
 				const newVideo = { id: videoID, title: `Video${videoID}`, videoUrl: videoURL };			
 
 				setVideos((prevVideos) => [...prevVideos, newVideo]);
@@ -52,7 +56,7 @@ const frontend = () => {
 					videos.map((video) => (
 						<div key={video.id} className="video-item">
 							<h3>{video.title}</h3>
-							<video width="400" controls>
+							<video width="400" controls preload = "auto">
 							<source src={video.videoUrl} type="video/mp4" />
 							Your browser does not support the video tag.
 							</video>
