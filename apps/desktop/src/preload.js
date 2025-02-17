@@ -1,21 +1,16 @@
 // File For Exposing IPC Functions
-import electron, { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
+// Expose protected methods that allow the renderer process to use
+// the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electron', {
-	// Invoke Record
-  triggerRecordVideo: () => ipcRenderer.invoke(
-		'trigger-record'
-	),
-	// Invoke Fetch Recording With Given Filepath
-	triggerFetchRecording: (timestamp) => ipcRenderer.invoke(
-		'trigger-recording-fetch', timestamp
-	),
-	// Invoke Fetching Previous Videos
-	triggerFetchPrevVideos: () => ipcRenderer.invoke(
-		'trigger-fetch-prev-videos'
-	),
-	// IPC Listener For New Filewrites
-	onTriggerVideoFetch: (callback) => ipcRenderer.once(
-		'trigger-new-video', (event, timestamp) => callback(timestamp)
-	)
+// Get list of local videos
+	getLocalVideos: () => ipcRenderer.invoke('get-local-videos'),
+
+// Trigger video recording
+	triggerRecordVideo: () => ipcRenderer.invoke('trigger-record'),
+
+// Listen for new recordings
+	onNewRecording: (callback) => 
+		ipcRenderer.on('new-recording', (event, data) => callback(data))
 });
