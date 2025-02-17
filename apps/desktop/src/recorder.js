@@ -1,43 +1,40 @@
 import { spawn } from 'child_process';
-import path from 'node:path';
-
-import dotenv from 'dotenv';
-dotenv.config();
+import { app } from 'electron';
+import path from 'path';
 
 export const runRecord = (timestamp) => {
-	
-	const outputPath = path.join(
-		'currentVideos', 
-		`output${timestamp}.mp4`
-	);
+  return new Promise((resolve, reject) => {
+    const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+    const outputPath = path.join(userVideosPath, `clip_${timestamp}.mp4`);
 
-  const args = [
-		'-y',
-    '-f', 'gdigrab',
-    '-i', 'desktop',
-    '-t', '5',
-    outputPath
-  ];
+    const args = [
+      '-y',
+      '-f', 'gdigrab',
+      '-i', 'desktop',
+      '-t', '5',
+      outputPath
+    ];
 
-  const ffmpegExecutable = process.env.FFMPEG_EXECUTABLE_NAME; 
-  const ffmpegProcess = spawn(ffmpegExecutable, args);
+    const ffmpegProcess = spawn('ffmpeg', args);
+    
+    ffmpegProcess.stdout.on('data', (data) => {
+      console.log(`ffmpeg stdout: ${data}`);
+    });
 
-  // Listen to stdout and stderr
-  ffmpegProcess.stdout.on('data', (data) => {
-    console.log(`stdout: ${data}`);
-  });
+    ffmpegProcess.stderr.on('data', (data) => {
+      console.error(`ffmpeg stderr: ${data}`);
+    });
 
-  // stdout data
-  ffmpegProcess.stderr.on('data', (data) => {
-    console.error(`stderr: ${data}`);
-  });
-  // Listen for exit
-  ffmpegProcess.on('close', (code) => {
-    console.log(`FFmpeg process exited with code ${code}`);
-  });
+    ffmpegProcess.on('close', (code) => {
+      if (code === 0) {
+        resolve(outputPath);
+      } else {
+        reject(new Error(`FFmpeg exited with code ${code}`));
+      }
+    });
 
-   // ffmpeg not found error
-  ffmpegProcess.on('error', (error) => {
-    console.error('Error spawning ffmpeg process:', error);
+    ffmpegProcess.on('error', (error) => {
+      reject(error);
+    });
   });
 };
