@@ -1,17 +1,21 @@
+// VideoGrid.jsx
 import React from 'react';
 import VideoContainer from './VideoContainer';
 
 const VideoGrid = ({ videos }) => {
-    if (!videos || videos.length === 0) {
-        return <p>No videos available.</p>;
-    }
     return (
+        // Main container for video grid
         <div className="video-grid">
             {videos.map((video) => (
-                <VideoContainer key={video.id} video={video} />
-        ))}
-    </div>
+                <VideoContainer 
+                    key={video.id} // Unique key for each video
+                    id={video.id} // Unique ID for each video
+                    title={video.title} // Title of the video
+                    videoUrl={video.videoUrl} // URL for the video
+                />
+            ))}
+        </div>
     );
 };
 
-export default VideoGrid;
+export default React.memo(VideoGrid);
