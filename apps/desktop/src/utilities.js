@@ -1,3 +1,4 @@
+import { app } from 'electron';
 import path from 'node:path';
 import fs from 'fs';
 import chokidar from 'chokidar';
@@ -59,4 +60,19 @@ export function getTimestamp() {
     + String(now.getSeconds()).padStart(2, '0');
 
 	return timestamp;
+}
+
+export function ensureAppDirectories() {
+  const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+  
+  if (!fs.existsSync(userVideosPath)) {
+    fs.mkdirSync(userVideosPath, { recursive: true });
+    console.log(`Created GCASP videos directory at: ${userVideosPath}`);
+  }
+}
+
+export function getAppPaths() {
+  return {
+    videosPath: path.join(app.getPath('videos'), 'GCASP')
+  };
 }
