@@ -1,6 +1,8 @@
 import { spawn } from 'child_process';
 import { app } from 'electron';
 import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config();
 
 export const runRecord = (timestamp) => {
   return new Promise((resolve, reject) => {
@@ -15,7 +17,7 @@ export const runRecord = (timestamp) => {
       outputPath
     ];
 
-    const ffmpegProcess = spawn('ffmpeg', args);
+    const ffmpegProcess = spawn(process.env.FFMPEG_EXECUTABLE_NAME, args);
     
     ffmpegProcess.stdout.on('data', (data) => {
       console.log(`ffmpeg stdout: ${data}`);
