@@ -6,6 +6,9 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('electron', {
 // Get list of local videos
 	getLocalVideos: () => ipcRenderer.invoke('get-local-videos'),
+	
+// Get list of local videos
+	removeLocalVideos: () => ipcRenderer.invoke('remove-local-videos'),
 
 // Trigger video recording
 	triggerRecordVideo: () => ipcRenderer.invoke('trigger-record'),

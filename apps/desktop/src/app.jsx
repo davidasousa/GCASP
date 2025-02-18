@@ -3,6 +3,8 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
 
+import { loadVideos } from './clientSideReq';
+
 import './app.css';
 
 const App = () => {
@@ -10,23 +12,9 @@ const App = () => {
     const [videos, setVideos] = useState([]);
 
     // Initial load of videos
-    useEffect(() => {
-        const loadVideos = async () => {
-            try {
-                const localVideos = await window.electron.getLocalVideos();
-                const processedVideos = localVideos.map(video => ({
-                    id: video.id,
-                    title: video.filename,
-                    videoUrl: `gcasp://${video.id.replace('clip_', '')}/`
-                }));
-                setVideos(processedVideos);
-            } catch (error) {
-                console.error('Error loading videos:', error);
-            }
-        };
-
-        loadVideos();
-    }, []);
+		useEffect(() => {
+			loadVideos(setVideos);
+		}, []);
 
     // Handle new recordings
     useEffect(() => {
@@ -43,11 +31,17 @@ const App = () => {
     }, []);
 
     const handleRecord = async () => {
-        try {
-            await window.electron.triggerRecordVideo();
-        } catch (error) {
-            console.error('Error starting recording:', error);
-        }
+			try { await window.electron.triggerRecordVideo(); } 
+			catch (error) { console.error('Error starting recording:', error); }
+    };
+
+    const removeLocalVideos = async () => {
+			try { 
+			await window.electron.removeLocalVideos(); 
+			loadVideos(setVideos);
+			} catch (error) { 
+			console.error('Error starting recording:', error); 
+			}
     };
 
     return (
@@ -67,6 +61,9 @@ const App = () => {
             <div className="record-button">
                 <button onClick={handleRecord}>
                     Record Screen
+                </button>
+                <button onClick={removeLocalVideos}>
+                    Delete Stashed Videos
                 </button>
             </div>
         </div>

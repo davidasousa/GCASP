@@ -22,6 +22,17 @@ ipcMain.handle('get-local-videos', () => {
     });
 });
 
+// Remove Local Videos
+ipcMain.handle('remove-local-videos', () => {
+    const files = fs.readdirSync(userVideosPath);
+    files.filter(file => file.endsWith('.mp4'))
+    .map(file => {
+        const filePath = path.join(userVideosPath, file);
+				fs.unlinkSync(filePath);  // Remove the file
+				console.log(`Deleted: ${filePath}`);
+    });
+});
+
 // Trigger video recording
 ipcMain.handle('trigger-record', async (event) => {
     const timestamp = new Date().toISOString()
@@ -52,7 +63,7 @@ ipcMain.handle('trigger-record', async (event) => {
             return videoInfo;
         }
         } catch (err) {
-        // File might not exist yet
+					console.log(err);
         }
         
         await new Promise(resolve => setTimeout(resolve, 500));
