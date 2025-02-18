@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { URL } from 'url';
 
-const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
 const ALLOWED_EXTENSIONS = ['.mp4'];
 
 const isPathWithinDirectory = (directory, targetPath) => {
@@ -18,8 +18,8 @@ return safeFilenameRegex.test(filename);
 };
 
 export function setupVideoProtocol() {
-    if (!fs.existsSync(userVideosPath)) {
-        fs.mkdirSync(userVideosPath, { recursive: true, mode: 0o700 });
+    if (!fs.existsSync(recordingsPath)) {
+        fs.mkdirSync(recordingsPath, { recursive: true, mode: 0o700 });
     }
 
     protocol.handle('gcasp', async (request) => {
@@ -34,7 +34,7 @@ export function setupVideoProtocol() {
             }
 
             // Find matching video file
-            const files = fs.readdirSync(userVideosPath);
+            const files = fs.readdirSync(recordingsPath);
             const videoFile = files.find(file => 
                 file.startsWith(`clip_${videoId}`) && 
                 ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
@@ -45,10 +45,10 @@ export function setupVideoProtocol() {
                 return new Response('Video not found', { status: 404 });
             }
 
-            const videoPath = path.join(userVideosPath, videoFile);
+            const videoPath = path.join(recordingsPath, videoFile);
 
             // Security checks
-            if (!isPathWithinDirectory(userVideosPath, videoPath)) {
+            if (!isPathWithinDirectory(recordingsPath, videoPath)) {
                 console.error('Attempted directory traversal:', videoPath);
                 return new Response('Access denied', { status: 403 });
             }

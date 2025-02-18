@@ -6,14 +6,14 @@ dotenv.config();
 
 export const runRecord = (timestamp) => {
   return new Promise((resolve, reject) => {
-    const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
-    const outputPath = path.join(userVideosPath, `clip_${timestamp}.mp4`);
+    const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
+    const outputPath = path.join(recordingsPath, `clip_${timestamp}.mp4`);
 
     const args = [
       '-y',
       '-f', 'gdigrab',
       '-i', 'desktop',
-      '-t', '2',
+      '-t', '5',
       outputPath
     ];
 
