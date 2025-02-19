@@ -3,7 +3,7 @@ import { app } from 'electron';
 import path from 'path';
 import dotenv from 'dotenv';
 
-dotenv.config()
+dotenv.config();
 
 export const runRecord = (timestamp) => {
   return new Promise((resolve, reject) => {
