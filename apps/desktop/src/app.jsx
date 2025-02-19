@@ -42,6 +42,10 @@ const App = () => {
         }
     };
 
+    const handleDeleteVideo = (id) => {
+        setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
+    };
+
     // Calculate slice of videos to show on current page.
     const indexOfLastVideo = currentPage * videosPerPage;
     const indexOfFirstVideo = indexOfLastVideo - videosPerPage;
@@ -65,36 +69,36 @@ const App = () => {
         <div className="app-container">
             <Sidebar currentView={currentView} onChangeView={setCurrentView} />
             <div className="main-content">
-                {currentView === 'home' && (
-                    <div>
-                        <button onClick={loadVideos}>Refresh Videos</button>
-                        {videos.length > 0 ? (
-                            <div>
-                                <VideoGrid videos={currentVideos} />
-                                <div className="pagination">
-                                    <button onClick={handlePrevPage} disabled={currentPage === 1}>
-                                        Previous
-                                    </button>
-                                    <span>
-                                        Page {currentPage} of {totalPages}
-                                    </span>
-                                    <button onClick={handleNextPage} disabled={currentPage === totalPages}>
-                                        Next
-                                    </button>
-                                </div>
+            {currentView === 'home' && (
+                <div>
+                    <button onClick={loadVideos}>Refresh Videos</button>
+                    {videos.length > 0 ? (
+                        <div>
+                            <VideoGrid videos={currentVideos} onDelete={handleDeleteVideo} />
+                            <div className="pagination">
+                                <button onClick={handlePrevPage} disabled={currentPage === 1}>
+                                    Previous
+                                </button>
+                                <span>
+                                    Page {currentPage} of {totalPages}
+                                </span>
+                                <button onClick={handleNextPage} disabled={currentPage === totalPages}>
+                                    Next
+                                </button>
                             </div>
-                        ) : (
-                            <p>No Videos Available</p>
-                        )}
-                    </div>
-                )}
-                {currentView === 'shared' && <div>Shared Clips (Coming Soon)</div>}
-                {currentView === 'settings' && <div>Settings (Coming Soon)</div>}
-            </div>
-            <div className="record-button">
-                <button onClick={handleRecord}>Record Screen</button>
-            </div>
+                        </div>
+                    ) : (
+                        <p>No Videos Available</p>
+                    )}
+                </div>
+            )}
+            {currentView === 'shared' && <div>Shared Clips (Coming Soon)</div>}
+            {currentView === 'settings' && <div>Settings (Coming Soon)</div>}
         </div>
+        <div className="record-button">
+            <button onClick={handleRecord}>Record Screen</button>
+        </div>
+    </div>
     );
 };
 
