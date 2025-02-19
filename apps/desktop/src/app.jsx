@@ -25,14 +25,12 @@ const App = () => {
         }
     };
 
-    // Load videos when the home view is active.
+    // Load videos when the component mounts or when the home view is selected.
     useEffect(() => {
         if (currentView === 'home') {
             loadVideos();
         }
     }, [currentView]);
-
-    // No longer automatically adding new recordings
 
     const handleRecord = async () => {
         try {
