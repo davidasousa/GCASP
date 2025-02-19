@@ -72,7 +72,13 @@ body {
 
 /* Video container styling */
 .video-container {
-	width: 100%;
+	border: 1px solid #ccc;
+	border-radius: 8px;
+	padding: 10px;
+	margin: 0.5rem;
+	background: #fafafa;
+	position: relative;
+	box-sizing: border-box;
 }
 
 /* The display area maintains a 16:9 aspect ratio */
@@ -90,6 +96,7 @@ body {
 	font-size: 1rem;
 	color: #333;
 }
+
 /* Make both the thumbnail image and Video.js player fill the container */
 .video-container img,
 .video-container .video-js,
@@ -106,16 +113,149 @@ body {
     height: auto;
 }
 
-/* Pagination styling */
+/* Video header styles */
+.video-header {
+	position: relative;
+	margin-top: 0.5rem;
+	text-align: center;
+}
+
+.video-header .delete-button {
+	position: absolute;
+	right: 0;
+	top: 0;
+	background: red;
+	color: white;
+	border: none;
+	padding: 5px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+/* Delete button (in header & modal) */
+.delete-button {
+	background: red;
+	color: white;
+	border: none;
+	padding: 5px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
+}
+
+.delete-button:hover {
+	background: darkred;
+}
+
+.delete-button:active {
+	transform: scale(0.98);
+}
+
+/* Delete modal */
+.delete-modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100vw;
+	height: 100vh;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1000;
+}
+
+.delete-modal .modal-content {
+	background: #fff;
+	padding: 20px;
+	border-radius: 8px;
+	text-align: center;
+	max-width: 300px;
+}
+
+.delete-modal .modal-buttons {
+	margin-top: 20px;
+	display: flex;
+	justify-content: space-around;
+}
+
+.delete-modal .modal-buttons button {
+	padding: 10px 20px;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
+}
+
+.delete-modal .cancel-button {
+	background: #ccc;
+	color: #000;
+}
+
+.delete-modal .cancel-button:hover {
+	background: #bbb;
+}
+
+.delete-modal .cancel-button:active {
+	transform: scale(0.98);
+}
+
+.delete-modal .delete-button {
+	background: red;
+	color: white;
+}
+
+.delete-modal .delete-button:hover {
+	background: darkred;
+}
+
+.delete-modal .delete-button:active {
+	transform: scale(0.98);
+}
+
+/* Pagination */
 .pagination {
-    text-align: center;
-    margin-top: 20px;
+	text-align: center;
+	margin-top: 20px;
 }
 
 .pagination button {
-    margin: 0 5px;
+	margin: 0 5px;
+	padding: 8px 12px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	background: #fff;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
+}
+
+.pagination button:hover {
+	background: #e0e0e0;
+}
+
+.pagination button:active {
+	transform: scale(0.98);
 }
 
 .pagination span {
-    margin: 0 10px;
+	margin: 0 10px;
+}
+
+/* Refresh button */
+.refresh-button {
+	padding: 8px 12px;
+	border: 1px solid #aaa;
+	border-radius: 4px;
+	background: #f5f5f5;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
+	margin-bottom: 10px;
+}
+
+.refresh-button:hover {
+	background: #e0e0e0;
+}
+
+.refresh-button:active {
+	transform: scale(0.98);
 }
