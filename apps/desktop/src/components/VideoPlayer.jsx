@@ -32,6 +32,7 @@ const VideoPlayer = ({ videoUrl, options = {}, onReady }) => {
 						'durationDisplay', // Total video time
                         'progressControl', // Progress bar
                         'playbackRateMenuButton', // Speed control
+                        'qualitySelector', // Quality selector
                         'fullscreenToggle' // Fullscreen button
                     ],
                 },

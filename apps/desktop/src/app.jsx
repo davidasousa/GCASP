@@ -9,38 +9,27 @@ const App = () => {
     const [currentView, setCurrentView] = useState('home');
     const [videos, setVideos] = useState([]);
 
-    // Initial load of videos
+    // Define a function to load videos manually.
+    const loadVideos = async () => {
+        try {
+            const localVideos = await window.electron.getLocalVideos();
+            const processedVideos = localVideos.map(video => ({
+                id: video.id,
+                title: video.filename,
+                videoUrl: `gcasp://${video.id.replace('clip_', '')}/`
+            }));
+            setVideos(processedVideos);
+        } catch (error) {
+            console.error('Error loading videos:', error);
+        }
+    };
+
+    // Load videos when the component mounts or when the home view is selected.
     useEffect(() => {
-        const loadVideos = async () => {
-            try {
-                const localVideos = await window.electron.getLocalVideos();
-                const processedVideos = localVideos.map(video => ({
-                    id: video.id,
-                    title: video.filename,
-                    videoUrl: `gcasp://${video.id.replace('clip_', '')}/`
-                }));
-                setVideos(processedVideos);
-            } catch (error) {
-                console.error('Error loading videos:', error);
-            }
-        };
-
-        loadVideos();
-    }, []);
-
-    // Handle new recordings
-    useEffect(() => {
-        const handleNewRecording = (newVideo) => {
-            const processedVideo = {
-                id: newVideo.id,
-                title: newVideo.filename,
-                videoUrl: `gcasp://${newVideo.id}/`
-            };
-            setVideos(prevVideos => [processedVideo, ...prevVideos]);
-        };
-
-        window.electron.onNewRecording(handleNewRecording);
-    }, []);
+        if (currentView === 'home') {
+            loadVideos();
+        }
+    }, [currentView]);
 
     const handleRecord = async () => {
         try {
@@ -55,11 +44,14 @@ const App = () => {
             <Sidebar currentView={currentView} onChangeView={setCurrentView} />
             <div className="main-content">
                 {currentView === 'home' && (
-                    videos.length > 0 ? (
-                        <VideoGrid videos={videos} />
-                    ) : (
-                        <p>No Videos Available</p>
-                    )
+                    <div>
+                        <button onClick={loadVideos}>Refresh Videos</button>
+                        {videos.length > 0 ? (
+                            <VideoGrid videos={videos} />
+                        ) : (
+                            <p>No Videos Available</p>
+                        )}
+                    </div>
                 )}
                 {currentView === 'shared' && <div>Shared Clips (Coming Soon)</div>}
                 {currentView === 'settings' && <div>Settings (Coming Soon)</div>}
