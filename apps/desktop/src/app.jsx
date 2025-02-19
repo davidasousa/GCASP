@@ -13,6 +13,8 @@ const App = () => {
     const loadVideos = async () => {
         try {
             const localVideos = await window.electron.getLocalVideos();
+            // Sort videos by timestamp in descending order (newest first)
+            localVideos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             const processedVideos = localVideos.map(video => ({
                 id: video.id,
                 title: video.filename,
