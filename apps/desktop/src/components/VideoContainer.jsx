@@ -34,7 +34,7 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 	};
 
 	return (
-		<div className="video-container" style={{ position: 'relative' }}>
+		<div className="video-container">
 			<div className="video-display">
 				<VideoPlayer
 					videoUrl={videoUrl}
@@ -42,72 +42,25 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 					options={{ inactivityTimeout: 2000 }}
 				/>
 			</div>
-			<div
-				className="video-header"
-				style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem' }}
-			>
-				<h3 className="video-title" style={{ margin: 0 }}>{title}</h3>
+			<div className="video-header">
+				<h3 className="video-title">{title}</h3>
 				<button
 					onClick={handleDeleteClick}
-					style={{
-						background: 'red',
-						color: 'white',
-						border: 'none',
-						padding: '5px 10px',
-						borderRadius: '4px',
-						cursor: 'pointer'
-					}}
+					className="delete-button"
 					aria-label={`Delete ${title}`}
 				>
 					Delete
 				</button>
 			</div>
 			{showDeletePrompt && (
-				<div
-					className="delete-modal"
-					style={{
-						position: 'fixed',
-						top: 0,
-						left: 0,
-						width: '100vw',
-						height: '100vh',
-						backgroundColor: 'rgba(0,0,0,0.5)',
-						display: 'flex',
-						alignItems: 'center',
-						justifyContent: 'center',
-						zIndex: 1000
-					}}
-				>
-					<div
-						style={{
-							background: '#fff',
-							padding: '20px',
-							borderRadius: '8px',
-							textAlign: 'center',
-							maxWidth: '300px'
-						}}
-					>
+				<div className="delete-modal">
+					<div className="modal-content">
 						<p>Are you sure you want to delete "{title}"?</p>
-						<div
-							style={{
-								marginTop: '20px',
-								display: 'flex',
-								justifyContent: 'space-around'
-							}}
-						>
-							<button onClick={cancelDelete} style={{ padding: '10px 20px' }}>
+						<div className="modal-buttons">
+							<button onClick={cancelDelete} className="cancel-button">
 								Cancel
 							</button>
-							<button
-								onClick={confirmDelete}
-								style={{
-									padding: '10px 20px',
-									backgroundColor: 'red',
-									color: 'white',
-									border: 'none',
-									borderRadius: '4px'
-								}}
-							>
+							<button onClick={confirmDelete} className="delete-button">
 								Delete
 							</button>
 						</div>
