@@ -8,7 +8,7 @@ import { setupIpcHandlers } from './ipcHandlers';
 import { ensureAppDirectories, deleteRecordings } from './utilities';
 
 // Get user's videos directory
-const recordingsPath = path.join(app.getPath('videos'), 'GCASP');
+const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
 
 // Register gcasp:// as a secure protocol
 protocol.registerSchemesAsPrivileged([

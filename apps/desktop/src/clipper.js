@@ -19,7 +19,6 @@ export const clipper = async () => {
 	useEffect(() => {
 		const handleNewRecording = async (videoInfo) => {
 			clipWindow.push(videoInfo);
-			console.log(videoInfo);
 			
 			if(clipWindow.length > 5) {
 				throw new Error("Clip Window Length Exceeded");
