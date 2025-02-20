@@ -41,11 +41,11 @@ const App = () => {
   
 		let userClipSettings = new clipSettings(2);
 
-    // Initial load of videos
-		useEffect(() => { loadVideos(setVideos); }, []);
-
 		// Clip Recordings
 		clipper();
+
+    // Initial load of videos
+		useEffect(() => { loadVideos(setVideos); }, []);
 
     const handleRecord = async () => {
 			try { await window.electron.triggerRecordVideo(); } 
@@ -57,8 +57,9 @@ const App = () => {
 			catch (error) { console.error('Error starting recording:', error); }
     };
 
-    const removeLocalVideos = async () => {
+    const handleClearRecordings = async () => {
 			try { 
+			console.log("Clear Recording");
 			await window.electron.removeLocalVideos(); 
 			loadVideos(setVideos);
 			} catch (error) { 
@@ -89,68 +90,52 @@ const App = () => {
         }
     };
 
-	return (
-		<div className="app-container">
-			<Sidebar currentView={currentView} onChangeView={setCurrentView} />
-			<div className="main-content">
-				{currentView === 'home' && (
-					<div>
-						<button className="refresh-button" onClick={loadVideos}>
-							Refresh Videos
-						</button>
-						{videos.length > 0 ? (
-							<div>
-								<VideoGrid videos={currentVideos} onDelete={handleDeleteVideo} />
-								<div className="pagination">
-									<button onClick={handlePrevPage} disabled={currentPage === 1}>
-										Previous
-									</button>
-									<span>
-										Page {currentPage} of {totalPages}
-									</span>
-									<button onClick={handleNextPage} disabled={currentPage === totalPages}>
-										Next
-									</button>
-								</div>
-							</div>
-						) : (
-							<p>No Videos Available</p>
-						)}
-					</div>
-				)}
-				{currentView === 'shared' && <div>Shared Clips (Coming Soon)</div>}
-				{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
-			</div>
-			<div className="record-button">
-				<button onClick={handleRecord}>Record Screen</button>
-			</div>
-		</div>
-	);
 		// Constant Recording
-		setInterval(() => { handleRecord(); }, 5300); // FIX THIS
+		// setInterval(() => { handleRecord(); }, 15 * 1000 + 300); // FIX THIS
 
-    return (
-        <div className="app-container">
-            <Sidebar currentView={currentView} onChangeView={setCurrentView} />
-            <div className="main-content">
-                {currentView === 'home' && (
-                    videos.length > 0 
-										? ( <VideoGrid videos={videos}/> ) 
-										: ( <p>No Videos Available</p> )
-                )}
-                {currentView === 'shared' && <div>Shared Clips (Coming Soon)</div>}
-                {currentView === 'settings' && <div>Settings (Coming Soon)</div>}
-            </div>
-            <div className="record-button">
-                <button onClick={handleClip}>
-                    Clip Screen
-                </button>
-                <button onClick={removeLocalVideos}>
-                    Delete Stashed Videos
-                </button>
-            </div>
-        </div>
-    );
+		return (
+			<div className="app-container">
+				<Sidebar currentView={currentView} onChangeView={setCurrentView} />
+				<div className="main-content">
+					{currentView === 'home' && (
+						<div>
+							<button className="refresh-button" onClick={loadVideos}>
+								Refresh Videos
+							</button>
+							<button className = "Clip Recording" onClick={handleClip}>
+								Record Clip
+							</button>
+							<button className = "Clear Recordings" onClick={handleClearRecordings}>
+								Delete All Recordings
+							</button>
+
+							{videos.length > 0 ? (
+								<div>
+									<VideoGrid videos={currentVideos} onDelete={handleDeleteVideo} />
+									<div className="pagination">
+										<button onClick={handlePrevPage} disabled={currentPage === 1}>
+											Previous
+										</button>
+										<span>
+											Page {currentPage} of {totalPages}
+										</span>
+										<button onClick={handleNextPage} disabled={currentPage === totalPages}>
+											Next
+										</button>
+									</div>
+								</div>
+							) : (
+								<p>No Videos Available</p>
+							)}
+
+						</div>
+					)}
+					{currentView === 'shared' && <div>Shared Clips (Coming Soon)</div>}
+					{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
+				</div>
+			</div>
+		);
+
 };
 
 export default App;

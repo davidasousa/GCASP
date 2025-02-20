@@ -6,15 +6,16 @@ import { deleteRecordings } from './utilities';
 import { clipSettings } from './clipper.js';
 
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
+const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
 
 export function setupIpcHandlers() {
 // Get list of local videos
 ipcMain.handle('get-local-videos', () => {
-    const files = fs.readdirSync(recordingsPath);
+    const files = fs.readdirSync(clipsPath);
     return files
     .filter(file => file.endsWith('.mp4'))
     .map(file => {
-        const filePath = path.join(recordingsPath, file);
+        const filePath = path.join(clipsPath, file);
         const stats = fs.statSync(filePath);
         return {
         id: path.parse(file).name,
@@ -26,7 +27,15 @@ ipcMain.handle('get-local-videos', () => {
 
 // Remove Local Videos
 ipcMain.handle('remove-local-videos', () => {
-	deleteRecordings();
+	function deleteRecordings() {
+		const files = fs.readdirSync(recordingsPath);
+		files.filter(file => file.endsWith('.mp4'))
+		.map(file => {
+				const filePath = path.join(recordingsPath, file);
+				fs.unlinkSync(filePath);  // Remove the file
+				console.log(`Deleted: ${filePath}`);
+		});
+	}
 });
 
 // Trigger video recording
@@ -75,7 +84,7 @@ ipcMain.handle('trigger-record', async (event) => {
 
 // Delete a specific video
 ipcMain.handle('remove-specific-video', (event, filename) => {
-    const filePath = path.join(userVideosPath, filename);
+    const filePath = path.join(recordingsPath, filename);
     if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
         console.log(`Deleted: ${filePath}`);
@@ -86,6 +95,7 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
 
 ipcMain.handle('trigger-clip', async (event, clipSettings) => {
 	// Wait For Current Recording To Finish
+	console.log(clipSettings.length);
 });
 
 }
