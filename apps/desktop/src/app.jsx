@@ -62,6 +62,11 @@ const App = () => {
 			}
     };
 
+    const handleClip = async () => {
+			try { await window.electron.triggerClipVideo(userClipSettings); } 
+			catch (error) { console.error('Error starting recording:', error); }
+    };
+
     const handleDeleteVideo = (id) => {
         setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
     };
@@ -94,7 +99,7 @@ const App = () => {
 							<button className="refresh-button" onClick={loadVideos}>
 								Refresh Videos
 							</button>
-							<button className = "Clip Recording">
+							<button className = "Clip Recording" onClick={handleClip}>
 								Record Clip
 							</button>
 							<button className = "Clear Recordings" onClick={handleClearRecordings}>

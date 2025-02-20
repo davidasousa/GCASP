@@ -91,4 +91,9 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
     return { success: false, error: 'File not found' };
 });
 
+ipcMain.handle('trigger-clip', async (event, clipSettings) => {
+	// Wait For Current Recording To Finish
+	console.log(clipSettings.length);
+});
+
 }

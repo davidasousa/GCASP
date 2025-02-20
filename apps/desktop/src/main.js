@@ -48,6 +48,14 @@ app.whenReady().then(() => {
 	});
 
 	app.on('window-all-closed', () => {
+		const files = fs.readdirSync(recordingsPath);
+		files.filter(file => file.endsWith('.mp4'))
+		.map(file => {
+				const filePath = path.join(recordingsPath, file);
+				fs.unlinkSync(filePath);  // Remove the file
+				console.log(`Deleted: ${filePath}`);
+		});
+
 	if (process.platform !== 'darwin') {
 		app.quit();
 	}
