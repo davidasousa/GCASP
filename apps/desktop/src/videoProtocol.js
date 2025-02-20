@@ -19,7 +19,7 @@ function nodeStreamToWebStream(nodeStream) {
   });
 }
 
-const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+const recordingsPath = path.join(app.getPath('videos'), 'GCASP');
 
 const ALLOWED_EXTENSIONS = ['.mp4'];
 
@@ -48,7 +48,7 @@ export function setupVideoProtocol() {
                 return new Response('Invalid request', { status: 400 });
             }
 
-            const files = fs.readdirSync(userVideosPath);
+            const files = fs.readdirSync(recordingsPath);
 
             const videoFile = files.find(file => 
                 file.startsWith(`clip_${videoId}`) && 
@@ -62,7 +62,7 @@ export function setupVideoProtocol() {
 
             const videoPath = path.join(recordingsPath, videoFile);
 
-            if (!isPathWithinDirectory(userVideosPath, videoPath)) {
+            if (!isPathWithinDirectory(recordingPath, videoPath)) {
 
                 console.error('Attempted directory traversal:', videoPath);
                 return new Response('Access denied', { status: 403 });
