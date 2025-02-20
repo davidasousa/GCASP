@@ -12,6 +12,11 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 		});
 	};
 
+	const handleEditClick = () => {
+		console.log(`Editing video: ${title}`);
+		// TODO
+	};
+
 	const handleDeleteClick = () => {
 		setShowDeletePrompt(true);
 	};
@@ -44,6 +49,13 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 			</div>
 			<div className="video-header">
 				<h3 className="video-title">{title}</h3>
+				<button
+					onClick={handleEditClick}
+					className="edit-button"
+					aria-label={`Edit ${title}`}
+				>
+					Edit
+				</button>
 				<button
 					onClick={handleDeleteClick}
 					className="delete-button"

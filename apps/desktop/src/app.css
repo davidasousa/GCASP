@@ -132,6 +132,28 @@ body {
 	cursor: pointer;
 }
 
+/* Edit button in header */
+.video-header .edit-button {
+	position: absolute;
+	right: 60px;
+	top: 0;
+	background: #007bff;
+	color: white;
+	border: none;
+	padding: 5px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
+}
+
+.video-header .edit-button:hover {
+	background: #0069d9;
+}
+
+.video-header .edit-button:active {
+	transform: scale(0.98);
+}
+
 /* Delete button (in header & modal) */
 .delete-button {
 	background: red;

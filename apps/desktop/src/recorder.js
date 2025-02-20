@@ -13,12 +13,15 @@ export const runRecord = (timestamp) => {
     const args = [
       '-y',
       '-f', 'gdigrab',
+      '-video_size', '2560x1440',
+      '-offset_x', '0',
+      '-offset_y', '0',
       '-i', 'desktop',
       '-t', '5',
       outputPath
     ];
-
-    const ffmpegProcess = spawn(process.env.FFMPEG_EXECUTABLE_NAME, args);
+    
+    const ffmpegProcess = spawn('ffmpeg', args);
     
     ffmpegProcess.stdout.on('data', (data) => {
       console.log(`ffmpeg stdout: ${data}`);
