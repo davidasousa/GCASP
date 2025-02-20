@@ -1,20 +1,36 @@
 // videoProtocol.js
-import { protocol, net, app } from 'electron';
+import { protocol, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { URL } from 'url';
 
-const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
+
+// Custom conversion helper
+function nodeStreamToWebStream(nodeStream) {
+  return new ReadableStream({
+    start(controller) {
+      nodeStream.on('data', (chunk) => controller.enqueue(chunk));
+      nodeStream.on('end', () => controller.close());
+      nodeStream.on('error', (err) => controller.error(err));
+    },
+    cancel(reason) {
+      nodeStream.destroy();
+    }
+  });
+}
+
+const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+
 const ALLOWED_EXTENSIONS = ['.mp4'];
 
 const isPathWithinDirectory = (directory, targetPath) => {
-const relative = path.relative(directory, targetPath);
-return relative && !relative.startsWith('..') && !path.isAbsolute(relative);
+    const relative = path.relative(directory, targetPath);
+    return relative && !relative.startsWith('..') && !path.isAbsolute(relative);
 };
 
 const isValidFilename = (filename) => {
-const safeFilenameRegex = /^[a-zA-Z0-9-_]+(\.[a-zA-Z0-9]+)?$/;
-return safeFilenameRegex.test(filename);
+    const safeFilenameRegex = /^[a-zA-Z0-9-_]+(\.[a-zA-Z0-9]+)?$/;
+    return safeFilenameRegex.test(filename);
 };
 
 export function setupVideoProtocol() {
@@ -24,7 +40,6 @@ export function setupVideoProtocol() {
 
     protocol.handle('gcasp', async (request) => {
         try {
-            // Validate request URL
             const requestUrl = new URL(request.url);
             const videoId = decodeURIComponent(requestUrl.hostname);
 
@@ -33,8 +48,8 @@ export function setupVideoProtocol() {
                 return new Response('Invalid request', { status: 400 });
             }
 
-            // Find matching video file
-            const files = fs.readdirSync(recordingsPath);
+            const files = fs.readdirSync(userVideosPath);
+
             const videoFile = files.find(file => 
                 file.startsWith(`clip_${videoId}`) && 
                 ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
@@ -47,13 +62,12 @@ export function setupVideoProtocol() {
 
             const videoPath = path.join(recordingsPath, videoFile);
 
-            // Security checks
-            if (!isPathWithinDirectory(recordingsPath, videoPath)) {
+            if (!isPathWithinDirectory(userVideosPath, videoPath)) {
+
                 console.error('Attempted directory traversal:', videoPath);
                 return new Response('Access denied', { status: 403 });
             }
 
-            // Get file stats
             const stats = await fs.promises.stat(videoPath);
             if (!stats.isFile()) {
                 return new Response('Invalid file type', { status: 400 });
@@ -68,45 +82,35 @@ export function setupVideoProtocol() {
                 const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
 
                 if (start >= fileSize || end >= fileSize || start > end) {
-                return new Response('Requested range not satisfiable', {
-                    status: 416,
-                    headers: {
-                    'Content-Range': `bytes */${fileSize}`
-                    }
-                });
+                    return new Response('Requested range not satisfiable', {
+                        status: 416,
+                        headers: { 'Content-Range': `bytes */${fileSize}` }
+                    });
                 }
 
                 const chunksize = end - start + 1;
                 const headers = {
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize.toString(),
-                'Content-Type': 'video/mp4'
+                    'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                    'Accept-Ranges': 'bytes',
+                    'Content-Length': chunksize.toString(),
+                    'Content-Type': 'video/mp4'
                 };
 
-                // Create a new response with 206 Partial Content status
-                return new Response(
-                fs.createReadStream(videoPath, { start, end }), 
-                { 
-                    status: 206, 
-                    headers
-                }
-                );
+                const nodeStream = fs.createReadStream(videoPath, { start, end });
+                const webStream = nodeStreamToWebStream(nodeStream);
+                return new Response(webStream, { status: 206, headers });
             }
 
-            // Full file response
-            return new Response(
-                fs.createReadStream(videoPath),
-                {
+            const nodeStream = fs.createReadStream(videoPath);
+            const webStream = nodeStreamToWebStream(nodeStream);
+            return new Response(webStream, {
                 status: 200,
                 headers: {
                     'Content-Length': fileSize.toString(),
                     'Content-Type': 'video/mp4',
                     'Accept-Ranges': 'bytes'
                 }
-                }
-            );
-
+            });
         } catch (error) {
             console.error('Protocol handler error:', error);
             return new Response('Internal error', { status: 500 });

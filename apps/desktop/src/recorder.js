@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import { app } from 'electron';
 import path from 'path';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 export const runRecord = (timestamp) => {

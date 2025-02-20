@@ -29,13 +29,6 @@ ipcMain.handle('remove-local-videos', () => {
 	deleteRecordings();
 });
 
-// Remove Specific Video
-ipcMain.handle('remove-specific-video', (event, file) => {
-		const filePath = path.join(recordingsPath, file);
-		fs.unlinkSync(filePath);  // Remove the file
-		console.log(`Deleted: ${filePath}`);
-});
-
 // Trigger video recording
 ipcMain.handle('trigger-record', async (event) => {
     const timestamp = new Date().toISOString()
@@ -80,9 +73,20 @@ ipcMain.handle('trigger-record', async (event) => {
     }
 });
 
+// Delete a specific video
+ipcMain.handle('remove-specific-video', (event, filename) => {
+    const filePath = path.join(userVideosPath, filename);
+    if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`Deleted: ${filePath}`);
+        return { success: true };
+    }
+    return { success: false, error: 'File not found' };
+});
+=======
+
 ipcMain.handle('trigger-clip', async (event, clipSettings) => {
 	// Wait For Current Recording To Finish
 });
 
 }
-
