@@ -40,9 +40,10 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 
 	return (
 		<div className="video-container">
-			<div className="video-display">
+			<div className="video-display" onClick={onActivate}>
 				<VideoPlayer
 					videoUrl={videoUrl}
+					isActive={isActive}
 					onReady={handlePlayerReady}
 					options={{ inactivityTimeout: 2000 }}
 				/>
