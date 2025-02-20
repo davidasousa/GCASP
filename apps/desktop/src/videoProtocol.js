@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { URL } from 'url';
 
+
 // Custom conversion helper
 function nodeStreamToWebStream(nodeStream) {
   return new ReadableStream({
@@ -19,6 +20,7 @@ function nodeStreamToWebStream(nodeStream) {
 }
 
 const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+
 const ALLOWED_EXTENSIONS = ['.mp4'];
 
 const isPathWithinDirectory = (directory, targetPath) => {
@@ -32,8 +34,8 @@ const isValidFilename = (filename) => {
 };
 
 export function setupVideoProtocol() {
-    if (!fs.existsSync(userVideosPath)) {
-        fs.mkdirSync(userVideosPath, { recursive: true, mode: 0o700 });
+    if (!fs.existsSync(recordingsPath)) {
+        fs.mkdirSync(recordingsPath, { recursive: true, mode: 0o700 });
     }
 
     protocol.handle('gcasp', async (request) => {
@@ -47,6 +49,7 @@ export function setupVideoProtocol() {
             }
 
             const files = fs.readdirSync(userVideosPath);
+
             const videoFile = files.find(file => 
                 file.startsWith(`clip_${videoId}`) && 
                 ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
@@ -57,9 +60,10 @@ export function setupVideoProtocol() {
                 return new Response('Video not found', { status: 404 });
             }
 
-            const videoPath = path.join(userVideosPath, videoFile);
+            const videoPath = path.join(recordingsPath, videoFile);
 
             if (!isPathWithinDirectory(userVideosPath, videoPath)) {
+
                 console.error('Attempted directory traversal:', videoPath);
                 return new Response('Access denied', { status: 403 });
             }

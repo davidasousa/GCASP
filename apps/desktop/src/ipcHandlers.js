@@ -2,17 +2,19 @@ import { ipcMain, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { runRecord } from './recorder';
+import { deleteRecordings } from './utilities';
+import { clipSettings } from './clipper.js';
 
-const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
 
 export function setupIpcHandlers() {
 // Get list of local videos
 ipcMain.handle('get-local-videos', () => {
-    const files = fs.readdirSync(userVideosPath);
+    const files = fs.readdirSync(recordingsPath);
     return files
     .filter(file => file.endsWith('.mp4'))
     .map(file => {
-        const filePath = path.join(userVideosPath, file);
+        const filePath = path.join(recordingsPath, file);
         const stats = fs.statSync(filePath);
         return {
         id: path.parse(file).name,
@@ -20,6 +22,11 @@ ipcMain.handle('get-local-videos', () => {
         timestamp: stats.mtime
         };
     });
+});
+
+// Remove Local Videos
+ipcMain.handle('remove-local-videos', () => {
+	deleteRecordings();
 });
 
 // Trigger video recording
@@ -52,7 +59,7 @@ ipcMain.handle('trigger-record', async (event) => {
             return videoInfo;
         }
         } catch (err) {
-        // File might not exist yet
+					console.log(err);
         }
         
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -65,7 +72,6 @@ ipcMain.handle('trigger-record', async (event) => {
     throw error;
     }
 });
-}
 
 // Delete a specific video
 ipcMain.handle('remove-specific-video', (event, filename) => {
@@ -77,3 +83,10 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
     }
     return { success: false, error: 'File not found' };
 });
+=======
+
+ipcMain.handle('trigger-clip', async (event, clipSettings) => {
+	// Wait For Current Recording To Finish
+});
+
+}
