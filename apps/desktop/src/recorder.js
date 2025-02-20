@@ -15,13 +15,12 @@ export const runRecord = (timestamp) => {
       '-y',
       '-f', 'gdigrab',
       '-i', 'desktop',
-      '-t', '15',
+      '-t', '5',
       outputPath
     ];
 
     const ffmpegProcess = spawn(process.env.FFMPEG_EXECUTABLE_NAME, args);
    	
-		/*
     ffmpegProcess.stdout.on('data', (data) => {
       console.log(`ffmpeg stdout: ${data}`);
     });
@@ -41,7 +40,6 @@ export const runRecord = (timestamp) => {
     ffmpegProcess.on('error', (error) => {
       reject(error);
     });
-		*/
 
   });
 };

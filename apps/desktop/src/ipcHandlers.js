@@ -27,7 +27,6 @@ ipcMain.handle('get-local-videos', () => {
 
 // Remove Local Videos
 ipcMain.handle('remove-local-videos', () => {
-	function deleteRecordings() {
 		const files = fs.readdirSync(recordingsPath);
 		files.filter(file => file.endsWith('.mp4'))
 		.map(file => {
@@ -35,7 +34,6 @@ ipcMain.handle('remove-local-videos', () => {
 				fs.unlinkSync(filePath);  // Remove the file
 				console.log(`Deleted: ${filePath}`);
 		});
-	}
 });
 
 // Trigger video recording
@@ -64,7 +62,7 @@ ipcMain.handle('trigger-record', async (event) => {
             };
             
             // Only notify about new recording after file is confirmed ready
-            event.sender.send('new-recording', videoInfo);
+            event.sender.send('recording-done', videoInfo);
             return videoInfo;
         }
         } catch (err) {
@@ -91,11 +89,6 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
         return { success: true };
     }
     return { success: false, error: 'File not found' };
-});
-
-ipcMain.handle('trigger-clip', async (event, clipSettings) => {
-	// Wait For Current Recording To Finish
-	console.log(clipSettings.length);
 });
 
 }

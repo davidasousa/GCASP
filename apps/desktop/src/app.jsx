@@ -41,25 +41,20 @@ const App = () => {
   
 		let userClipSettings = new clipSettings(2);
 
-		// Clip Recordings
+		// Clip Recordings Processor
 		clipper();
 
+		// Starting The Recording Process	
+		useEffect(() => { 
+			window.electron.triggerRecordVideo(); 
+		}, []);
+
+
     // Initial load of videos
-		useEffect(() => { loadVideos(setVideos); }, []);
-
-    const handleRecord = async () => {
-			try { await window.electron.triggerRecordVideo(); } 
-			catch (error) { console.error('Error starting recording:', error); }
-    };
-
-    const handleClip = async () => {
-			try { await window.electron.triggerClipVideo(userClipSettings); } 
-			catch (error) { console.error('Error starting recording:', error); }
-    };
+		// useEffect(() => { loadVideos(setVideos); }, []);
 
     const handleClearRecordings = async () => {
 			try { 
-			console.log("Clear Recording");
 			await window.electron.removeLocalVideos(); 
 			loadVideos(setVideos);
 			} catch (error) { 
@@ -90,9 +85,6 @@ const App = () => {
         }
     };
 
-		// Constant Recording
-		// setInterval(() => { handleRecord(); }, 15 * 1000 + 300); // FIX THIS
-
 		return (
 			<div className="app-container">
 				<Sidebar currentView={currentView} onChangeView={setCurrentView} />
@@ -102,7 +94,7 @@ const App = () => {
 							<button className="refresh-button" onClick={loadVideos}>
 								Refresh Videos
 							</button>
-							<button className = "Clip Recording" onClick={handleClip}>
+							<button className = "Clip Recording">
 								Record Clip
 							</button>
 							<button className = "Clear Recordings" onClick={handleClearRecordings}>
