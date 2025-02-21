@@ -48,6 +48,7 @@ app.whenReady().then(() => {
 	});
 
 	app.on('window-all-closed', () => {
+		// Deleting All Recordings
 		const files = fs.readdirSync(recordingsPath);
 		files.filter(file => file.endsWith('.mp4'))
 		.map(file => {

@@ -1,37 +1,38 @@
 import { useEffect } from 'react';
 
-export class clipSettings {
-	constructor(length) {
-		this.length = length;
-	}
+export class clipper {
+constructor(_clipLength) {
+	this.clipLength = length;
+	this.clipWindow = [];
+	this.captureFlag = false;
+
+	// Calling The First Record
+	this.handleRecord();
 }
 
-const handleRecord = async () => {
-	console.log("Start");
+async runClipper() {
+		useEffect(() => {
+		const handleNewRecording = async (videoInfo) => {
+			this.clipWindow.push(videoInfo);
+
+			if(this.clipWindow.length > 5) {
+				throw new Error("Clip Window Length Exceeded");
+			} else if(this.clipWindow.length == 5) {
+				const file = this.clipWindow[0].filename;
+				await window.electron.removeSpecificVideo(file);
+				this.clipWindow.shift();
+			}
+
+			await this.handleRecord();
+		}
+
+		window.electron.onRecordingDone(handleNewRecording);
+	}, []);
+};
+
+// Trigger The Recording Of The Next Video
+async handleRecord() {
 	try { await window.electron.triggerRecordVideo(); } 
 	catch (error) { console.error('Error starting recording:', error); }
 };
-
-export const clipper = async () => {
-	var clipWindow = [];
-
-	// Storing LRU Videos
-	useEffect(() => {
-		const handleNewRecording = async (videoInfo) => {
-			clipWindow.push(videoInfo);
-			
-			if(clipWindow.length > 5) {
-				throw new Error("Clip Window Length Exceeded");
-			} else if(clipWindow.length == 5) {
-				const file = clipWindow[0].filename;
-				await window.electron.removeSpecificVideo(file); 
-				clipWindow.shift();
-				await handleRecord();
-			} else {
-				await handleRecord();
-			}
-		}
-		
-		window.electron.onRecordingDone(handleNewRecording); 
-	}, []);
 }

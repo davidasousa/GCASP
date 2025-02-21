@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
 
 import { loadVideos } from './clientSideReq';
-import { clipper, clipSettings } from './clipper';
+import { clipper } from './clipper';
 
 import './app.css';
 
@@ -39,17 +39,6 @@ const App = () => {
         }
     }, [currentView]);
   
-		let userClipSettings = new clipSettings(2);
-
-		// Clip Recordings Processor
-		clipper();
-
-		// Starting The Recording Process	
-		useEffect(() => { 
-			window.electron.triggerRecordVideo(); 
-		}, []);
-
-
     // Initial load of videos
 		// useEffect(() => { loadVideos(setVideos); }, []);
 
@@ -63,8 +52,6 @@ const App = () => {
     };
 
     const handleClip = async () => {
-			try { await window.electron.triggerClipVideo(userClipSettings); } 
-			catch (error) { console.error('Error starting recording:', error); }
     };
 
     const handleDeleteVideo = (id) => {
@@ -90,6 +77,11 @@ const App = () => {
         }
     };
 
+		// Creating The Clipper Object & Starting The Recording
+		let programClipper = new clipper(5);
+		programClipper.runClipper();
+
+		// JSX Element
 		return (
 			<div className="app-container">
 				<Sidebar currentView={currentView} onChangeView={setCurrentView} />
@@ -132,7 +124,7 @@ const App = () => {
 				</div>
 			</div>
 		);
-
+		// End JSX Element
 };
 
 export default App;
