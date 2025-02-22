@@ -12,6 +12,14 @@ const App = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const videosPerPage = 10;
 
+		// Creating The Clipper Object
+		var clipLength = 5;
+		var clipWindow = [];
+		const [captureFlag, setCaptureFlag] = useState(false);
+		const captureFlagRef = useRef(captureFlag);
+		useEffect(() => { captureFlagRef.current = captureFlag; }, [captureFlag]);
+
+
     // Function to load videos from the folder.
     const loadVideos = async () => {
         try {
@@ -31,6 +39,32 @@ const App = () => {
         }
     };
 
+		// Core Recording + Clipping Loop
+		const triggerRecord = () => {
+			const loop = async () => {
+					// Get New Video
+					const videoInfo = await window.electron.triggerRecordVideo(); 
+
+					// Remove Last Video
+					if(clipWindow.length > 5) {
+						throw new Error("Clip Window Length Exceeded");
+					} else if(clipWindow.length == 5) {
+						const file = clipWindow[0].filename;
+						await window.electron.removeSpecificVideo(file);
+						clipWindow.shift();
+					}		
+					// Add New Video To Buffer
+					clipWindow.push(videoInfo);	
+					// Clipping Video
+					if(captureFlagRef.current) {
+						await window.electron.triggerClipVideo(clipLength);
+						setCaptureFlag(false);
+					}
+					setTimeout(loop, 5); // 100 ms delay between recordings
+				};
+			loop();
+		};
+
     // Load videos when the component mounts or when the home view is selected.
     useEffect(() => {
         if (currentView === 'home') {
@@ -41,14 +75,15 @@ const App = () => {
     // Initial load of videos & starting clipper
 		useEffect(() => { 
 			loadVideos(setVideos); 
+			triggerRecord();
 		}, []);
 
     const handleClearClips = async () => {
 			try { 
-			await window.electron.removeLocalClips(); 
-			loadVideos(setVideos);
+				await window.electron.removeLocalClips(); 
+				loadVideos(setVideos);
 			} catch (error) { 
-			console.error('Error starting recording:', error); 
+				console.error('Error starting recording:', error); 
 			}
     };
 
@@ -75,54 +110,19 @@ const App = () => {
         }
     };
 
-		// Creating The Clipper Object
-		var clipLength = 5;
-		var clipWindow = [];
+		const enableCaptureFlag = () => { 
+			if(captureFlagRef.current == true) {
+				console.log("Error Clipping In Process");
+				return;
+			}
 
-		const [captureFlag, setCaptureFlag] = useState(false);
-		const captureFlagRef = useRef(captureFlag);
+			const timestamp = new Date().toISOString()
+			.replace(/[:.]/g, '-')
+			.replace('T', '_')
+			.replace('Z', '');
 
-		useEffect(() => {
-			captureFlagRef.current = captureFlag;
-		}, [captureFlag]);
-
-		const triggerRecord = () => {
-			const loop = async () => {
-					// Get New Video
-					const videoInfo = await window.electron.triggerRecordVideo(); 
-
-					// Remove Last Video
-					if(clipWindow.length > 5) {
-						throw new Error("Clip Window Length Exceeded");
-					} else if(clipWindow.length == 5) {
-						const file = clipWindow[0].filename;
-						await window.electron.removeSpecificVideo(file);
-						clipWindow.shift();
-					}	
-					
-					// Add New Video To Buffer
-					clipWindow.push(videoInfo);
-					
-					// Clipping Video
-					if(captureFlagRef.current) {
-						await window.electron.triggerClipVideo(clipLength);
-						setCaptureFlag(false);
-					}
-
-					setTimeout(loop, 5);
-				};
-			loop();
+			setCaptureFlag(true); 
 		};
-
-		const handleClip = async () => {
-			await window.electron.triggerClipVideo(clipLength);
-		};
-
-		const enableCaptureFlag = () => { setCaptureFlag(true); };
-
-		useEffect(() => {
-			triggerRecord();
-		}, []);
 
 		// JSX Element
 		return (
