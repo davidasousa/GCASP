@@ -42,8 +42,6 @@ ipcMain.handle('trigger-record', async (event) => {
     .replace('T', '_')
     .replace('Z', '');
 
-		console.log(timestamp);
-    
     // Don't send the event until recording is complete
     try {
     const outputPath = await runRecord(timestamp);
@@ -93,6 +91,8 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
 });
 
 ipcMain.handle('trigger-clip', async (event, length) => {
+	console.log("go");
+
 	var videoFiles = [];
 	const files = fs.readdirSync(recordingsPath);
 	files.filter(file => file.endsWith('.mp4'))
@@ -115,6 +115,7 @@ ipcMain.handle('trigger-clip', async (event, length) => {
 
 	// Notify Frontend Clip Is Done
 	// event.sender.send('clip-done', clipName);
+	return;
 });
 
 }

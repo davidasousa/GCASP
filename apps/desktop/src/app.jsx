@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
 
@@ -9,7 +9,6 @@ import './app.css';
 const App = () => {
     const [currentView, setCurrentView] = useState('home');
     const [videos, setVideos] = useState([]);
-
     const [currentPage, setCurrentPage] = useState(1);
     const videosPerPage = 10;
 
@@ -80,24 +79,50 @@ const App = () => {
 		var clipLength = 5;
 		var clipWindow = [];
 
-		async function triggerRecord() {
-			while(true) {
-				const videoInfo = await window.electron.triggerRecordVideo(); 
+		const [captureFlag, setCaptureFlag] = useState(false);
+		const captureFlagRef = useRef(captureFlag);
 
-				if(clipWindow.length > 5) {
-					throw new Error("Clip Window Length Exceeded");
-				} else if(clipWindow.length == 5) {
-					const file = clipWindow[0].filename;
-					await window.electron.removeSpecificVideo(file);
-					clipWindow.shift();
-				}	
-				clipWindow.push(videoInfo);
-			}
-		}
+		useEffect(() => {
+			captureFlagRef.current = captureFlag;
+		}, [captureFlag]);
+
+		const triggerRecord = () => {
+			const loop = async () => {
+					// Get New Video
+					const videoInfo = await window.electron.triggerRecordVideo(); 
+
+					// Remove Last Video
+					if(clipWindow.length > 5) {
+						throw new Error("Clip Window Length Exceeded");
+					} else if(clipWindow.length == 5) {
+						const file = clipWindow[0].filename;
+						await window.electron.removeSpecificVideo(file);
+						clipWindow.shift();
+					}	
+					
+					// Add New Video To Buffer
+					clipWindow.push(videoInfo);
+					
+					// Clipping Video
+					if(captureFlagRef.current) {
+						await window.electron.triggerClipVideo(clipLength);
+						setCaptureFlag(false);
+					}
+
+					setTimeout(loop, 5);
+				};
+			loop();
+		};
 
 		const handleClip = async () => {
 			await window.electron.triggerClipVideo(clipLength);
-		}
+		};
+
+		const enableCaptureFlag = () => { setCaptureFlag(true); };
+
+		useEffect(() => {
+			triggerRecord();
+		}, []);
 
 		// JSX Element
 		return (
@@ -109,13 +134,10 @@ const App = () => {
 							<button className="refresh-button" onClick={loadVideos}>
 								Refresh Videos
 							</button>
-							<button className = "Clip Recording" onClick={handleClip}>
+							<button className = "Clip Recording" onClick={enableCaptureFlag}>
 								Record Clip
 							</button>
 							<button className = "Clear Recordings" onClick={handleClearClips}>
-								Delete All Recordings
-							</button>
-							<button className = "Start Recording" onClick={triggerRecord}>
 								Delete All Recordings
 							</button>
 
