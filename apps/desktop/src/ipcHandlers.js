@@ -2,7 +2,6 @@ import { ipcMain, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { runRecord } from './recorder';
-import { clipSettings } from './clipper.js';
 
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
 const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
@@ -16,7 +15,6 @@ ipcMain.handle('get-local-videos', () => {
     .filter(file => file.endsWith('.mp4'))
     .map(file => {
         const filePath = path.join(clipsPath, file);
-				console.log(filePath);
         const stats = fs.statSync(filePath);
         return {
         id: path.parse(file).name,
@@ -28,7 +26,6 @@ ipcMain.handle('get-local-videos', () => {
 
 // Remove Local Recordings
 ipcMain.handle('remove-local-clips', () => {
-		console.log("removing");
 		const files = fs.readdirSync(clipsPath);
 		files.filter(file => file.endsWith('.mp4'))
 		.map(file => {
@@ -93,16 +90,15 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
     return { success: false, error: 'File not found' };
 });
 
-ipcMain.handle('trigger-clip', async (event, clipSettings) => {
+ipcMain.handle('trigger-clip', async (event, length) => {
 	var videoFiles = [];
 	const files = fs.readdirSync(recordingsPath);
 	files.filter(file => file.endsWith('.mp4'))
 	.map(file => {
-			console.log(`${file}`);
 			videoFiles.push(file);
 	});  
 
-	const mostRecentVideo = videoFiles[videoFiles.length - 1];
+	const mostRecentVideo = videoFiles[videoFiles.length - 2];
 
 	const recordingPath = path.join(recordingsPath, mostRecentVideo);
 	const clipPath = path.join(clipsPath, mostRecentVideo);

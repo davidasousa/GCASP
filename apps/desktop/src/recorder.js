@@ -21,9 +21,9 @@ export const runRecord = (timestamp) => {
       outputPath
     ];
 
-    const ffmpegProcess = spawn(process.env.FFMPEG_EXECUTABLE_NAME, args);
-   	
-    ffmpegProcess.stdout.on('data', (data) => {
+    const ffmpegProcess = spawn(process.env.FFMPEG_EXECUTABLE_NAME, args); 	
+
+		ffmpegProcess.stdout.on('data', (data) => {
       console.log(`ffmpeg stdout: ${data}`);
     });
 
@@ -42,6 +42,5 @@ export const runRecord = (timestamp) => {
     ffmpegProcess.on('error', (error) => {
       reject(error);
     });
-
   });
 };

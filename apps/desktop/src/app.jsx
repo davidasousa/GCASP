@@ -3,7 +3,6 @@ import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
 
 import { loadVideos } from './clientSideReq';
-import { clipper } from './clipper';
 
 import './app.css';
 
@@ -39,9 +38,11 @@ const App = () => {
             loadVideos();
         }
     }, [currentView]);
-  
-    // Initial load of videos
-		useEffect(() => { loadVideos(setVideos); }, []);
+
+    // Initial load of videos & starting clipper
+		useEffect(() => { 
+			loadVideos(setVideos); 
+		}, []);
 
     const handleClearClips = async () => {
 			try { 
@@ -75,13 +76,35 @@ const App = () => {
         }
     };
 
-		// Creating The Clipper Object & Starting The Recording
-		let programClipper = new clipper(5);
-		programClipper.runClipper(); // Listen & Process Videos
+		// Trigger The Recording Of The Next Video
+		const handleRecord = async () => {
+			try { await window.electron.triggerRecordVideo(); } 
+			catch (error) { console.error('Error starting recording:', error); }
+		};
 
-    const requestClip = async () => {
-			programClipper.sendClipRequest();
-    };
+		// Creating The Clipper Object
+		var clipLength = 5;
+		var clipWindow = [];
+
+		const handleNewRecording = async (videoInfo) => {
+			clipWindow.push(videoInfo);
+
+			if(clipWindow.length > 5) {
+				throw new Error("Clip Window Length Exceeded");
+			} else if(clipWindow.length == 5) {
+				const file = clipWindow[0].filename;
+				await window.electron.removeSpecificVideo(file);
+				clipWindow.shift();
+			}
+
+			await handleRecord();
+		}
+
+		window.electron.onRecordingDone(handleNewRecording); 
+
+		const handleClip = async () => {
+			await window.electron.triggerClipVideo(clipLength);
+		}
 
 		// JSX Element
 		return (
@@ -93,11 +116,14 @@ const App = () => {
 							<button className="refresh-button" onClick={loadVideos}>
 								Refresh Videos
 							</button>
-							<button className = "Clip Recording" onClick={requestClip}>
+							<button className = "Clip Recording" onClick={handleClip}>
 								Record Clip
 							</button>
 							<button className = "Clear Recordings" onClick={handleClearClips}>
 								Delete All Recordings
+							</button>
+							<button className = "Start Clipper" onClick={handleRecord}>
+								Start Recording
 							</button>
 
 							{videos.length > 0 ? (

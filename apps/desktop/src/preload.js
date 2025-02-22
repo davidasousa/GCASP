@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld('electron', {
 
 // Listen for new recordings
 	onRecordingDone: (callback) => 
-		ipcRenderer.on('recording-done', (event, data) => callback(data)),
+		ipcRenderer.once('recording-done', (event, data) => callback(data)),
 
 // Remove specific video
 	removeSpecificVideo: (filename) => ipcRenderer.invoke('remove-specific-video', filename),
