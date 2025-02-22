@@ -1,14 +1,32 @@
 import { useEffect } from 'react';
+import { EventEmitter } from 'events';
 
 export class clipper {
 constructor(_clipLength) {
-	this.clipLength = length;
+	this.clipLength = _clipLength;
 	this.clipWindow = [];
-	this.captureFlag = false;
+	// Event Listener
+	this.captureListener = new EventEmitter();
+	this.setupEventListeners();
 
 	// Calling The First Record
 	this.handleRecord();
 }
+
+setupEventListeners() {
+	this.captureListener.once('capture-clip', async () => {
+		await window.electron.triggerClipVideo(this.clipLength);
+	});
+}
+
+// Trigger The Recording Of The Next Video
+async handleRecord() {
+	try { await window.electron.triggerRecordVideo(); } 
+	catch (error) { console.error('Error starting recording:', error); }
+};
+
+// Setting The Clip Request Flag
+sendClipRequest() { this.captureListener.emit('capture-clip'); };
 
 async runClipper() {
 		useEffect(() => {
@@ -28,11 +46,7 @@ async runClipper() {
 
 		window.electron.onRecordingDone(handleNewRecording);
 	}, []);
+
 };
 
-// Trigger The Recording Of The Next Video
-async handleRecord() {
-	try { await window.electron.triggerRecordVideo(); } 
-	catch (error) { console.error('Error starting recording:', error); }
-};
 }

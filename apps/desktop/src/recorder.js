@@ -16,6 +16,8 @@ export const runRecord = (timestamp) => {
       '-f', 'gdigrab',
       '-i', 'desktop',
       '-t', '5',
+			'-c:v', 'libx264',
+			'-pix_fmt', 'yuv420p',
       outputPath
     ];
 

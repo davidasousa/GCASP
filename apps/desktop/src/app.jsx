@@ -24,7 +24,8 @@ const App = () => {
                 id: video.id,
                 title: video.filename,
                 videoUrl: `gcasp://${video.id.replace('clip_', '')}/`
-            }));
+            }));	
+
             setVideos(processedVideos);
             setCurrentPage(1); // Reset to first page after refresh
         } catch (error) {
@@ -40,18 +41,15 @@ const App = () => {
     }, [currentView]);
   
     // Initial load of videos
-		// useEffect(() => { loadVideos(setVideos); }, []);
+		useEffect(() => { loadVideos(setVideos); }, []);
 
-    const handleClearRecordings = async () => {
+    const handleClearClips = async () => {
 			try { 
-			await window.electron.removeLocalVideos(); 
+			await window.electron.removeLocalClips(); 
 			loadVideos(setVideos);
 			} catch (error) { 
 			console.error('Error starting recording:', error); 
 			}
-    };
-
-    const handleClip = async () => {
     };
 
     const handleDeleteVideo = (id) => {
@@ -79,7 +77,11 @@ const App = () => {
 
 		// Creating The Clipper Object & Starting The Recording
 		let programClipper = new clipper(5);
-		programClipper.runClipper();
+		programClipper.runClipper(); // Listen & Process Videos
+
+    const requestClip = async () => {
+			programClipper.sendClipRequest();
+    };
 
 		// JSX Element
 		return (
@@ -91,10 +93,10 @@ const App = () => {
 							<button className="refresh-button" onClick={loadVideos}>
 								Refresh Videos
 							</button>
-							<button className = "Clip Recording" onClick={handleClip}>
+							<button className = "Clip Recording" onClick={requestClip}>
 								Record Clip
 							</button>
-							<button className = "Clear Recordings" onClick={handleClearRecordings}>
+							<button className = "Clear Recordings" onClick={handleClearClips}>
 								Delete All Recordings
 							</button>
 
