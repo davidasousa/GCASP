@@ -18,6 +18,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+
 // Ensure uploads directory exists
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -143,4 +144,99 @@ function authenticateToken(req, res, next) {
     }
 }
 
+// Add Friend API
+router.post("/add-friend/:friendUsername", authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id; // Logged-in user ID (ObjectId)
+        const friendUsername = req.params.friendUsername; // Friend's username (string)
+
+        console.log("🔹 Searching for friend by username:", friendUsername);
+
+        // 🔥 Find the friend's ObjectId using their username
+        const friend = await User.findOne({ username: friendUsername });
+
+        if (!friend) return res.status(404).json({ message: "Friend not found" });
+
+        // Ensure we use the ObjectId
+        const friendId = friend._id.toString(); 
+        console.log("Found Friend ObjectId:", friendId);
+
+        // Find the logged-in user
+        const user = await User.findById(userId);
+
+        if (user.friends.includes(friendId)) {
+            return res.status(400).json({ message: "Already friends" });
+        }
+
+        // Store ObjectId in the "friends" array
+        user.friends.push(friendId);
+        friend.friends.push(userId);
+
+        await user.save();
+        await friend.save();
+
+        console.log("Friend added successfully:", friend.username);
+
+        res.json({ message: "Friend added successfully", friend: friend.username });
+    } catch (err) {
+        console.error("Server Error:", err);
+        res.status(500).json({ message: "Server error", error: err.message });
+    }
+});
+
+
+
+// Get Friend's Profile API
+router.get("/friend-profile/:friendUsername", authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const friendUsername = req.params.friendUsername;
+
+        console.log("🔹 Checking profile for:", friendUsername);
+
+        // Find friend's ObjectId by username
+        const friend = await User.findOne({ username: friendUsername }).select("-password");
+
+        if (!friend) return res.status(404).json({ message: "Friend not found" });
+
+        // Use ObjectId for comparison
+        const friendId = friend._id.toString();
+        const user = await User.findById(userId);
+
+        if (!user.friends.includes(friendId)) {
+            return res.status(403).json({ message: "You are not friends with this user" });
+        }
+
+        console.log("Friend profile found:", friend.username);
+        res.json(friend);
+    } catch (err) {
+        console.error("Server Error:", err);
+        res.status(500).json({ message: "Server error", error: err.message });
+    }
+});
+
+router.get("/friend-list", authenticateToken, async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        console.log("🔹 Fetching friends for User ID:", userId);
+
+        // Find user and populate friends
+        const user = await User.findById(userId).populate("friends", "username email -_id");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        console.log("Friend list retrieved:", user.friends);
+
+        res.json({ friends: user.friends });
+    } catch (err) {
+        console.error("Server Error:", err);
+        res.status(500).json({ message: "Server error", error: err.message });
+    }
+});
+
+
+app.use("/api/friends", router);
 app.use('/api/auth', router);
