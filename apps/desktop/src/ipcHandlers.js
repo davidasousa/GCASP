@@ -16,6 +16,7 @@ ipcMain.handle('get-local-videos', () => {
     .filter(file => file.endsWith('.mp4'))
     .map(file => {
         const filePath = path.join(clipsPath, file);
+				console.log(filePath);
         const stats = fs.statSync(filePath);
         return {
         id: path.parse(file).name,
