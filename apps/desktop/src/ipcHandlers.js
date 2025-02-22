@@ -91,8 +91,6 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
 });
 
 ipcMain.handle('trigger-clip', async (event, length) => {
-	console.log("go");
-
 	var videoFiles = [];
 	const files = fs.readdirSync(recordingsPath);
 	files.filter(file => file.endsWith('.mp4'))
