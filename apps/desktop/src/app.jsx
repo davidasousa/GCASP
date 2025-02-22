@@ -76,31 +76,24 @@ const App = () => {
         }
     };
 
-		// Trigger The Recording Of The Next Video
-		const handleRecord = async () => {
-			try { await window.electron.triggerRecordVideo(); } 
-			catch (error) { console.error('Error starting recording:', error); }
-		};
-
 		// Creating The Clipper Object
 		var clipLength = 5;
 		var clipWindow = [];
 
-		const handleNewRecording = async (videoInfo) => {
-			clipWindow.push(videoInfo);
+		async function triggerRecord() {
+			while(true) {
+				const videoInfo = await window.electron.triggerRecordVideo(); 
 
-			if(clipWindow.length > 5) {
-				throw new Error("Clip Window Length Exceeded");
-			} else if(clipWindow.length == 5) {
-				const file = clipWindow[0].filename;
-				await window.electron.removeSpecificVideo(file);
-				clipWindow.shift();
+				if(clipWindow.length > 5) {
+					throw new Error("Clip Window Length Exceeded");
+				} else if(clipWindow.length == 5) {
+					const file = clipWindow[0].filename;
+					await window.electron.removeSpecificVideo(file);
+					clipWindow.shift();
+				}	
+				clipWindow.push(videoInfo);
 			}
-
-			await handleRecord();
 		}
-
-		window.electron.onRecordingDone(handleNewRecording); 
 
 		const handleClip = async () => {
 			await window.electron.triggerClipVideo(clipLength);
@@ -122,8 +115,8 @@ const App = () => {
 							<button className = "Clear Recordings" onClick={handleClearClips}>
 								Delete All Recordings
 							</button>
-							<button className = "Start Clipper" onClick={handleRecord}>
-								Start Recording
+							<button className = "Start Recording" onClick={triggerRecord}>
+								Delete All Recordings
 							</button>
 
 							{videos.length > 0 ? (

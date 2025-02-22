@@ -13,10 +13,6 @@ contextBridge.exposeInMainWorld('electron', {
 // Trigger video recording
 	triggerRecordVideo: () => ipcRenderer.invoke('trigger-record'),
 
-// Listen for new recordings
-	onRecordingDone: (callback) => 
-		ipcRenderer.once('recording-done', (event, data) => callback(data)),
-
 // Remove specific video
 	removeSpecificVideo: (filename) => ipcRenderer.invoke('remove-specific-video', filename),
 
@@ -24,6 +20,10 @@ contextBridge.exposeInMainWorld('electron', {
 	triggerClipVideo: (clipSettings) => ipcRenderer.invoke('trigger-clip', clipSettings),
 
 // Listen for new recordings
+	onRecordingDone: (callback) => 
+		ipcRenderer.on('recording-done', (event, data) => callback(data)),
+
+// Listen for new clippings
 	onClipDone: (callback) => 
 		ipcRenderer.on('clip-done', (event, data) => callback(data)),
 

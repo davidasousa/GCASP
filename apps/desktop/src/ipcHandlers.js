@@ -41,6 +41,8 @@ ipcMain.handle('trigger-record', async (event) => {
     .replace(/[:.]/g, '-')
     .replace('T', '_')
     .replace('Z', '');
+
+		console.log(timestamp);
     
     // Don't send the event until recording is complete
     try {
@@ -61,7 +63,7 @@ ipcMain.handle('trigger-record', async (event) => {
             };
             
             // Only notify about new recording after file is confirmed ready
-            event.sender.send('recording-done', videoInfo);
+//            event.sender.send('recording-done', videoInfo);
             return videoInfo;
         }
         } catch (err) {
@@ -98,7 +100,7 @@ ipcMain.handle('trigger-clip', async (event, length) => {
 			videoFiles.push(file);
 	});  
 
-	const mostRecentVideo = videoFiles[videoFiles.length - 2];
+	const mostRecentVideo = videoFiles[videoFiles.length - 1];
 
 	const recordingPath = path.join(recordingsPath, mostRecentVideo);
 	const clipPath = path.join(clipsPath, mostRecentVideo);
