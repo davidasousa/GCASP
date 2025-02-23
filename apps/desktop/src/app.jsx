@@ -1,6 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import VideoGrid from './components/VideoGrid';
+
+import { loadVideos } from './clientSideReq';
+
 import './app.css';
 
 const App = () => {
@@ -8,6 +11,14 @@ const App = () => {
     const [videos, setVideos] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const videosPerPage = 10;
+
+		// Creating The Clipper Object
+		var clipLength = 5;
+		var clipWindow = [];
+		const [captureFlag, setCaptureFlag] = useState(false);
+		const captureFlagRef = useRef(captureFlag);
+		useEffect(() => { captureFlagRef.current = captureFlag; }, [captureFlag]);
+
 
     // Function to load videos from the folder.
     const loadVideos = async () => {
@@ -19,13 +30,40 @@ const App = () => {
                 id: video.id,
                 title: video.filename,
                 videoUrl: `gcasp://${video.id.replace('clip_', '')}/`
-            }));
+            }));	
+
             setVideos(processedVideos);
             setCurrentPage(1); // Reset to first page after refresh
         } catch (error) {
             console.error('Error loading videos:', error);
         }
     };
+
+		// Core Recording + Clipping Loop
+		const triggerRecord = () => {
+			const loop = async () => {
+					// Get New Video
+					const videoInfo = await window.electron.triggerRecordVideo(); 
+
+					// Remove Last Video
+					if(clipWindow.length > 5) {
+						throw new Error("Clip Window Length Exceeded");
+					} else if(clipWindow.length == 5) {
+						const file = clipWindow[0].filename;
+						await window.electron.removeSpecificVideo(file);
+						clipWindow.shift();
+					}		
+					// Add New Video To Buffer
+					clipWindow.push(videoInfo);	
+					// Clipping Video
+					if(captureFlagRef.current) {
+						await window.electron.triggerClipVideo(clipLength);
+						setCaptureFlag(false);
+					}
+					setTimeout(loop, 5); // 100 ms delay between recordings
+				};
+			loop();
+		};
 
     // Load videos when the component mounts or when the home view is selected.
     useEffect(() => {
@@ -34,12 +72,19 @@ const App = () => {
         }
     }, [currentView]);
 
-    const handleRecord = async () => {
-        try {
-            await window.electron.triggerRecordVideo();
-        } catch (error) {
-            console.error('Error starting recording:', error);
-        }
+    // Initial load of videos & starting clipper
+		useEffect(() => { 
+			loadVideos(setVideos); 
+			triggerRecord();
+		}, []);
+
+    const handleClearClips = async () => {
+			try { 
+				await window.electron.removeLocalClips(); 
+				loadVideos(setVideos);
+			} catch (error) { 
+				console.error('Error starting recording:', error); 
+			}
     };
 
     const handleDeleteVideo = (id) => {
@@ -65,43 +110,64 @@ const App = () => {
         }
     };
 
-	return (
-		<div className="app-container">
-			<Sidebar currentView={currentView} onChangeView={setCurrentView} />
-			<div className="main-content">
-				{currentView === 'home' && (
-					<div>
-						<button className="refresh-button" onClick={loadVideos}>
-							Refresh Videos
-						</button>
-						{videos.length > 0 ? (
-							<div>
-								<VideoGrid videos={currentVideos} onDelete={handleDeleteVideo} />
-								<div className="pagination">
-									<button onClick={handlePrevPage} disabled={currentPage === 1}>
-										Previous
-									</button>
-									<span>
-										Page {currentPage} of {totalPages}
-									</span>
-									<button onClick={handleNextPage} disabled={currentPage === totalPages}>
-										Next
-									</button>
+		const enableCaptureFlag = () => { 
+			if(captureFlagRef.current == true) {
+				console.log("Error Clipping In Process");
+				return;
+			}
+
+			const timestamp = new Date().toISOString()
+			.replace(/[:.]/g, '-')
+			.replace('T', '_')
+			.replace('Z', '');
+
+			setCaptureFlag(true); 
+		};
+
+		// JSX Element
+		return (
+			<div className="app-container">
+				<Sidebar currentView={currentView} onChangeView={setCurrentView} />
+				<div className="main-content">
+					{currentView === 'home' && (
+						<div>
+							<button className="refresh-button" onClick={loadVideos}>
+								Refresh Videos
+							</button>
+							<button className = "Clip Recording" onClick={enableCaptureFlag}>
+								Record Clip
+							</button>
+							<button className = "Clear Recordings" onClick={handleClearClips}>
+								Delete All Recordings
+							</button>
+
+							{videos.length > 0 ? (
+								<div>
+									<VideoGrid videos={currentVideos} onDelete={handleDeleteVideo} />
+									<div className="pagination">
+										<button onClick={handlePrevPage} disabled={currentPage === 1}>
+											Previous
+										</button>
+										<span>
+											Page {currentPage} of {totalPages}
+										</span>
+										<button onClick={handleNextPage} disabled={currentPage === totalPages}>
+											Next
+										</button>
+									</div>
 								</div>
-							</div>
-						) : (
-							<p>No Videos Available</p>
-						)}
-					</div>
-				)}
-				{currentView === 'shared' && <div>Shared Clips (Coming Soon)</div>}
-				{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
+							) : (
+								<p>No Videos Available</p>
+							)}
+
+						</div>
+					)}
+					{currentView === 'shared' && <div>Shared Clips (Coming Soon)</div>}
+					{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
+				</div>
 			</div>
-			<div className="record-button">
-				<button onClick={handleRecord}>Record Screen</button>
-			</div>
-		</div>
-	);
+		);
+		// End JSX Element
 };
 
 export default App;
