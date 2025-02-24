@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
 
 const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete }) => {
 	const [hasError, setHasError] = useState(false);
 	const [showDeletePrompt, setShowDeletePrompt] = useState(false);
-
+	const navigate = useNavigate();
 
 	const handlePlayerReady = (player) => {
 		player.on('error', () => {
@@ -14,7 +15,8 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 
 	const handleEditClick = () => {
 		console.log(`Editing video: ${title}`);
-		// TODO
+		// Navigate to edit page with video id
+		navigate(`/edit/${encodeURIComponent(title)}`);
 	};
 
 	const handleDeleteClick = () => {

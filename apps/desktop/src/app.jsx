@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
 import SharedPage from './pages/SharedPage';
 import SettingsPage from './pages/SettingsPage';
+import EditPage from './pages/EditPage';
 import './app.css';
 
 const App = () => {
@@ -11,7 +12,6 @@ const App = () => {
     useEffect(() => {
         const handleNewRecording = (videoInfo) => {
             console.log('New recording received:', videoInfo);
-
         };
 
         // Set up the event listener
@@ -40,6 +40,7 @@ const App = () => {
                         <Route path="/" element={<HomePage />} />
                         <Route path="/shared" element={<SharedPage />} />
                         <Route path="/settings" element={<SettingsPage />} />
+                        <Route path="/edit/:videoId" element={<EditPage />} />
                     </Routes>
                 </main>
                 <div className="record-button">
