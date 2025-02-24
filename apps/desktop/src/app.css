@@ -28,8 +28,10 @@ body {
 	margin-bottom: 1rem;
 }
 
-/* Style the buttons to be clean and full-width */
-.sidebar button {
+/* Style both buttons and NavLinks to be consistent */
+.sidebar button,
+.sidebar a {
+	display: block;
 	background: none;
 	border: none;
 	font-size: 1rem;
@@ -38,13 +40,17 @@ body {
 	padding: 0.5rem;
 	cursor: pointer;
 	transition: background-color 0.3s;
+	text-decoration: none;
+	color: inherit;
 }
 
-.sidebar button:hover {
+.sidebar button:hover,
+.sidebar a:hover {
 	background-color: #e0e0e0;
 }
 
-.sidebar button.active {
+.sidebar button.active,
+.sidebar a.active {
 	font-weight: bold;
 	background-color: #d0d0d0;
 }
@@ -280,4 +286,35 @@ body {
 
 .refresh-button:active {
 	transform: scale(0.98);
+}
+
+/* Record button */
+.record-button {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	z-index: 100;
+}
+
+.record-button button {
+	padding: 10px 20px;
+	background-color: #ff4444;
+	color: white;
+	border: none;
+	border-radius: 5px;
+	font-weight: bold;
+	cursor: pointer;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	transition: all 0.3s ease;
+}
+
+.record-button button:hover {
+	background-color: #ff0000;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.record-button button:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 3px rgba(0, 0, 0, 0.2);
 }
