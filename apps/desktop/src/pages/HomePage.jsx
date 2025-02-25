@@ -24,12 +24,20 @@ const HomePage = () => {
         }
     };
 
+    // Handle clearing all clips
+    const handleClearClips = async () => {
+        try { 
+            await window.electron.removeLocalClips(); 
+            loadVideos();
+        } catch (error) { 
+            console.error('Error clearing clips:', error); 
+        }
+    };
+
     // Load videos when the component mounts
     useEffect(() => {
         loadVideos();
     }, []);
-
-
 
     const handleDeleteVideo = (id) => {
         setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
@@ -56,9 +64,18 @@ const HomePage = () => {
 
     return (
         <div>
-            <button className="refresh-button" onClick={loadVideos}>
-                Refresh Videos
-            </button>
+            <div className="button-group">
+                <button className="refresh-button" onClick={loadVideos}>
+                    Refresh Videos
+                </button>
+                <button className="refresh-button" onClick={() => window.electron.triggerClipVideo(5)}>
+                    Record Clip
+                </button>
+                <button className="refresh-button" onClick={handleClearClips}>
+                    Delete All Recordings
+                </button>
+            </div>
+            
             {videos.length > 0 ? (
                 <div>
                     <VideoGrid videos={currentVideos} onDelete={handleDeleteVideo} />
@@ -77,7 +94,6 @@ const HomePage = () => {
             ) : (
                 <p>No Videos Available</p>
             )}
-
         </div>
     );
 };
