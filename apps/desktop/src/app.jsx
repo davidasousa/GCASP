@@ -95,9 +95,6 @@ const App = () => {
 						<Route path="/edit/:videoId" element={<EditPage />} />
 					</Routes>
 				</main>
-				<div className="record-button">
-					<button onClick={handleRecordNow}>Record Clip</button>
-				</div>
 			</div>
 		</Router>
 	);
