@@ -7,16 +7,32 @@ import { spawn } from 'child_process';
 import { getTimestamp } from './utilities';
 
 const exec = promisify(require('child_process').exec);
-const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+
+// Set up paths for recordings and clips
+const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
+const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
+
+// Ensure directories exist
+const ensureDirectories = () => {
+	if (!fs.existsSync(recordingsPath)) {
+		fs.mkdirSync(recordingsPath, { recursive: true });
+	}
+	if (!fs.existsSync(clipsPath)) {
+		fs.mkdirSync(clipsPath, { recursive: true });
+	}
+};
 
 export function setupIpcHandlers() {
-	// Get list of local videos
+	// Ensure directories exist when IPC handlers are set up
+	ensureDirectories();
+
+	// Get list of local clips
 	ipcMain.handle('get-local-videos', () => {
-		const files = fs.readdirSync(userVideosPath);
+		const files = fs.readdirSync(clipsPath);
 		return files
 			.filter(file => file.endsWith('.mp4'))
 			.map(file => {
-				const filePath = path.join(userVideosPath, file);
+				const filePath = path.join(clipsPath, file);
 				const stats = fs.statSync(filePath);
 				return {
 					id: path.parse(file).name,
@@ -26,7 +42,19 @@ export function setupIpcHandlers() {
 			});
 	});
 
-	// Trigger video recording
+	// Remove all local clips
+	ipcMain.handle('remove-local-clips', () => {
+		const files = fs.readdirSync(clipsPath);
+		files.filter(file => file.endsWith('.mp4'))
+			.map(file => {
+				const filePath = path.join(clipsPath, file);
+				fs.unlinkSync(filePath);  // Remove the file
+				console.log(`Deleted: ${filePath}`);
+			});
+		return { success: true };
+	});
+
+	// Trigger video recording for the buffer
 	ipcMain.handle('trigger-record', async (event) => {
 		const timestamp = new Date().toISOString()
 			.replace(/[:.]/g, '-')
@@ -70,21 +98,74 @@ export function setupIpcHandlers() {
 		}
 	});
 
-	// Delete a specific video
+	// Trigger clip creation
+	ipcMain.handle('trigger-clip', async (event, length) => {
+		var videoFiles = [];
+		const files = fs.readdirSync(recordingsPath);
+		files.filter(file => file.endsWith('.mp4'))
+			.map(file => {
+				videoFiles.push(file);
+			});  
+
+		// Get most recent recordings from the buffer
+		if (videoFiles.length === 0) {
+			return { success: false, error: 'No recordings available to clip' };
+		}
+
+		// The most recent recording is the last one in the buffer
+		const mostRecentVideo = videoFiles[videoFiles.length - 1];
+		const timestamp = new Date().toISOString()
+			.replace(/[:.]/g, '-')
+			.replace('T', '_')
+			.replace('Z', '');
+		const clipName = `clip_${timestamp}.mp4`;
+		
+		const recordingPath = path.join(recordingsPath, mostRecentVideo);
+		const clipPath = path.join(clipsPath, clipName);
+
+		try {
+			// Copy the file to clips directory
+			await fs.promises.copyFile(recordingPath, clipPath);
+			
+			// Notify frontend that clip is done
+			event.sender.send('clip-done', clipName);
+			
+			return {
+				success: true,
+				filename: clipName,
+				path: clipPath
+			};
+		} catch (err) {
+			console.error('Error creating clip:', err);
+			return { success: false, error: err.message };
+		}
+	});
+
+	// Delete a specific video (from recordings)
 	ipcMain.handle('remove-specific-video', (event, filename) => {
-		const filePath = path.join(userVideosPath, filename);
+		// Try to find in recordings path first
+		let filePath = path.join(recordingsPath, filename);
 		if (fs.existsSync(filePath)) {
 			fs.unlinkSync(filePath);
-			console.log(`Deleted: ${filePath}`);
+			console.log(`Deleted recording: ${filePath}`);
 			return { success: true };
 		}
+		
+		// If not found, try clips path
+		filePath = path.join(clipsPath, filename);
+		if (fs.existsSync(filePath)) {
+			fs.unlinkSync(filePath);
+			console.log(`Deleted clip: ${filePath}`);
+			return { success: true };
+		}
+		
 		return { success: false, error: 'File not found' };
 	});
 
-	// Get video metadata
+	// Get video metadata (for clips)
 	ipcMain.handle('get-video-metadata', async (event, filename) => {
 		try {
-			const filePath = path.join(userVideosPath, filename);
+			const filePath = path.join(clipsPath, filename);
 			
 			if (!fs.existsSync(filePath)) {
 				return { success: false, error: 'File not found' };
@@ -132,7 +213,7 @@ export function setupIpcHandlers() {
 		} = params;
 
 		try {
-			const originalPath = path.join(userVideosPath, originalFilename);
+			const originalPath = path.join(clipsPath, originalFilename);
 			
 			if (!fs.existsSync(originalPath)) {
 				return { success: false, error: 'Original file not found' };
@@ -166,7 +247,7 @@ export function setupIpcHandlers() {
 			// Case 1: Title-only change (no content modification)
 			if (isTitleChanged && !isContentModified) {
 				const newFileName = newTitle.trim().endsWith('.mp4') ? newTitle.trim() : `${newTitle.trim()}.mp4`;
-				const newPath = path.join(userVideosPath, newFileName);
+				const newPath = path.join(clipsPath, newFileName);
 				
 				// Check if target filename already exists
 				if (fs.existsSync(newPath) && newPath !== originalPath) {
@@ -203,7 +284,7 @@ export function setupIpcHandlers() {
 				outputFilename = newTitle.trim().endsWith('.mp4') ? newTitle.trim() : `${newTitle.trim()}.mp4`;
 			}
 			
-			const outputPath = path.join(userVideosPath, outputFilename);
+			const outputPath = path.join(clipsPath, outputFilename);
 			
 			// Check if target filename already exists
 			if (fs.existsSync(outputPath)) {
@@ -213,7 +294,7 @@ export function setupIpcHandlers() {
 				};
 			}
 			
-			const finalOutputPath = path.join(userVideosPath, outputFilename);
+			const finalOutputPath = path.join(clipsPath, outputFilename);
 
 			// Calculate bitrate for target size if compression is enabled and effective
 			let targetBitrate;
@@ -241,9 +322,9 @@ export function setupIpcHandlers() {
 				finalOutputPath // Output file
 			];
 
+			const ffmpegProcess = spawn('ffmpeg', ffmpegArgs);
+			
 			const ffmpegResult = await new Promise((resolve, reject) => {
-				const ffmpegProcess = spawn('ffmpeg', ffmpegArgs);
-				
 				let stdoutData = '';
 				let stderrData = '';
 				

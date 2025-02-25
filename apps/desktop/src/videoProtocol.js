@@ -17,8 +17,20 @@ function nodeStreamToWebStream(nodeStream) {
     });
 }
 
-const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+// Main folders
+const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
+const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
 const ALLOWED_EXTENSIONS = ['.mp4'];
+
+// Ensure directories exist
+const ensureDirectories = () => {
+    if (!fs.existsSync(recordingsPath)) {
+        fs.mkdirSync(recordingsPath, { recursive: true, mode: 0o700 });
+    }
+    if (!fs.existsSync(clipsPath)) {
+        fs.mkdirSync(clipsPath, { recursive: true, mode: 0o700 });
+    }
+};
 
 // Path security check to prevent directory traversal
 const isPathWithinDirectory = (directory, targetPath) => {
@@ -42,31 +54,61 @@ const isSafeFilename = (filename) => {
     return true;
 };
 
-// Find the video file by id (more flexible matching)
+// Find video in either directory
 const findVideoFile = (videoId) => {
-    const files = fs.readdirSync(userVideosPath);
+    // Check in clips directory first (most likely location)
+    const clipFiles = fs.readdirSync(clipsPath);
     
-    // First try exact prefix match
-    const exactMatch = files.find(file => 
+    // First try exact prefix match in clips
+    let exactMatch = clipFiles.find(file => 
         file.startsWith(`clip_${videoId}`) && 
         ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
     );
     
     if (exactMatch) {
-        return exactMatch;
+        return { file: exactMatch, dir: clipsPath };
     }
     
-    // If no exact match, try to find by id anywhere in the filename
-    return files.find(file => 
+    // Try to find by id anywhere in the filename in clips
+    let partialMatch = clipFiles.find(file => 
         file.includes(videoId) && 
         ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
     );
+    
+    if (partialMatch) {
+        return { file: partialMatch, dir: clipsPath };
+    }
+    
+    // If not found in clips, check recordings
+    const recordingFiles = fs.readdirSync(recordingsPath);
+    
+    // Try exact prefix match in recordings
+    exactMatch = recordingFiles.find(file => 
+        file.startsWith(`clip_${videoId}`) && 
+        ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
+    );
+    
+    if (exactMatch) {
+        return { file: exactMatch, dir: recordingsPath };
+    }
+    
+    // Try to find by id anywhere in the filename in recordings
+    partialMatch = recordingFiles.find(file => 
+        file.includes(videoId) && 
+        ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
+    );
+    
+    if (partialMatch) {
+        return { file: partialMatch, dir: recordingsPath };
+    }
+    
+    // Not found in either directory
+    return null;
 };
 
 export function setupVideoProtocol() {
-    if (!fs.existsSync(userVideosPath)) {
-        fs.mkdirSync(userVideosPath, { recursive: true, mode: 0o700 });
-    }
+    // Ensure directories exist
+    ensureDirectories();
 
     protocol.handle('gcasp', async (request) => {
         try {
@@ -78,16 +120,17 @@ export function setupVideoProtocol() {
                 return new Response('Invalid request', { status: 400 });
             }
 
-            const videoFile = findVideoFile(videoId);
+            // Search for the video in both directories
+            const videoInfo = findVideoFile(videoId);
 
-            if (!videoFile) {
+            if (!videoInfo) {
                 console.error('Video file not found for ID:', videoId);
                 return new Response('Video not found', { status: 404 });
             }
 
-            const videoPath = path.join(userVideosPath, videoFile);
+            const videoPath = path.join(videoInfo.dir, videoInfo.file);
 
-            if (!isPathWithinDirectory(userVideosPath, videoPath)) {
+            if (!isPathWithinDirectory(videoInfo.dir, videoPath)) {
                 console.error('Attempted directory traversal:', videoPath);
                 return new Response('Access denied', { status: 403 });
             }
@@ -136,8 +179,6 @@ export function setupVideoProtocol() {
                 
                 // Make sure start is valid and within bounds
                 start = Math.max(0, Math.min(start, end));
-                
-                //console.log(`Range request: bytes=${start}-${end}/${fileSize}`);
                 
                 const chunksize = end - start + 1;
                 const headers = {

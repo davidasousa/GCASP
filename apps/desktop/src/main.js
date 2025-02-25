@@ -5,10 +5,10 @@ import { net } from 'electron';
 import fs from 'fs';
 import { setupVideoProtocol } from './videoProtocol';
 import { setupIpcHandlers } from './ipcHandlers';
-import { ensureAppDirectories } from './utilities';
+import { ensureAppDirectories, deleteRecordings } from './utilities';
 
 // Get user's videos directory
-const userVideosPath = path.join(app.getPath('videos'), 'GCASP');
+const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
 
 // Register gcasp:// as a secure protocol
 protocol.registerSchemesAsPrivileged([
@@ -48,6 +48,15 @@ app.whenReady().then(() => {
 	});
 
 	app.on('window-all-closed', () => {
+		// Deleting All Recordings
+		const files = fs.readdirSync(recordingsPath);
+		files.filter(file => file.endsWith('.mp4'))
+		.map(file => {
+				const filePath = path.join(recordingsPath, file);
+				fs.unlinkSync(filePath);  // Remove the file
+				console.log(`Deleted: ${filePath}`);
+		});
+
 	if (process.platform !== 'darwin') {
 		app.quit();
 	}
