@@ -1,11 +1,11 @@
 import React from 'react';
 
-const SharedPage = () => {
+const SettingsPage = () => {
     return (
         <div>
-            <h2>Shared Clips (Coming Soon)</h2>
+            <h2>Settings (Coming Soon)</h2>
         </div>
     );
 };
 
-export default SharedPage;
+export default SettingsPage;

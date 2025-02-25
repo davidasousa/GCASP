@@ -11,6 +11,7 @@ const EditPage = () => {
     const [endTime, setEndTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [compressSize, setCompressSize] = useState(20); // Default 20MB
+    const [enableCompression, setEnableCompression] = useState(false); // Compression disabled by default
     const [metadata, setMetadata] = useState({});
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -129,7 +130,8 @@ const EditPage = () => {
                 newTitle: title,
                 startTime,
                 endTime,
-                compressSizeMB: compressSize
+                compressSizeMB: compressSize,
+                enableCompression // Pass the compression toggle state
             };
             
             // Save changes using IPC
@@ -249,18 +251,32 @@ const EditPage = () => {
                     
                     {/* Compression Controls */}
                     <div className="control-group">
-                        <h3>Compression</h3>
-                        <div className="compression-control">
-                            <label htmlFor="compress-size">Target Size (MB):</label>
-                            <input 
-                                id="compress-size"
-                                type="number" 
-                                min="1" 
-                                max="100" 
-                                value={compressSize}
-                                onChange={(e) => setCompressSize(Math.max(1, parseInt(e.target.value) || 1))}
-                            />
+                        <h3>Video Output</h3>
+                        <div className="compression-toggle">
+                            <label htmlFor="enable-compression">
+                                <input 
+                                    id="enable-compression"
+                                    type="checkbox" 
+                                    checked={enableCompression}
+                                    onChange={(e) => setEnableCompression(e.target.checked)}
+                                />
+                                Enable Video Compression
+                            </label>
                         </div>
+                        
+                        {enableCompression && (
+                            <div className="compression-control">
+                                <label htmlFor="compress-size">Target Size (MB):</label>
+                                <input 
+                                    id="compress-size"
+                                    type="number" 
+                                    min="1" 
+                                    max="100" 
+                                    value={compressSize}
+                                    onChange={(e) => setCompressSize(Math.max(1, parseInt(e.target.value) || 1))}
+                                />
+                            </div>
+                        )}
                     </div>
                     
                     {/* Metadata Display */}
