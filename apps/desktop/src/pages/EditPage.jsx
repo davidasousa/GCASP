@@ -36,7 +36,13 @@ const EditPage = () => {
                     title: video.filename,
                     videoUrl
                 });
-                setTitle(video.filename);
+                
+                // Strip .mp4 extension for the editable title
+                const baseTitle = video.filename.endsWith('.mp4') 
+                    ? video.filename.slice(0, -4) 
+                    : video.filename;
+                
+                setTitle(baseTitle);
 
                 // Get video metadata
                 const meta = await window.electron.getVideoMetadata(video.filename);
@@ -124,10 +130,15 @@ const EditPage = () => {
                 return;
             }
             
+            // Remove any .mp4 extension the user might have added to the title
+            const cleanTitle = title.trim().toLowerCase().endsWith('.mp4') 
+                ? title.trim().slice(0, -4) 
+                : title.trim();
+            
             // Prepare save parameters
             const params = {
                 originalFilename: videoData.title,
-                newTitle: title,
+                newTitle: cleanTitle + '.mp4', // Always add .mp4 extension consistently
                 startTime,
                 endTime,
                 compressSizeMB: compressSize,

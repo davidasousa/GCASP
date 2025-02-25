@@ -127,7 +127,8 @@ export function setupIpcHandlers() {
 			newTitle,
 			startTime,
 			endTime,
-			compressSizeMB
+			compressSizeMB,
+			enableCompression
 		} = params;
 
 		try {
@@ -137,41 +138,110 @@ export function setupIpcHandlers() {
 				return { success: false, error: 'Original file not found' };
 			}
 
-			// Determine if we're overwriting or creating a new file
-			let outputFilename;
-			const shouldOverwrite = newTitle.trim() === originalFilename;
+			// Get the original metadata to determine if content is being modified
+			const { stdout } = await exec(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height,duration,codec_name,r_frame_rate -show_entries format=duration,size -of json "${originalPath}"`);
+			const metadata = JSON.parse(stdout);
+			const originalDuration = parseFloat(metadata.format.duration || 0);
+			const originalSizeBytes = parseInt(metadata.format.size || 0);
+			const originalSizeMB = originalSizeBytes / (1024 * 1024);
 			
-			if (shouldOverwrite) {
-				// We'll use a temporary file first to avoid data loss
-				outputFilename = `temp_edit_${Date.now()}.mp4`;
+			// Determine if we're modifying content (trimming or compression)
+			const isTrimming = Math.abs(startTime) > 0.1 || Math.abs(endTime - originalDuration) > 0.1;
+			
+			// Only consider compression if it's enabled AND target size is smaller than current size
+			const isCompressionEffective = enableCompression && compressSizeMB < originalSizeMB;
+			const isContentModified = isTrimming || isCompressionEffective;
+			const isTitleChanged = newTitle.trim() !== originalFilename;
+			
+			// Case 0: No changes at all - do nothing
+			if (!isContentModified && !isTitleChanged) {
+				return {
+					success: true,
+					filename: originalFilename,
+					path: originalPath,
+					message: 'No changes were needed'
+				};
+			}
+			
+			// Case 1: Title-only change (no content modification)
+			if (isTitleChanged && !isContentModified) {
+				const newFileName = newTitle.trim().endsWith('.mp4') ? newTitle.trim() : `${newTitle.trim()}.mp4`;
+				const newPath = path.join(userVideosPath, newFileName);
+				
+				// Check if target filename already exists
+				if (fs.existsSync(newPath) && newPath !== originalPath) {
+					return { 
+						success: false, 
+						error: `A file named "${newFileName}" already exists. Please choose a different name.`
+					};
+				}
+				
+				try {
+					// Simply rename the file
+					fs.renameSync(originalPath, newPath);
+					return {
+						success: true,
+						filename: newFileName,
+						path: newPath,
+						message: 'File renamed successfully'
+					};
+				} catch (err) {
+					console.error('Error renaming file:', err);
+					return { success: false, error: `Error renaming file: ${err.message}` };
+				}
+			}
+			
+			// Case 2: Content modification
+			// Determine output filename
+			let outputFilename;
+			if (!isTitleChanged) {
+				// Same title but content modified - add _edit suffix
+				const baseName = path.basename(originalFilename, '.mp4');
+				outputFilename = `${baseName}_edit.mp4`;
 			} else {
-				// New filename based on the provided title
+				// New title and content modified
 				outputFilename = newTitle.trim().endsWith('.mp4') ? newTitle.trim() : `${newTitle.trim()}.mp4`;
 			}
 			
 			const outputPath = path.join(userVideosPath, outputFilename);
+			
+			// Check if target filename already exists
+			if (fs.existsSync(outputPath)) {
+				return { 
+					success: false, 
+					error: `A file named "${outputFilename}" already exists. Please choose a different name.`
+				};
+			}
+			
+			const finalOutputPath = path.join(userVideosPath, outputFilename);
 
-			// Calculate bitrate for target size (in bits per second)
-			// Formula: (target_size_bytes * 8) / duration_seconds
+			// Calculate bitrate for target size if compression is enabled and effective
+			let targetBitrate;
 			const duration = endTime - startTime;
-			const targetSizeBytes = compressSizeMB * 1024 * 1024; // Convert MB to bytes
-			const targetBitrate = Math.floor((targetSizeBytes * 8) / duration);
+			
+			if (isCompressionEffective) {
+				const targetSizeBytes = compressSizeMB * 1024 * 1024; // Convert MB to bytes
+				targetBitrate = Math.floor((targetSizeBytes * 8) / duration);
+			} else {
+				// Use a high bitrate to maintain quality if not compressing
+				targetBitrate = "5000k";
+			}
 
-			// Trim and compress the video using ffmpeg
+			// Trim and optionally compress the video using ffmpeg
+			const ffmpegArgs = [
+				'-y', // Overwrite output file if exists
+				'-i', originalPath, // Input file
+				'-ss', startTime.toString(), // Start time
+				'-to', endTime.toString(), // End time
+				'-c:v', 'libx264', // Video codec
+				'-b:v', `${targetBitrate}`, // Video bitrate
+				'-preset', 'medium', // Encoding preset
+				'-c:a', 'aac', // Audio codec
+				'-b:a', '128k', // Audio bitrate
+				finalOutputPath // Output file
+			];
+
 			const ffmpegResult = await new Promise((resolve, reject) => {
-				const ffmpegArgs = [
-					'-y', // Overwrite output file if exists
-					'-i', originalPath, // Input file
-					'-ss', startTime.toString(), // Start time
-					'-to', endTime.toString(), // End time
-					'-c:v', 'libx264', // Video codec
-					'-b:v', `${targetBitrate}`, // Video bitrate
-					'-preset', 'medium', // Encoding preset (fast, medium, slow, etc.)
-					'-c:a', 'aac', // Audio codec
-					'-b:a', '128k', // Audio bitrate
-					outputPath // Output file
-				];
-
 				const ffmpegProcess = spawn('ffmpeg', ffmpegArgs);
 				
 				let stdoutData = '';
@@ -190,7 +260,7 @@ export function setupIpcHandlers() {
 						resolve({ 
 							success: true, 
 							filename: outputFilename,
-							path: outputPath
+							path: finalOutputPath
 						});
 					} else {
 						console.error('FFmpeg error output:', stderrData);
@@ -203,30 +273,14 @@ export function setupIpcHandlers() {
 				});
 			});
 
-			// If we're overwriting the original, replace it now
-			if (shouldOverwrite) {
-				try {
-					// Delete original and rename the temp file
-					fs.unlinkSync(originalPath);
-					fs.renameSync(outputPath, originalPath);
-					
-					return {
-						success: true,
-						filename: originalFilename,
-						path: originalPath
-					};
-				} catch (err) {
-					console.error('Error replacing original file:', err);
-					return {
-						success: true,
-						filename: outputFilename,
-						path: outputPath,
-						warning: 'Could not replace original file, saved as new file instead'
-					};
-				}
-			}
-
-			return ffmpegResult;
+			return {
+				...ffmpegResult,
+				message: isTrimming ? 
+					'Video trimmed and saved successfully' : 
+					isCompressionEffective ? 
+						'Video compressed and saved successfully' : 
+						'Video processed and saved successfully'
+			};
 		} catch (error) {
 			console.error('Error saving edited video:', error);
 			return { success: false, error: error.message };
