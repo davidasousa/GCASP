@@ -21,6 +21,28 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 				preload: 'metadata',
 				fluid: true,
 				playbackRates: [0.5, 1, 1.5, 2],
+                responsive: true,
+                
+                // Improve performance and reliability
+                html5: {
+                    vhs: {
+                        overrideNative: true,
+                        limitRenditionByPlayerDimensions: false,
+                        smoothQualityChange: true,
+                        handleManifestRedirects: true,
+                    },
+                    nativeAudioTracks: false,
+                    nativeVideoTracks: false
+                },
+                
+                // Improve seeking behavior
+                liveui: false,
+                liveTracker: false,
+                inactivityTimeout: 2000,
+                
+                // Error handling improvements
+                techOrder: ['html5'],
+                enableSourceset: true,
 
 				// Control bar configuration
 				controlBar: {
@@ -42,25 +64,9 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 					hotkeys: true // Enable keyboard shortcuts
 				},
 
-				// Keyboard shortcuts
-				keyboard: {
-					focused: true,
-					global: false
-				},
-
-				// HTML5 video settings
-				html5: {
-					vhs: {
-						overrideNative: true // Use video.js HLS implementation
-					},
-					nativeAudioTracks: false, // Don't use native audio track controls
-					nativeVideoTracks: false // Don't use native video track controls
-				},
 				loadingSpinner: true, // Show loading animation
 				errorDisplay: true, // Show error messages
 				bigPlayButton: true, // Show large play button in center
-				textTrackSettings: false, // Hide closed caption settings
-				// Video source config
 				sources: [{
 					src: videoUrl, // URL of the video
 					type: 'video/mp4' // Video format
@@ -100,6 +106,41 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 						}
 					});
 
+					// Improve error handling for seeking
+					player.on('error', function(e) {
+						const error = player.error();
+						console.error('Video.js error:', error);
+						
+						// Handle range not satisfiable errors specifically
+						if (error.code === 4 && (error.message.includes('416') || 
+							error.message.includes('range') || 
+							error.message.includes('satisfiable'))) {
+							console.log('Handling range error, attempting to reload video');
+							
+							// Try to recover by reloading with the current time
+							const currentTime = player.currentTime();
+							
+							player.src({
+								src: `${videoUrl}?reload=${Date.now()}`,
+								type: 'video/mp4'
+							});
+							
+							player.load();
+							player.on('loadedmetadata', () => {
+								player.currentTime(currentTime);
+							});
+						}
+					});
+					
+					// Monitor seeking behavior
+					player.on('seeking', () => {
+						console.log('Seeking to:', player.currentTime());
+					});
+					
+					player.on('seeked', () => {
+						console.log('Seeked to:', player.currentTime());
+					});
+
 					if (onReady) {
 						onReady(player);
 					}
@@ -121,7 +162,16 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 	// Update the video source when videoUrl changes.
 	useEffect(() => {
 		if (playerRef.current) {
-			playerRef.current.src({ src: videoUrl, type: 'video/mp4' });
+			playerRef.current.src({ 
+				src: videoUrl, 
+				type: 'video/mp4' 
+			});
+			
+			// Add timestamp query parameter to bust cache
+			playerRef.current.src({
+				src: `${videoUrl}?t=${Date.now()}`,
+				type: 'video/mp4'
+			});
 		}
 	}, [videoUrl]);
 
@@ -140,10 +190,10 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 
 	// Render video element with video.js wrapper
 	return (
-		<div data-vjs-player>
+		<div data-vjs-player className="video-player-container">
 			<video 
 				ref={videoRef}
-				className="video-js vjs-big-play-centered"
+				className="video-js vjs-big-play-centered vjs-fluid"
 			/>
 		</div>
 	);

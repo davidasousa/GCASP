@@ -1,4 +1,3 @@
-// videoProtocol.js
 import { protocol, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
@@ -102,24 +101,51 @@ export function setupVideoProtocol() {
             const rangeHeader = request.headers.get('range');
 
             if (rangeHeader) {
-                const parts = rangeHeader.replace(/bytes=/, '').split('-');
-                const start = parseInt(parts[0], 10);
-                const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-
-                if (start >= fileSize || end >= fileSize || start > end) {
-                    return new Response('Requested range not satisfiable', {
-                        status: 416,
-                        headers: { 'Content-Range': `bytes */${fileSize}` }
+                // More robust range parsing
+                const matches = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+                if (!matches) {
+                    console.log('Invalid range format:', rangeHeader);
+                    // Fall back to sending the whole file
+                    const nodeStream = fs.createReadStream(videoPath);
+                    const webStream = nodeStreamToWebStream(nodeStream);
+                    return new Response(webStream, {
+                        status: 200,
+                        headers: {
+                            'Content-Length': fileSize.toString(),
+                            'Content-Type': 'video/mp4',
+                            'Accept-Ranges': 'bytes'
+                        }
                     });
                 }
-
+                
+                let start = parseInt(matches[1], 10);
+                let end = matches[2] ? parseInt(matches[2], 10) : undefined;
+                
+                // Handle missing or invalid start position
+                if (isNaN(start)) {
+                    start = 0;
+                }
+                
+                // Handle missing or invalid end position
+                if (isNaN(end) || end === 0) {
+                    end = fileSize - 1;
+                }
+                
+                // Ensure end doesn't exceed file size
+                end = Math.min(end, fileSize - 1);
+                
+                // Make sure start is valid and within bounds
+                start = Math.max(0, Math.min(start, end));
+                
+                //console.log(`Range request: bytes=${start}-${end}/${fileSize}`);
+                
                 const chunksize = end - start + 1;
                 const headers = {
                     'Content-Range': `bytes ${start}-${end}/${fileSize}`,
                     'Accept-Ranges': 'bytes',
                     'Content-Length': chunksize.toString(),
-                    'Content-Type': 'video/mp4',
-                    'Cache-Control': 'public, max-age=3600'
+                    'Content-Type': 'video/mp4', 
+                    'Cache-Control': 'no-cache, no-store, must-revalidate'
                 };
 
                 const nodeStream = fs.createReadStream(videoPath, { start, end });
