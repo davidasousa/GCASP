@@ -1,10 +1,9 @@
 import { ipcMain, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { runRecord } from './recorder';
 import { promisify } from 'util';
 import { spawn } from 'child_process';
-import { getTimestamp } from './utilities';
+import { createClip, startContinuousRecording, stopContinuousRecording } from './recorder';
 
 const exec = promisify(require('child_process').exec);
 
@@ -25,6 +24,9 @@ const ensureDirectories = () => {
 export function setupIpcHandlers() {
 	// Ensure directories exist when IPC handlers are set up
 	ensureDirectories();
+
+	// Start the continuous recording when IPC handlers are set up
+	startContinuousRecording();
 
 	// Get list of local clips
 	ipcMain.handle('get-local-videos', () => {
@@ -54,90 +56,36 @@ export function setupIpcHandlers() {
 		return { success: true };
 	});
 
-	// Trigger video recording for the buffer
-	ipcMain.handle('trigger-record', async (event) => {
-		const timestamp = new Date().toISOString()
-			.replace(/[:.]/g, '-')
-			.replace('T', '_')
-			.replace('Z', '');
-		
-		// Don't send the event until recording is complete
-		try {
-			const outputPath = await runRecord(timestamp);
-			
-			// Check if file exists and is complete
-			const maxAttempts = 10;
-			let attempts = 0;
-			
-			while (attempts < maxAttempts) {
-				try {
-					const stats = fs.statSync(outputPath);
-					if (stats.size > 0) {
-						const videoInfo = {
-							id: timestamp,
-							filename: path.basename(outputPath),
-							timestamp: new Date()
-						};
-						
-						// Only notify about new recording after file is confirmed ready
-						event.sender.send('new-recording', videoInfo);
-						return videoInfo;
-					}
-				} catch (err) {
-					// File might not exist yet
-				}
-				
-				await new Promise(resolve => setTimeout(resolve, 500));
-				attempts++;
-			}
-			
-			throw new Error('Recording failed to complete');
-		} catch (error) {
-			console.error('Recording error:', error);
-			throw error;
-		}
-	});
-
 	// Trigger clip creation
-	ipcMain.handle('trigger-clip', async (event, length) => {
-		var videoFiles = [];
-		const files = fs.readdirSync(recordingsPath);
-		files.filter(file => file.endsWith('.mp4'))
-			.map(file => {
-				videoFiles.push(file);
-			});  
-
-		// Get most recent recordings from the buffer
-		if (videoFiles.length === 0) {
-			return { success: false, error: 'No recordings available to clip' };
-		}
-
-		// The most recent recording is the last one in the buffer
-		const mostRecentVideo = videoFiles[videoFiles.length - 1];
-		const timestamp = new Date().toISOString()
-			.replace(/[:.]/g, '-')
-			.replace('T', '_')
-			.replace('Z', '');
-		const clipName = `clip_${timestamp}.mp4`;
-		
-		const recordingPath = path.join(recordingsPath, mostRecentVideo);
-		const clipPath = path.join(clipsPath, clipName);
-
+	ipcMain.handle('trigger-clip', async (event) => {
 		try {
-			// Copy the file to clips directory
-			await fs.promises.copyFile(recordingPath, clipPath);
+			const result = await createClip();
 			
-			// Notify frontend that clip is done
-			event.sender.send('clip-done', clipName);
-			
-			return {
-				success: true,
-				filename: clipName,
-				path: clipPath
-			};
-		} catch (err) {
-			console.error('Error creating clip:', err);
-			return { success: false, error: err.message };
+			if (result.success) {
+				// Extract the ID from the filename (without extension)
+				const id = path.parse(result.filename).name;
+				
+				// Notify about new clip
+				event.sender.send('new-recording', {
+					id: id,
+					filename: result.filename,
+					timestamp: new Date()
+				});
+				
+				// Notify frontend that clip is done
+				event.sender.send('clip-done', result.filename);
+				
+				return {
+					success: true,
+					filename: result.filename,
+					path: result.path
+				};
+			} else {
+				return { success: false, error: result.error };
+			}
+		} catch (error) {
+			console.error('Error creating clip:', error);
+			return { success: false, error: error.message };
 		}
 	});
 
