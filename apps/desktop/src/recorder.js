@@ -62,35 +62,17 @@ async function recordSegment() {
 		
     // Set up platform-specific capture commands for main monitor only
     let captureArgs;
-    if (process.platform === 'win32') {
       // Windows: Use gdigrab with primary monitor only
-      captureArgs = [
-        '-f', 'gdigrab',
-        '-framerate', config.fps.toString(),
-        '-offset_x', '0',
-        '-offset_y', '0',
-        '-video_size', `${config.width}x${config.height}`,
-        '-draw_mouse', '1',
-        '-i', 'desktop'
-      ];
-    } else if (process.platform === 'darwin') {
-      // macOS: Use avfoundation with specific resolution
-      captureArgs = [
-        '-f', 'avfoundation',
-        '-framerate', config.fps.toString(),
-        '-video_size', `${config.width}x${config.height}`,
-        '-i', '1:none' // Capture display 1, no audio
-      ];
-    } else {
-      // Linux: Use x11grab with specific resolution
-      captureArgs = [
-        '-f', 'x11grab',
-        '-framerate', config.fps.toString(),
-        '-video_size', `${config.width}x${config.height}`,
-        '-i', ':0.0+0,0', // Primary display, offset 0,0
-      ];
-    }
-    
+	captureArgs = [
+		'-f', 'gdigrab',
+		'-framerate', config.fps.toString(),
+		'-offset_x', '0',
+		'-offset_y', '0',
+		'-video_size', `${config.width}x${config.height}`,
+		'-draw_mouse', '1',
+		'-i', 'desktop'
+	];
+
     // Build FFmpeg command for this segment
     const args = [
       '-y',
