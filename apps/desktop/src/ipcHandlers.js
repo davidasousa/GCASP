@@ -1,119 +1,318 @@
 import { ipcMain, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { runRecord } from './recorder';
+import { promisify } from 'util';
+import { spawn } from 'child_process';
+import { createClip, startContinuousRecording, stopContinuousRecording } from './recorder';
 
+const exec = promisify(require('child_process').exec);
+
+// Set up paths for recordings and clips
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
 const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
 
+// Ensure directories exist
+const ensureDirectories = () => {
+	if (!fs.existsSync(recordingsPath)) {
+		fs.mkdirSync(recordingsPath, { recursive: true });
+	}
+	if (!fs.existsSync(clipsPath)) {
+		fs.mkdirSync(clipsPath, { recursive: true });
+	}
+};
+
 export function setupIpcHandlers() {
+	// Ensure directories exist when IPC handlers are set up
+	ensureDirectories();
 
-// Get list of local videos
-ipcMain.handle('get-local-videos', () => {
-    const files = fs.readdirSync(clipsPath);
-    return files
-    .filter(file => file.endsWith('.mp4'))
-    .map(file => {
-        const filePath = path.join(clipsPath, file);
-        const stats = fs.statSync(filePath);
-        return {
-        id: path.parse(file).name,
-        filename: file,
-        timestamp: stats.mtime
-        };
-    });
-});
+	// Start the continuous recording when IPC handlers are set up
+	startContinuousRecording();
 
-// Remove Local Recordings
-ipcMain.handle('remove-local-clips', () => {
+	// Get list of local clips
+	ipcMain.handle('get-local-videos', () => {
+		const files = fs.readdirSync(clipsPath);
+		return files
+			.filter(file => file.endsWith('.mp4'))
+			.map(file => {
+				const filePath = path.join(clipsPath, file);
+				const stats = fs.statSync(filePath);
+				return {
+					id: path.parse(file).name,
+					filename: file,
+					timestamp: stats.mtime
+				};
+			});
+	});
+
+	// Remove all local clips
+	ipcMain.handle('remove-local-clips', () => {
 		const files = fs.readdirSync(clipsPath);
 		files.filter(file => file.endsWith('.mp4'))
-		.map(file => {
+			.map(file => {
 				const filePath = path.join(clipsPath, file);
 				fs.unlinkSync(filePath);  // Remove the file
 				console.log(`Deleted: ${filePath}`);
-		});
-});
+			});
+		return { success: true };
+	});
 
-// Trigger video recording
-ipcMain.handle('trigger-record', async (event) => {
-    const timestamp = new Date().toISOString()
-    .replace(/[:.]/g, '-')
-    .replace('T', '_')
-    .replace('Z', '');
-
-    // Don't send the event until recording is complete
-    try {
-    const outputPath = await runRecord(timestamp);
-    
-    // Check if file exists and is complete
-    const maxAttempts = 10;
-    let attempts = 0;
-    
-    while (attempts < maxAttempts) {
-        try {
-        const stats = fs.statSync(outputPath);
-        if (stats.size > 0) {
-            const videoInfo = {
-            id: timestamp,
-            filename: path.basename(outputPath),
-            timestamp: new Date()
-            };
-            
-            // Only notify about new recording after file is confirmed ready
-//            event.sender.send('recording-done', videoInfo);
-            return videoInfo;
-        }
-        } catch (err) {
-					console.log(err);
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        attempts++;
-    }
-    
-    throw new Error('Recording failed to complete');
-    } catch (error) {
-    console.error('Recording error:', error);
-    throw error;
-    }
-});
-
-// Delete a specific video
-ipcMain.handle('remove-specific-video', (event, filename) => {
-    const filePath = path.join(recordingsPath, filename);
-    if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log(`Deleted: ${filePath}`);
-        return { success: true };
-    }
-    return { success: false, error: 'File not found' };
-});
-
-ipcMain.handle('trigger-clip', async (event, length) => {
-	var videoFiles = [];
-	const files = fs.readdirSync(recordingsPath);
-	files.filter(file => file.endsWith('.mp4'))
-	.map(file => {
-			videoFiles.push(file);
-	});  
-
-	const mostRecentVideo = videoFiles[videoFiles.length - 1];
-
-	const recordingPath = path.join(recordingsPath, mostRecentVideo);
-	const clipPath = path.join(clipsPath, mostRecentVideo);
-
-	await fs.copyFile(
-		recordingPath,
-		clipPath,
-		(err) => {
-			console.log(err);
+	// Trigger clip creation
+	ipcMain.handle('trigger-clip', async (event) => {
+		try {
+			const result = await createClip();
+			
+			if (result.success) {
+				// Extract the ID from the filename (without extension)
+				const id = path.parse(result.filename).name;
+				
+				// Notify about new clip
+				event.sender.send('new-recording', {
+					id: id,
+					filename: result.filename,
+					timestamp: new Date()
+				});
+				
+				// Notify frontend that clip is done
+				event.sender.send('clip-done', result.filename);
+				
+				return {
+					success: true,
+					filename: result.filename,
+					path: result.path
+				};
+			} else {
+				return { success: false, error: result.error };
+			}
+		} catch (error) {
+			console.error('Error creating clip:', error);
+			return { success: false, error: error.message };
 		}
-	);
+	});
 
-	// Notify Frontend Clip Is Done
-	// event.sender.send('clip-done', clipName);
-	return;
-});
+	// Delete a specific video (from recordings)
+	ipcMain.handle('remove-specific-video', (event, filename) => {
+		// Try to find in recordings path first
+		let filePath = path.join(recordingsPath, filename);
+		if (fs.existsSync(filePath)) {
+			fs.unlinkSync(filePath);
+			console.log(`Deleted recording: ${filePath}`);
+			return { success: true };
+		}
+		
+		// If not found, try clips path
+		filePath = path.join(clipsPath, filename);
+		if (fs.existsSync(filePath)) {
+			fs.unlinkSync(filePath);
+			console.log(`Deleted clip: ${filePath}`);
+			return { success: true };
+		}
+		
+		return { success: false, error: 'File not found' };
+	});
 
+	// Get video metadata (for clips)
+	ipcMain.handle('get-video-metadata', async (event, filename) => {
+		try {
+			const filePath = path.join(clipsPath, filename);
+			
+			if (!fs.existsSync(filePath)) {
+				return { success: false, error: 'File not found' };
+			}
+
+			// Use ffprobe to get video metadata
+			const { stdout } = await exec(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height,duration,codec_name,r_frame_rate -show_entries format=duration,size -of json "${filePath}"`);
+			
+			const metadata = JSON.parse(stdout);
+			const videoStream = metadata.streams[0] || {};
+			const format = metadata.format || {};
+			
+			// Calculate frame rate from fraction
+			let frameRate = 0;
+			if (videoStream.r_frame_rate) {
+				const [numerator, denominator] = videoStream.r_frame_rate.split('/');
+				frameRate = Math.round(parseInt(numerator) / parseInt(denominator));
+			}
+			
+			return {
+				success: true,
+				width: videoStream.width,
+				height: videoStream.height,
+				codec: videoStream.codec_name,
+				frameRate,
+				duration: parseFloat(format.duration || videoStream.duration || 0),
+				size: parseInt(format.size || 0),
+				format: 'mp4'
+			};
+		} catch (error) {
+			console.error('Error getting video metadata:', error);
+			return { success: false, error: error.message };
+		}
+	});
+
+	// Save edited video
+	ipcMain.handle('save-edited-video', async (event, params) => {
+		const {
+			originalFilename,
+			newTitle,
+			startTime,
+			endTime,
+			compressSizeMB,
+			enableCompression
+		} = params;
+
+		try {
+			const originalPath = path.join(clipsPath, originalFilename);
+			
+			if (!fs.existsSync(originalPath)) {
+				return { success: false, error: 'Original file not found' };
+			}
+
+			// Get the original metadata to determine if content is being modified
+			const { stdout } = await exec(`ffprobe -v error -select_streams v:0 -show_entries stream=width,height,duration,codec_name,r_frame_rate -show_entries format=duration,size -of json "${originalPath}"`);
+			const metadata = JSON.parse(stdout);
+			const originalDuration = parseFloat(metadata.format.duration || 0);
+			const originalSizeBytes = parseInt(metadata.format.size || 0);
+			const originalSizeMB = originalSizeBytes / (1024 * 1024);
+			
+			// Determine if we're modifying content (trimming or compression)
+			const isTrimming = Math.abs(startTime) > 0.1 || Math.abs(endTime - originalDuration) > 0.1;
+			
+			// Only consider compression if it's enabled AND target size is smaller than current size
+			const isCompressionEffective = enableCompression && compressSizeMB < originalSizeMB;
+			const isContentModified = isTrimming || isCompressionEffective;
+			const isTitleChanged = newTitle.trim() !== originalFilename;
+			
+			// Case 0: No changes at all - do nothing
+			if (!isContentModified && !isTitleChanged) {
+				return {
+					success: true,
+					filename: originalFilename,
+					path: originalPath,
+					message: 'No changes were needed'
+				};
+			}
+			
+			// Case 1: Title-only change (no content modification)
+			if (isTitleChanged && !isContentModified) {
+				const newFileName = newTitle.trim().endsWith('.mp4') ? newTitle.trim() : `${newTitle.trim()}.mp4`;
+				const newPath = path.join(clipsPath, newFileName);
+				
+				// Check if target filename already exists
+				if (fs.existsSync(newPath) && newPath !== originalPath) {
+					return { 
+						success: false, 
+						error: `A file named "${newFileName}" already exists. Please choose a different name.`
+					};
+				}
+				
+				try {
+					// Simply rename the file
+					fs.renameSync(originalPath, newPath);
+					return {
+						success: true,
+						filename: newFileName,
+						path: newPath,
+						message: 'File renamed successfully'
+					};
+				} catch (err) {
+					console.error('Error renaming file:', err);
+					return { success: false, error: `Error renaming file: ${err.message}` };
+				}
+			}
+			
+			// Case 2: Content modification
+			// Determine output filename
+			let outputFilename;
+			if (!isTitleChanged) {
+				// Same title but content modified - add _edit suffix
+				const baseName = path.basename(originalFilename, '.mp4');
+				outputFilename = `${baseName}_edit.mp4`;
+			} else {
+				// New title and content modified
+				outputFilename = newTitle.trim().endsWith('.mp4') ? newTitle.trim() : `${newTitle.trim()}.mp4`;
+			}
+			
+			const outputPath = path.join(clipsPath, outputFilename);
+			
+			// Check if target filename already exists
+			if (fs.existsSync(outputPath)) {
+				return { 
+					success: false, 
+					error: `A file named "${outputFilename}" already exists. Please choose a different name.`
+				};
+			}
+			
+			const finalOutputPath = path.join(clipsPath, outputFilename);
+
+			// Calculate bitrate for target size if compression is enabled and effective
+			let targetBitrate;
+			const duration = endTime - startTime;
+			
+			if (isCompressionEffective) {
+				const targetSizeBytes = compressSizeMB * 1024 * 1024; // Convert MB to bytes
+				targetBitrate = Math.floor((targetSizeBytes * 8) / duration);
+			} else {
+				// Use a high bitrate to maintain quality if not compressing
+				targetBitrate = "5000k";
+			}
+
+			// Trim and optionally compress the video using ffmpeg
+			const ffmpegArgs = [
+				'-y', // Overwrite output file if exists
+				'-i', originalPath, // Input file
+				'-ss', startTime.toString(), // Start time
+				'-to', endTime.toString(), // End time
+				'-c:v', 'libx264', // Video codec
+				'-b:v', `${targetBitrate}`, // Video bitrate
+				'-preset', 'medium', // Encoding preset
+				'-c:a', 'aac', // Audio codec
+				'-b:a', '128k', // Audio bitrate
+				finalOutputPath // Output file
+			];
+
+			const ffmpegProcess = spawn('ffmpeg', ffmpegArgs);
+			
+			const ffmpegResult = await new Promise((resolve, reject) => {
+				let stdoutData = '';
+				let stderrData = '';
+				
+				ffmpegProcess.stdout.on('data', (data) => {
+					stdoutData += data.toString();
+				});
+				
+				ffmpegProcess.stderr.on('data', (data) => {
+					stderrData += data.toString();
+				});
+				
+				ffmpegProcess.on('close', (code) => {
+					if (code === 0) {
+						resolve({ 
+							success: true, 
+							filename: outputFilename,
+							path: finalOutputPath
+						});
+					} else {
+						console.error('FFmpeg error output:', stderrData);
+						reject(new Error(`FFmpeg exited with code ${code}: ${stderrData}`));
+					}
+				});
+				
+				ffmpegProcess.on('error', (error) => {
+					reject(error);
+				});
+			});
+
+			return {
+				...ffmpegResult,
+				message: isTrimming ? 
+					'Video trimmed and saved successfully' : 
+					isCompressionEffective ? 
+						'Video compressed and saved successfully' : 
+						'Video processed and saved successfully'
+			};
+		} catch (error) {
+			console.error('Error saving edited video:', error);
+			return { success: false, error: error.message };
+		}
+	});
 }
