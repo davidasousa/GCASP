@@ -13,11 +13,18 @@ const App = () => {
     const videosPerPage = 10;
 
 		// Creating The Clipper Object
-		var clipLength = 5;
+		var clipLength = 10;
 		var clipWindow = [];
+
+		// Capture Clip Flag 
 		const [captureFlag, setCaptureFlag] = useState(false);
 		const captureFlagRef = useRef(captureFlag);
 		useEffect(() => { captureFlagRef.current = captureFlag; }, [captureFlag]);
+
+		// Clip Timestamp
+		const [timestamp, setTimestamp] = useState(null);
+		const clipTimestamp = useRef(timestamp);
+		useEffect(() => { clipTimestamp.current = timestamp; }, [timestamp]);
 
 
     // Function to load videos from the folder.
@@ -46,18 +53,22 @@ const App = () => {
 					const videoInfo = await window.electron.triggerRecordVideo(); 
 
 					// Remove Last Video
-					if(clipWindow.length > 5) {
+					if(clipWindow.length > clipLength) {
 						throw new Error("Clip Window Length Exceeded");
-					} else if(clipWindow.length == 5) {
+					} else if(clipWindow.length == clipLength) {
 						const file = clipWindow[0].filename;
 						await window.electron.removeSpecificVideo(file);
 						clipWindow.shift();
 					}		
 					// Add New Video To Buffer
 					clipWindow.push(videoInfo);	
+
 					// Clipping Video
 					if(captureFlagRef.current) {
-						await window.electron.triggerClipVideo(clipLength);
+						const clipSettings = {
+							clipLength: 9
+						};
+						await window.electron.triggerClipVideo(clipTimestamp.current, clipSettings);
 						setCaptureFlag(false);
 					}
 					setTimeout(loop, 5); // 100 ms delay between recordings
@@ -67,9 +78,9 @@ const App = () => {
 
     // Load videos when the component mounts or when the home view is selected.
     useEffect(() => {
-        if (currentView === 'home') {
-            loadVideos();
-        }
+       if (currentView === 'home') {
+           loadVideos();
+       }
     }, [currentView]);
 
     // Initial load of videos & starting clipper
@@ -121,6 +132,7 @@ const App = () => {
 			.replace('T', '_')
 			.replace('Z', '');
 
+			setTimestamp(timestamp);
 			setCaptureFlag(true); 
 		};
 

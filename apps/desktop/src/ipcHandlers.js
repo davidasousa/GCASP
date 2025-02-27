@@ -1,10 +1,12 @@
 import { ipcMain, app } from 'electron';
 import path from 'path';
+import { spawn } from 'child_process';
 import fs from 'fs';
 import { runRecord } from './recorder';
 
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
 const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
+const clipInstructionsPath = path.join(app.getPath('videos'), 'GCASP/clipInstructions.txt');
 
 export function setupIpcHandlers() {
 
@@ -90,26 +92,76 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
     return { success: false, error: 'File not found' };
 });
 
-ipcMain.handle('trigger-clip', async (event, length) => {
+ipcMain.handle('trigger-clip', async (event, clipTimestamp, clipSettings) => {
 	var videoFiles = [];
+
+	// Reading All Recordings Into A File
 	const files = fs.readdirSync(recordingsPath);
 	files.filter(file => file.endsWith('.mp4'))
-	.map(file => {
-			videoFiles.push(file);
-	});  
+	.map(file => { videoFiles.push(file); });  
+	
+	const timestampPattern = /clip_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.mp4$/;
 
-	const mostRecentVideo = videoFiles[videoFiles.length - 1];
+	// Sorting Videos Into Ascending Order
+	const sortedVideos = videoFiles
+  .map(file => {
+    // Extract the timestamp from the file name using the regex
+    const baseName = file.split('/').pop();  // Get the last part of the path
+    const timestampMatch = baseName.match(timestampPattern);  // Match the timestamp part
+    const timestamp = timestampMatch ? timestampMatch[1] : null;
+    return { file, timestamp };  // Return the file path and its timestamp
+  })
+  .sort((a, b) => {
+    // Convert the timestamp to a Date object for comparison (sorting in descending order)
+    const dateA = new Date(a.timestamp.replace(/_/g, ':').replace('-', '/'));
+    const dateB = new Date(b.timestamp.replace(/_/g, ':').replace('-', '/'));
+    return dateB - dateA;  // Sort in descending order (latest first)
+  })
+  .map(entry => entry.file);  // Extract the sorted file paths
 
-	const recordingPath = path.join(recordingsPath, mostRecentVideo);
-	const clipPath = path.join(clipsPath, mostRecentVideo);
+	const clipRecordings = sortedVideos.slice(
+		sortedVideos.length - Math.ceil(9 / 5),
+		sortedVideos.length)
+	
+	fs.writeFileSync(clipInstructionsPath, '', { flag: 'w' });
+	clipRecordings.forEach(str => {
+		const path = 'file \'' + recordingsPath + '/' + str + '\'';
+		fs.appendFileSync(clipInstructionsPath, path + '\n');
+	});
 
-	await fs.copyFile(
-		recordingPath,
-		clipPath,
-		(err) => {
-			console.log(err);
+	const outputPath = path.join(clipsPath, `clip_${clipTimestamp}.mp4`);
+
+	const args = [
+		'-f',
+		'concat',
+		'-safe', '0', 
+		'-i', clipInstructionsPath,
+		'-c', 'copy',
+		outputPath
+	];
+
+	const ffmpegProcess = spawn(process.env.FFMPEG_EXECUTABLE_NAME, args); 	
+
+	ffmpegProcess.on('close', (code) => {
+		if (code === 0) {
+			resolve(outputPath);
+		} else {
+			reject(new Error(`FFmpeg exited with code ${code}`));
 		}
-	);
+	});
+
+	ffmpegProcess.on('error', (error) => {
+		reject(error);
+	});
+
+	ffmpegProcess.stdout.on('data', (data) => {
+		console.log(`ffmpeg stdout: ${data}`);
+	});
+
+	ffmpegProcess.stderr.on('data', (data) => {
+		console.error(`ffmpeg stderr: ${data}`);
+	});
+
 
 	// Notify Frontend Clip Is Done
 	// event.sender.send('clip-done', clipName);
