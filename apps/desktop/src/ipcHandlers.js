@@ -5,6 +5,8 @@ import fs from 'fs';
 import { runRecord } from './recorder';
 
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
+const recordingLength = 5; // Recording Length In Seconds
+
 const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
 const clipInstructionsPath = path.join(app.getPath('videos'), 'GCASP/clipInstructions.txt');
 
@@ -120,7 +122,7 @@ ipcMain.handle('trigger-clip', async (event, clipTimestamp, clipSettings) => {
   .map(entry => entry.file);  // Extract the sorted file paths
 
 	const clipRecordings = sortedVideos.slice(
-		sortedVideos.length - Math.ceil(9 / 5),
+		sortedVideos.length - Math.ceil(clipSettings.clipLength / recordingLength),
 		sortedVideos.length)
 	
 	fs.writeFileSync(clipInstructionsPath, '', { flag: 'w' });
@@ -142,26 +144,9 @@ ipcMain.handle('trigger-clip', async (event, clipTimestamp, clipSettings) => {
 
 	const ffmpegProcess = spawn(process.env.FFMPEG_EXECUTABLE_NAME, args); 	
 
-	ffmpegProcess.on('close', (code) => {
-		if (code === 0) {
-			resolve(outputPath);
-		} else {
-			reject(new Error(`FFmpeg exited with code ${code}`));
-		}
+	ffmpegProcess.on('close', () => {
+		console.log("Clipping Done");	
 	});
-
-	ffmpegProcess.on('error', (error) => {
-		reject(error);
-	});
-
-	ffmpegProcess.stdout.on('data', (data) => {
-		console.log(`ffmpeg stdout: ${data}`);
-	});
-
-	ffmpegProcess.stderr.on('data', (data) => {
-		console.error(`ffmpeg stderr: ${data}`);
-	});
-
 
 	// Notify Frontend Clip Is Done
 	// event.sender.send('clip-done', clipName);

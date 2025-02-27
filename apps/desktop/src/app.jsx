@@ -13,8 +13,8 @@ const App = () => {
     const videosPerPage = 10;
 
 		// Creating The Clipper Object
-		var clipLength = 10;
-		var clipWindow = [];
+		var clipBuffer = [];
+		var clipBufferMaxLen = 10;
 
 		// Capture Clip Flag 
 		const [captureFlag, setCaptureFlag] = useState(false);
@@ -53,15 +53,15 @@ const App = () => {
 					const videoInfo = await window.electron.triggerRecordVideo(); 
 
 					// Remove Last Video
-					if(clipWindow.length > clipLength) {
+					if(clipBuffer.length > clipBufferMaxLen) {
 						throw new Error("Clip Window Length Exceeded");
-					} else if(clipWindow.length == clipLength) {
-						const file = clipWindow[0].filename;
+					} else if(clipBuffer.length == clipBufferMaxLen) {
+						const file = clipBuffer[0].filename;
 						await window.electron.removeSpecificVideo(file);
-						clipWindow.shift();
+						clipBuffer.shift();
 					}		
 					// Add New Video To Buffer
-					clipWindow.push(videoInfo);	
+					clipBuffer.push(videoInfo);	
 
 					// Clipping Video
 					if(captureFlagRef.current) {
