@@ -23,9 +23,9 @@ const MAX_SEGMENTS = 5; // Keep 5 segments (5 seconds each)
 
 // Configuration - can be overridden from .env
 const config = {
-  // Default to 1440p (2560x1440) if not specified in env
-  width: process.env.CAPTURE_WIDTH ? parseInt(process.env.CAPTURE_WIDTH) : 2560,
-  height: process.env.CAPTURE_HEIGHT ? parseInt(process.env.CAPTURE_HEIGHT) : 1440,
+  // Default to 1080p (1920x1080) if not specified in env
+  width: process.env.CAPTURE_WIDTH ? parseInt(process.env.CAPTURE_WIDTH) : 1920,
+  height: process.env.CAPTURE_HEIGHT ? parseInt(process.env.CAPTURE_HEIGHT) : 1080,
   // Maximum framerate
   fps: process.env.CAPTURE_FPS ? parseInt(process.env.CAPTURE_FPS) : 30
 };
