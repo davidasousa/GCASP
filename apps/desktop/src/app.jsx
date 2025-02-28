@@ -66,7 +66,7 @@ const App = () => {
 					// Clipping Video
 					if(captureFlagRef.current) {
 						const clipSettings = {
-							clipLength: 9
+							clipLength: 7
 						};
 						await window.electron.triggerClipVideo(clipTimestamp.current, clipSettings);
 						setCaptureFlag(false);
