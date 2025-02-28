@@ -14,7 +14,7 @@ const App = () => {
 
 		// Creating The Clipper Object
 		var clipBuffer = [];
-		var clipBufferMaxLen = 10;
+		var clipBufferMaxLen = 24;
 
 		// Capture Clip Flag 
 		const [captureFlag, setCaptureFlag] = useState(false);
@@ -66,7 +66,7 @@ const App = () => {
 					// Clipping Video
 					if(captureFlagRef.current) {
 						const clipSettings = {
-							clipLength: 7
+							clipLength: 14
 						};
 						await window.electron.triggerClipVideo(clipTimestamp.current, clipSettings);
 						setCaptureFlag(false);

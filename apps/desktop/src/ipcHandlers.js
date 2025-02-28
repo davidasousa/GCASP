@@ -95,47 +95,40 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
 });
 
 ipcMain.handle('trigger-clip', async (event, clipTimestamp, clipSettings) => {
-	var videoFiles = [];
-
-	// Reading All Recordings Into A File
-	const files = fs.readdirSync(recordingsPath);
-	files.filter(file => file.endsWith('.mp4'))
-	.map(file => { videoFiles.push(file); });  
-	
 	const timestampPattern = /clip_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.mp4$/;
 
-	// Sorting Videos Into Ascending Order
-	const sortedVideos = videoFiles
-	.map(file => {
-		// Extract the timestamp from the file name using the regex
-		const baseName = file.split('/').pop();  // Get the last part of the path
-		const timestampMatch = baseName.match(timestampPattern);  // Match the timestamp part
-		const timestamp = timestampMatch ? timestampMatch[1] : null;
-		return { file, timestamp };  // Return the file path and its timestamp
-	})
-	.sort((a, b) => {
-		// Convert the timestamp to a Date object for comparison (sorting in descending order)
-		const dateA = new Date(a.timestamp.replace(/_/g, ':').replace('-', '/'));
-		const dateB = new Date(b.timestamp.replace(/_/g, ':').replace('-', '/'));
-		return dateB - dateA;  // Sort in descending order (latest first)
-	})
-	.map(entry => entry.file);  // Extract the sorted file paths
+	const rawOutputPath = path.join(clipsPath, `clip_${clipTimestamp}_raw.mp4`);
+	const outputPath = path.join(clipsPath, `clip_${clipTimestamp}.mp4`);
 
+	// Sorting Recordings
+	const sortedVideos = fs.readdirSync(recordingsPath)
+  .filter(file => file.endsWith('.mp4'))
+  .map(file => {
+    const timestampMatch = file.match(timestampPattern);
+    const timestamp = timestampMatch ? timestampMatch[1] : null;
+    return { file, timestamp };
+  })
+  .sort((a, b) => {
+    const dateA = new Date(a.timestamp.replace(/_/g, ':').replace('-', '/'));
+    const dateB = new Date(b.timestamp.replace(/_/g, ':').replace('-', '/'));
+    return dateB - dateA;
+  })
+  .map(entry => entry.file);
+
+	// Getting Enough Videos To Get The Clip
 	const clipRecordings = sortedVideos.slice(
 		sortedVideos.length - Math.ceil(clipSettings.clipLength / recordingLength),
 		sortedVideos.length)
+
+	// Amount Needed To Cut To Match Video Length
+	const ssCut = (clipRecordings.length * recordingLength - clipSettings.clipLength).toString();
 	
+	// Writing Videos To Text File
 	fs.writeFileSync(clipInstructionsPath, '', { flag: 'w' });
 	clipRecordings.forEach(str => {
 		const path = 'file \'' + recordingsPath + '/' + str + '\'';
 		fs.appendFileSync(clipInstructionsPath, path + '\n');
 	});
-
-	// Amount Needed To Cut To Match Video Length
-	const ssCut = (clipRecordings.length * recordingLength - clipSettings.clipLength).toString();
-
-	const rawOutputPath = path.join(clipsPath, `clip_${clipTimestamp}_raw.mp4`);
-	const outputPath = path.join(clipsPath, `clip_${clipTimestamp}.mp4`);
 
 	const concatArgs = [
 		'-f',

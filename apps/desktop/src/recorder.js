@@ -23,16 +23,6 @@ export const runRecord = (timestamp) => {
 
     const ffmpegProcess = spawn(process.env.FFMPEG_EXECUTABLE_NAME, args); 	
 		
-		/*
-		ffmpegProcess.stdout.on('data', (data) => {
-      console.log(`ffmpeg stdout: ${data}`);
-    });
-
-    ffmpegProcess.stderr.on('data', (data) => {
-      console.error(`ffmpeg stderr: ${data}`);
-    });
-
-		*/
     ffmpegProcess.on('close', (code) => {
       if (code === 0) {
         resolve(outputPath);
