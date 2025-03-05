@@ -11,8 +11,31 @@ const App = () => {
 	// State for clip creation
 	const [isClipping, setIsClipping] = useState(false);
 	
-	// Clip settings
+	// State for settings
 	const [clipLength, setClipLength] = useState(20); // Default clip length in seconds
+	
+	// Load settings on component mount
+	useEffect(() => {
+		const loadSettings = async () => {
+			try {
+				const settings = await window.electron.getSettings();
+				if (settings) {
+					setClipLength(settings.recordingLength || 20);
+				}
+			} catch (error) {
+				console.error('Error loading settings:', error);
+			}
+		};
+		
+		loadSettings();
+		
+		// Listen for settings changes
+		const settingsInterval = setInterval(loadSettings, 5000);
+		
+		return () => {
+			clearInterval(settingsInterval);
+		};
+	}, []);
 	
 	// Listen for new recordings from the main process
 	useEffect(() => {
