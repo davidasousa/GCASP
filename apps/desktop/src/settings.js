@@ -3,8 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import { globalShortcut } from 'electron';
 
-// Define the path for settings
-const settingsPath = path.join(app.getPath('userData'), 'settings.json');
+// Define path for GCASP settings
+const gcaspDataPath = path.join(app.getPath('appData'), 'GCASP');
+const settingsPath = path.join(gcaspDataPath, 'settings.json');
 
 // Default settings
 const defaultSettings = {
@@ -52,9 +53,10 @@ export function saveSettings(settings) {
 // Ensure the settings directory exists
 export function ensureSettingsDirectory() {
     try {
-        const dir = path.dirname(settingsPath);
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
+        // Create GCASP directory if it doesn't exist
+        if (!fs.existsSync(gcaspDataPath)) {
+            fs.mkdirSync(gcaspDataPath, { recursive: true });
+            console.log(`Created GCASP settings directory at: ${gcaspDataPath}`);
         }
     } catch (error) {
         console.error('Error creating settings directory:', error);
