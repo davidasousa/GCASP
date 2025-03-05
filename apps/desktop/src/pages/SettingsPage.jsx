@@ -6,6 +6,7 @@ const SettingsPage = () => {
     const [hotkey, setHotkey] = useState('F9');
     const [isListening, setIsListening] = useState(false);
     const [recordingLength, setRecordingLength] = useState(20);
+    const [recordingLengthInput, setRecordingLengthInput] = useState('20'); // Separate state for input
     const [isSaving, setSaving] = useState(false);
     const [savedMessage, setSavedMessage] = useState('');
     
@@ -18,7 +19,9 @@ const SettingsPage = () => {
                 const settings = await window.electron.getSettings();
                 if (settings) {
                     setHotkey(settings.hotkey || 'F9');
-                    setRecordingLength(settings.recordingLength || 20);
+                    const savedLength = settings.recordingLength || 20;
+                    setRecordingLength(savedLength);
+                    setRecordingLengthInput(savedLength.toString());
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -66,10 +69,41 @@ const SettingsPage = () => {
         setIsListening(false);
     };
 
+    // Handle recording length input change without immediate clamping
+    const handleRecordingLengthInputChange = (e) => {
+        // Allow user to type any value
+        setRecordingLengthInput(e.target.value);
+    };
+
+    // Handle blur event to validate and clamp the input
+    const handleRecordingLengthBlur = () => {
+        const value = parseInt(recordingLengthInput, 10);
+        
+        if (isNaN(value)) {
+            // Reset to current valid value
+            setRecordingLengthInput(recordingLength.toString());
+        } else {
+            // Clamp between 5 and 120 seconds
+            const clampedValue = Math.max(5, Math.min(120, value));
+            setRecordingLength(clampedValue);
+            setRecordingLengthInput(clampedValue.toString());
+        }
+    };
+
+    // Handle Enter key press in recording length input
+    const handleRecordingLengthKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleRecordingLengthBlur();
+        }
+    };
+
     // Save settings
     const saveSettings = async () => {
         setSaving(true);
         setSavedMessage('');
+        
+        // First make sure recording length is valid by triggering blur validation
+        handleRecordingLengthBlur();
         
         try {
             const settings = {
@@ -140,12 +174,14 @@ const SettingsPage = () => {
                             type="number"
                             min="5"
                             max="120"
-                            value={recordingLength}
-                            onChange={(e) => setRecordingLength(Math.max(5, Math.min(120, parseInt(e.target.value) || 5)))}
+                            value={recordingLengthInput}
+                            onChange={handleRecordingLengthInputChange}
+                            onBlur={handleRecordingLengthBlur}
+                            onKeyDown={handleRecordingLengthKeyDown}
                         />
                     </div>
                     <p className="setting-help">
-                        Set how many seconds of gameplay will be saved when you press the clip hotkey.
+                        Set how many seconds of gameplay will be saved when you press the clip hotkey (5-120 seconds).
                     </p>
                 </div>
                 

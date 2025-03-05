@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { execSync } from 'child_process';
+import { loadSettings } from './settings';
 
 // Load environment variables
 dotenv.config();
@@ -22,8 +23,10 @@ const getFFmpegPath = () => {
 let isRecording = false;
 let recordingSegments = [];
 let activeProcess = null; // Track the active FFmpeg process
-const MAX_SEGMENTS = 8; // Keep 8 segments (5 seconds each)
-const RECORDING_LENGTH = 5; // Recording Length In Seconds
+
+// Segment configuration
+const SEGMENT_LENGTH = 5; // Recording Length In Seconds
+// MAX_SEGMENTS will be calculated dynamically based on settings
 
 // Configuration - can be overridden from .env
 const config = {
@@ -33,6 +36,14 @@ const config = {
 	// Maximum framerate
 	fps: process.env.CAPTURE_FPS ? parseInt(process.env.CAPTURE_FPS) : 30
 };
+
+// Get the maximum number of segments to keep based on settings
+function getMaxSegments() {
+	const settings = loadSettings();
+	const desiredClipLength = settings.recordingLength || 20; // Default to 20 seconds
+	// Calculate segments needed (round up to ensure we have enough)
+	return Math.ceil(desiredClipLength / SEGMENT_LENGTH) + 1; // +1 for safety
+}
 
 // Start the continuous recording process
 export function startContinuousRecording() {
@@ -92,7 +103,7 @@ async function recordSegment() {
 		const args = [
 			'-y',
 			...captureArgs,
-			'-t', '5', // 5 second segments
+			'-t', SEGMENT_LENGTH.toString(), // Segment length in seconds
 			'-c:v', 'libx264',
 			'-preset', 'ultrafast', // Fastest encoding
 			'-pix_fmt', 'yuv420p',
@@ -115,6 +126,9 @@ async function recordSegment() {
 						path: outputPath,
 						filename: path.basename(outputPath)
 					});
+					
+					// Get current max segments based on settings
+					const MAX_SEGMENTS = getMaxSegments();
 					
 					// Keep only the last MAX_SEGMENTS
 					while (recordingSegments.length > MAX_SEGMENTS) {
@@ -196,16 +210,22 @@ export async function createClip(clipTimestamp, clipSettings) {
 		// Default settings if not provided
 		const settings = clipSettings || { clipLength: 20 };
 		
+		// Ensure clip length is within bounds
+		const clipLength = Math.max(5, Math.min(120, settings.clipLength));
+		
 		const rawOutputPath = path.join(clipsPath, `clip_${clipTimestamp}_raw.mp4`);
 		const outputPath = path.join(clipsPath, `clip_${clipTimestamp}.mp4`);
 		
 		// Get the needed segments (most recent ones first)
-		const segmentsNeeded = Math.ceil(settings.clipLength / RECORDING_LENGTH);
-		const segmentsToUse = recordingSegments.slice(-segmentsNeeded);
+		const segmentsNeeded = Math.ceil(clipLength / SEGMENT_LENGTH);
+		
+		// Make sure we don't request more segments than we have
+		const availableSegments = Math.min(segmentsNeeded, recordingSegments.length);
+		const segmentsToUse = recordingSegments.slice(-availableSegments);
 		
 		// Calculate how much to trim from the beginning
-		const totalSegmentLength = segmentsToUse.length * RECORDING_LENGTH;
-		const trimAmount = totalSegmentLength - settings.clipLength;
+		const totalSegmentLength = segmentsToUse.length * SEGMENT_LENGTH;
+		const trimAmount = Math.max(0, totalSegmentLength - clipLength);
 		
 		// Create clip instructions file for FFmpeg concat
 		fs.writeFileSync(clipInstructionsPath, '', { flag: 'w' });
