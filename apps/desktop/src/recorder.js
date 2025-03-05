@@ -22,7 +22,7 @@ const getFFmpegPath = () => {
 let isRecording = false;
 let recordingSegments = [];
 let activeProcess = null; // Track the active FFmpeg process
-const MAX_SEGMENTS = 5; // Keep 5 segments (5 seconds each)
+const MAX_SEGMENTS = 8; // Keep 8 segments (5 seconds each)
 const RECORDING_LENGTH = 5; // Recording Length In Seconds
 
 // Configuration - can be overridden from .env
@@ -64,6 +64,17 @@ async function recordSegment() {
 		
 		const outputPath = path.join(recordingsPath, `clip_${timestamp}.mp4`);
 		
+		const args = [
+			'-y',
+			'-f', 'gdigrab',
+			'-i', 'desktop',
+			'-t', '5',
+			'-c:v', 'libx264',
+			'-pix_fmt', 'yuv420p',
+			outputPath
+		];
+		
+		/*
 		// Set up platform-specific capture commands for main monitor only
 		let captureArgs;
 		// Windows: Use gdigrab with primary monitor only
@@ -88,7 +99,7 @@ async function recordSegment() {
 			'-vf', 'scale=1920:1080', // Scale down to 1080p for efficient storage
 			outputPath
 		];
-		
+		*/
 		// Record segment
 		await new Promise((resolve, reject) => {
 			const ffmpegProcess = spawn(getFFmpegPath(), args);
@@ -183,7 +194,7 @@ export async function createClip(clipTimestamp, clipSettings) {
 		}
 		
 		// Default settings if not provided
-		const settings = clipSettings || { clipLength: 14 };
+		const settings = clipSettings || { clipLength: 20 };
 		
 		const rawOutputPath = path.join(clipsPath, `clip_${clipTimestamp}_raw.mp4`);
 		const outputPath = path.join(clipsPath, `clip_${clipTimestamp}.mp4`);

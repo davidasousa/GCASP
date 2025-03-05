@@ -12,7 +12,7 @@ const App = () => {
 	const [isClipping, setIsClipping] = useState(false);
 	
 	// Clip settings
-	const [clipLength, setClipLength] = useState(14); // Default clip length in seconds
+	const [clipLength, setClipLength] = useState(20); // Default clip length in seconds
 	
 	// Listen for new recordings from the main process
 	useEffect(() => {
