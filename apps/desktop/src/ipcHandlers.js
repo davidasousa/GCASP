@@ -48,18 +48,70 @@ export function setupIpcHandlers() {
 	ipcMain.handle('remove-local-clips', () => {
 		const files = fs.readdirSync(clipsPath);
 		files.filter(file => file.endsWith('.mp4'))
-			.map(file => {
+			.forEach(file => {
 				const filePath = path.join(clipsPath, file);
-				fs.unlinkSync(filePath);  // Remove the file
-				console.log(`Deleted: ${filePath}`);
+				try {
+					fs.unlinkSync(filePath);  // Remove the file
+					console.log(`Deleted: ${filePath}`);
+				} catch (err) {
+					console.error(`Failed to delete ${filePath}:`, err);
+				}
 			});
 		return { success: true };
 	});
 
-	// Trigger clip creation
-	ipcMain.handle('trigger-clip', async (event) => {
+	// Trigger recording (for splicing implementation)
+	ipcMain.handle('trigger-record', async (event) => {
+		const timestamp = new Date().toISOString()
+			.replace(/[:.]/g, '-')
+			.replace('T', '_')
+			.replace('Z', '');
+		
 		try {
-			const result = await createClip();
+			// This will be handled by the continuous recording in recorder.js
+			// Just return the latest segment info
+			const segments = fs.readdirSync(recordingsPath)
+				.filter(file => file.endsWith('.mp4'))
+				.map(file => {
+					const filePath = path.join(recordingsPath, file);
+					const stats = fs.statSync(filePath);
+					return {
+						filename: file,
+						path: filePath,
+						timestamp: stats.mtime
+					};
+				})
+				.sort((a, b) => b.timestamp - a.timestamp);
+			
+			if (segments.length > 0) {
+				const latest = segments[0];
+				return {
+					id: path.parse(latest.filename).name,
+					filename: latest.filename,
+					timestamp: latest.timestamp
+				};
+			}
+			
+			// If no segments found, return a placeholder
+			return {
+				id: `placeholder_${timestamp}`,
+				filename: `placeholder_${timestamp}.mp4`,
+				timestamp: new Date()
+			};
+		} catch (error) {
+			console.error('Recording error:', error);
+			throw error;
+		}
+	});
+
+	// Trigger clip creation with splicing
+	ipcMain.handle('trigger-clip', async (event, clipTimestamp, clipSettings) => {
+		try {
+			// Use the same settings format for both implementations
+			const settings = clipSettings || { clipLength: 14 };
+			
+			// Create the clip
+			const result = await createClip(clipTimestamp, settings);
 			
 			if (result.success) {
 				// Extract the ID from the filename (without extension)
@@ -89,22 +141,31 @@ export function setupIpcHandlers() {
 		}
 	});
 
-	// Delete a specific video (from recordings)
+	// Delete a specific video 
 	ipcMain.handle('remove-specific-video', (event, filename) => {
 		// Try to find in recordings path first
 		let filePath = path.join(recordingsPath, filename);
 		if (fs.existsSync(filePath)) {
-			fs.unlinkSync(filePath);
-			console.log(`Deleted recording: ${filePath}`);
-			return { success: true };
+			try {
+				fs.unlinkSync(filePath);
+				console.log(`Deleted recording: ${filePath}`);
+				return { success: true };
+			} catch (err) {
+				console.error(`Error deleting recording: ${filePath}`, err);
+			}
 		}
 		
 		// If not found, try clips path
 		filePath = path.join(clipsPath, filename);
 		if (fs.existsSync(filePath)) {
-			fs.unlinkSync(filePath);
-			console.log(`Deleted clip: ${filePath}`);
-			return { success: true };
+			try {
+				fs.unlinkSync(filePath);
+				console.log(`Deleted clip: ${filePath}`);
+				return { success: true };
+			} catch (err) {
+				console.error(`Error deleting clip: ${filePath}`, err);
+				return { success: false, error: err.message };
+			}
 		}
 		
 		return { success: false, error: 'File not found' };
@@ -235,7 +296,7 @@ export function setupIpcHandlers() {
 			const outputPath = path.join(clipsPath, outputFilename);
 			
 			// Check if target filename already exists
-			if (fs.existsSync(outputPath)) {
+			if (fs.existsSync(outputPath) && outputPath !== originalPath) {
 				return { 
 					success: false, 
 					error: `A file named "${outputFilename}" already exists. Please choose a different name.`
@@ -270,7 +331,9 @@ export function setupIpcHandlers() {
 				finalOutputPath // Output file
 			];
 
-			const ffmpegProcess = spawn('ffmpeg', ffmpegArgs);
+			// Get the FFmpeg path with fallback
+			const ffmpegPath = process.env.FFMPEG_EXECUTABLE_PATH || 'ffmpeg';
+			const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
 			
 			const ffmpegResult = await new Promise((resolve, reject) => {
 				let stdoutData = '';

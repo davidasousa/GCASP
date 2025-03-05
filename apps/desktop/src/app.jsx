@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
@@ -10,7 +10,10 @@ import './app.css';
 const App = () => {
 	// State for clip creation
 	const [isClipping, setIsClipping] = useState(false);
-
+	
+	// Clip settings
+	const [clipLength, setClipLength] = useState(14); // Default clip length in seconds
+	
 	// Listen for new recordings from the main process
 	useEffect(() => {
 		const handleNewRecording = (videoInfo) => {
@@ -19,12 +22,19 @@ const App = () => {
 
 		// Set up the event listener
 		window.electron.onNewRecording(handleNewRecording);
-
+		
+		// Listen for clip completion
+		window.electron.onClipDone((filename) => {
+			console.log('Clip created:', filename);
+			setIsClipping(false);
+		});
+		
 		return () => {
+			// Cleanup would go here if needed
 		};
 	}, []);
 
-	// Handler for recording button
+	// Handler for recording button - uses splicing approach
 	const handleRecordNow = async () => {
 		if (isClipping) {
 			console.log("Already creating a clip");
@@ -32,15 +42,30 @@ const App = () => {
 		}
 		
 		setIsClipping(true);
+		
 		try {
-			const result = await window.electron.triggerClipVideo();
-			if (!result.success) {
-				console.error("Clipping failed:", result.error);
+			// Generate a timestamp for the clip
+			const timestamp = new Date().toISOString()
+				.replace(/[:.]/g, '-')
+				.replace('T', '_')
+				.replace('Z', '');
+			
+			// Create the clip settings
+			const clipSettings = {
+				clipLength: clipLength
+			};
+			
+			// Trigger the clip creation
+			const result = await window.electron.triggerClipVideo(timestamp, clipSettings);
+			
+			if (!result || !result.success) {
+				console.error("Clipping failed:", result ? result.error : "Unknown error");
+				setIsClipping(false);
 			}
 		} catch (error) {
 			console.error("Error during clipping:", error);
+			setIsClipping(false);
 		}
-		setIsClipping(false);
 	};
 
 	return (

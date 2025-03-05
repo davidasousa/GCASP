@@ -16,8 +16,10 @@ contextBridge.exposeInMainWorld('electron', {
 	// Remove specific video
 	removeSpecificVideo: (filename) => ipcRenderer.invoke('remove-specific-video', filename),
 	
-	// Trigger video clipping
-	triggerClipVideo: (clipSettings) => ipcRenderer.invoke('trigger-clip', clipSettings),
+	// Trigger video clipping with splicing
+	triggerClipVideo: (clipTimestamp, clipSettings) => ipcRenderer.invoke(
+		'trigger-clip', clipTimestamp, clipSettings
+	),
 	
 	// Get video metadata (for editing)
 	getVideoMetadata: (filename) => ipcRenderer.invoke('get-video-metadata', filename),
@@ -28,6 +30,10 @@ contextBridge.exposeInMainWorld('electron', {
 	// Listen for new recordings
 	onNewRecording: (callback) => 
 		ipcRenderer.on('new-recording', (event, data) => callback(data)),
+	
+	// Listen for recording completion
+	onRecordingDone: (callback) => 
+		ipcRenderer.on('recording-done', (event, data) => callback(data)),
 		
 	// Listen for clip completion
 	onClipDone: (callback) => 
