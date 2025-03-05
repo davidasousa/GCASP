@@ -1,10 +1,14 @@
 import { ipcMain, app } from 'electron';
 import path from 'path';
+import { spawn } from 'child_process';
 import fs from 'fs';
 import { runRecord } from './recorder';
 
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
+const recordingLength = 5; // Recording Length In Seconds
+
 const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
+const clipInstructionsPath = path.join(app.getPath('videos'), 'GCASP/clipInstructions.txt');
 
 export function setupIpcHandlers() {
 
@@ -90,29 +94,98 @@ ipcMain.handle('remove-specific-video', (event, filename) => {
     return { success: false, error: 'File not found' };
 });
 
-ipcMain.handle('trigger-clip', async (event, length) => {
-	var videoFiles = [];
-	const files = fs.readdirSync(recordingsPath);
-	files.filter(file => file.endsWith('.mp4'))
-	.map(file => {
-			videoFiles.push(file);
-	});  
+ipcMain.handle('trigger-clip', async (event, clipTimestamp, clipSettings) => {
+	const timestampPattern = /clip_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}-\d{3})\.mp4$/;
 
-	const mostRecentVideo = videoFiles[videoFiles.length - 1];
+	const rawOutputPath = path.join(clipsPath, `clip_${clipTimestamp}_raw.mp4`);
+	const outputPath = path.join(clipsPath, `clip_${clipTimestamp}.mp4`);
 
-	const recordingPath = path.join(recordingsPath, mostRecentVideo);
-	const clipPath = path.join(clipsPath, mostRecentVideo);
+	// Sorting Recordings
+	const sortedVideos = fs.readdirSync(recordingsPath)
+  .filter(file => file.endsWith('.mp4'))
+  .map(file => {
+    const timestampMatch = file.match(timestampPattern);
+    const timestamp = timestampMatch ? timestampMatch[1] : null;
+    return { file, timestamp };
+  })
+  .sort((a, b) => {
+    const dateA = new Date(a.timestamp.replace(/_/g, ':').replace('-', '/'));
+    const dateB = new Date(b.timestamp.replace(/_/g, ':').replace('-', '/'));
+    return dateB - dateA;
+  })
+  .map(entry => entry.file);
 
-	await fs.copyFile(
-		recordingPath,
-		clipPath,
-		(err) => {
-			console.log(err);
+	// Getting Enough Videos To Get The Clip
+	const clipRecordings = sortedVideos.slice(
+		sortedVideos.length - Math.ceil(clipSettings.clipLength / recordingLength),
+		sortedVideos.length)
+
+	// Amount Needed To Cut To Match Video Length
+	const ssCut = (clipRecordings.length * recordingLength - clipSettings.clipLength).toString();
+	
+	// Writing Videos To Text File
+	fs.writeFileSync(clipInstructionsPath, '', { flag: 'w' });
+	clipRecordings.forEach(str => {
+		const path = 'file \'' + recordingsPath + '/' + str + '\'';
+		fs.appendFileSync(clipInstructionsPath, path + '\n');
+	});
+
+	const concatArgs = [
+		'-f',
+		'concat',
+		'-safe', '0', 
+		'-i', clipInstructionsPath,
+		'-c', 'copy',
+		rawOutputPath
+	];
+
+	const shaveArgs = [
+		'-ss',
+		ssCut,
+		'-i', rawOutputPath,
+		'-c', 'copy',
+		outputPath
+	];
+
+	function runFfmpegProcess(args) {
+		return new Promise((resolve, reject) => {
+			const ffmpegProcess = spawn(process.env.FFMPEG_EXECUTABLE_NAME, args);
+
+			ffmpegProcess.on('close', (code) => {
+				if (code === 0) {
+					resolve();
+				} else {
+					reject(new Error(`FFmpeg process exited with code ${code}`));
+				}
+			});
+
+			ffmpegProcess.on('error', (err) => {
+				reject(err);
+			});
+		});
+	}
+
+	// Main function to handle the entire process
+	async function processVideo() {
+		try {
+			await runFfmpegProcess(concatArgs);
+			console.log("Raw Concat Done");
+
+			await runFfmpegProcess(shaveArgs);
+			console.log("Clipping Done");
+
+			await fs.unlink(rawOutputPath, (err) => {
+				console.log(err);
+			});
+			console.log('File Deleted Successfully');
+		} catch (err) {
+			console.error('Error during processing:', err);
 		}
-	);
+	}
 
-	// Notify Frontend Clip Is Done
-	// event.sender.send('clip-done', clipName);
+	// Execute the main function
+	processVideo();
+	
 	return;
 });
 
