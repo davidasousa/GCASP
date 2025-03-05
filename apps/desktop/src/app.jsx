@@ -79,3 +79,15 @@ const App = () => {
 						<Route path="/settings" element={<SettingsPage />} />
 						<Route path="/edit/:videoId" element={<EditPage />} />
 					</Routes>
+				</main>
+				<div className="record-button">
+					<button onClick={handleRecordNow} disabled={isClipping}>
+						{isClipping ? "Creating Clip..." : "Record Clip"}
+					</button>
+				</div>
+			</div>
+		</Router>
+	);
+};
+
+export default App;
