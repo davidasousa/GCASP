@@ -63,7 +63,7 @@ async function recordSegment() {
 			.replace('Z', '');
 		
 		const outputPath = path.join(recordingsPath, `clip_${timestamp}.mp4`);
-		
+		/*
 		const args = [
 			'-y',
 			'-f', 'gdigrab',
@@ -73,8 +73,8 @@ async function recordSegment() {
 			'-pix_fmt', 'yuv420p',
 			outputPath
 		];
+		*/
 		
-		/*
 		// Set up platform-specific capture commands for main monitor only
 		let captureArgs;
 		// Windows: Use gdigrab with primary monitor only
@@ -99,7 +99,7 @@ async function recordSegment() {
 			'-vf', 'scale=1920:1080', // Scale down to 1080p for efficient storage
 			outputPath
 		];
-		*/
+		
 		// Record segment
 		await new Promise((resolve, reject) => {
 			const ffmpegProcess = spawn(getFFmpegPath(), args);
