@@ -61,17 +61,6 @@ const SettingsPage = () => {
             newHotkey = e.key;
         }
         
-        // Add modifiers if pressed
-        const modifiers = [];
-        if (e.ctrlKey) modifiers.push('Ctrl');
-        if (e.altKey) modifiers.push('Alt');
-        if (e.shiftKey) modifiers.push('Shift');
-        
-        // Combine modifiers with the key
-        if (modifiers.length > 0) {
-            newHotkey = [...modifiers, newHotkey].join('+');
-        }
-        
         // Update state
         setHotkey(newHotkey);
         setIsListening(false);
@@ -88,8 +77,12 @@ const SettingsPage = () => {
                 recordingLength
             };
             
-            await window.electron.saveSettings(settings);
-            setSavedMessage('Settings saved successfully!');
+            const result = await window.electron.saveSettings(settings);
+            if (result.success) {
+                setSavedMessage('Settings saved successfully!');
+            } else {
+                setSavedMessage('Failed to save settings');
+            }
             
             // Clear saved message after 3 seconds
             setTimeout(() => {
@@ -131,8 +124,8 @@ const SettingsPage = () => {
                         </div>
                         <p className="hotkey-help">
                             {isListening 
-                                ? 'Press any key or key combination. Press Escape to cancel.' 
-                                : 'Click "Change Hotkey" and press the key or key combination you want to use for clip recording.'}
+                                ? 'Press any key. Press Escape to cancel.' 
+                                : 'Click "Change Hotkey" and press the key you want to use for clip recording.'}
                         </p>
                     </div>
                 </div>

@@ -1,9 +1,10 @@
-import { ipcMain, app } from 'electron';
+import { ipcMain, app, globalShortcut } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
 import { spawn } from 'child_process';
 import { createClip, startContinuousRecording, stopContinuousRecording } from './recorder';
+import { loadSettings, saveSettings, initSettings } from './settings';
 
 const exec = promisify(require('child_process').exec);
 
@@ -21,12 +22,105 @@ const ensureDirectories = () => {
 	}
 };
 
+// Variable to store the registered hotkey
+let registeredHotkey = null;
+
+// Register the hotkey for recording clips
+function registerHotkey(hotkey) {
+    // First unregister any existing hotkeys
+    unregisterHotkeys();
+    
+    // Now register the new hotkey
+    try {
+        registeredHotkey = hotkey;
+        const success = globalShortcut.register(hotkey, async () => {
+            console.log(`Hotkey ${hotkey} pressed - creating clip`);
+            
+            // Generate a timestamp for the clip
+            const timestamp = new Date().toISOString()
+                .replace(/[:.]/g, '-')
+                .replace('T', '_')
+                .replace('Z', '');
+            
+            // Load current settings to get clip length
+            const settings = loadSettings();
+            
+            // Create the clip settings
+            const clipSettings = {
+                clipLength: settings.recordingLength || 20
+            };
+            
+            // Create the clip
+            try {
+                const result = await createClip(timestamp, clipSettings);
+                if (result.success) {
+                    console.log(`Clip created: ${result.filename}`);
+                    // Could notify the renderer process here if needed
+                } else {
+                    console.error(`Failed to create clip: ${result.error}`);
+                }
+            } catch (error) {
+                console.error('Error during hotkey clip creation:', error);
+            }
+        });
+        
+        if (!success) {
+            console.error(`Failed to register hotkey: ${hotkey}`);
+            return false;
+        }
+        
+        console.log(`Registered hotkey: ${hotkey}`);
+        return true;
+    } catch (error) {
+        console.error(`Error registering hotkey ${hotkey}:`, error);
+        return false;
+    }
+}
+
+// Unregister all hotkeys
+function unregisterHotkeys() {
+    if (registeredHotkey) {
+        try {
+            globalShortcut.unregister(registeredHotkey);
+            console.log(`Unregistered hotkey: ${registeredHotkey}`);
+        } catch (error) {
+            console.error(`Error unregistering hotkey ${registeredHotkey}:`, error);
+        }
+        registeredHotkey = null;
+    }
+    // Alternatively, you could use:
+    // globalShortcut.unregisterAll();
+}
+
 export function setupIpcHandlers() {
 	// Ensure directories exist when IPC handlers are set up
 	ensureDirectories();
 
+	// Initialize settings
+	const settings = initSettings();
+
+	// Register the default hotkey on startup
+	registerHotkey(settings.hotkey);
+
 	// Start the continuous recording when IPC handlers are set up
 	startContinuousRecording();
+
+	// Get settings
+	ipcMain.handle('get-settings', () => {
+		return loadSettings();
+	});
+
+	// Save settings
+	ipcMain.handle('save-settings', (event, newSettings) => {
+		const success = saveSettings(newSettings);
+		
+		// If hotkey was changed, update the registered hotkey
+		if (success && newSettings.hotkey && newSettings.hotkey !== registeredHotkey) {
+			registerHotkey(newSettings.hotkey);
+		}
+		
+		return { success };
+	});
 
 	// Get list of local clips
 	ipcMain.handle('get-local-videos', () => {
@@ -378,4 +472,9 @@ export function setupIpcHandlers() {
 			return { success: false, error: error.message };
 		}
 	});
+}
+
+// Make sure to unregister shortcuts when the app is about to quit
+export function cleanupIpcHandlers() {
+    unregisterHotkeys();
 }

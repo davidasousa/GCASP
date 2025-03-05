@@ -4,7 +4,7 @@ import path from 'path';
 import { net } from 'electron';
 import fs from 'fs';
 import { setupVideoProtocol } from './videoProtocol';
-import { setupIpcHandlers } from './ipcHandlers';
+import { setupIpcHandlers, cleanupIpcHandlers } from './ipcHandlers';
 import { ensureAppDirectories, deleteRecordings } from './utilities';
 import { stopContinuousRecording } from './recorder';
 
@@ -72,6 +72,9 @@ app.on('window-all-closed', () => {
 	// Stop continuous recording when app closes
 	stopContinuousRecording();
 	
+	// Cleanup IPC handlers (including hotkeys)
+	cleanupIpcHandlers();
+	
 	// Wait a bit for FFmpeg to fully release file handles
 	setTimeout(() => {
 		safelyDeleteRecordings();
@@ -85,4 +88,5 @@ app.on('window-all-closed', () => {
 // Make sure recording is stopped before the app quits
 app.on('before-quit', () => {
 	stopContinuousRecording();
+	cleanupIpcHandlers();
 });
