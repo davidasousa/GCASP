@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
 
 const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete }) => {
 	const [hasError, setHasError] = useState(false);
 	const [showDeletePrompt, setShowDeletePrompt] = useState(false);
-
+	const navigate = useNavigate();
 
 	const handlePlayerReady = (player) => {
 		player.on('error', () => {
 			setHasError(true);
 		});
+	};
+
+	const handleEditClick = () => {
+		console.log(`Editing video: ${title}`);
+		// Navigate to edit page with video id
+		navigate(`/edit/${encodeURIComponent(title)}`);
 	};
 
 	const handleDeleteClick = () => {
@@ -35,15 +42,23 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 
 	return (
 		<div className="video-container">
-			<div className="video-display">
+			<div className="video-display" onClick={onActivate}>
 				<VideoPlayer
 					videoUrl={videoUrl}
+					isActive={isActive}
 					onReady={handlePlayerReady}
 					options={{ inactivityTimeout: 2000 }}
 				/>
 			</div>
 			<div className="video-header">
 				<h3 className="video-title">{title}</h3>
+				<button
+					onClick={handleEditClick}
+					className="edit-button"
+					aria-label={`Edit ${title}`}
+				>
+					Edit
+				</button>
 				<button
 					onClick={handleDeleteClick}
 					className="delete-button"
