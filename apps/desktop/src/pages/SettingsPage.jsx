@@ -10,12 +10,12 @@ const SettingsPage = () => {
     const [isSaving, setSaving] = useState(false);
 
 		// User Settings -> Input For Clamping & Error Detection
-    const [recordingLength, setRecordingLength] = useState(20);
+    const [clipLength, setClipLength] = useState(20);
     const [pixelWidth, setPixelWidth] = useState(1080);
     const [pixelHeight, setPixelHeight] = useState(1080);
     const [fps, setFps] = useState(30);
 
-    const [recordingLengthInput, setRecordingLengthInput] = useState('20');
+    const [clipLengthInput, setClipLengthInput] = useState('20');
     const [pixelWidthInput, setPixelWidthInput] = useState('1080');
     const [pixelHeightInput, setPixelHeightInput] = useState('1080');
     const [fpsInput, setFpsInput] = useState(30);
@@ -34,17 +34,17 @@ const SettingsPage = () => {
                 if (settings) {
 										// Loading User Settings
                     setHotkey(settings.hotkey);
-                    const savedRecordingLength = settings.recordingLength;
+                    const savedClipLength = settings.clipLength;
                     const savedPixelWidth = settings.pixelWidth;
                     const savedPixelLength = settings.pixelHeight;
                     const savedFps = settings.fps;
 										// Setting Use State Values
-                    setRecordingLength(savedRecordingLength);
+                    setClipLength(savedClipLength);
                     setPixelWidth(savedPixelWidth);
                     setPixelHeight(savedPixelHeight);
                     setFps(savedFps);
 										// Setting Use State Inputs
-                    setRecordingLengthInput(savedRecordingLength.toString());
+                    setClipLengthInput(savedClipLength.toString());
                     setPixelWidthInput(savedPixelWidth.toString());
                     setPixelHeightInput(savedPixelHeight.toString());
                     setFpsInput(savedFps.toString());
@@ -96,25 +96,25 @@ const SettingsPage = () => {
     };
 
     // Handle recording length input change without immediate clamping
-    const handleRecordingLengthInputChange = (e) => {
-        setRecordingLengthInput(e.target.value);
+    const handleClipLengthInputChange = (e) => {
+        setClipLengthInput(e.target.value);
     };
     // Handle blur event to validate and clamp the input
-    const handleRecordingLengthBlur = () => {
-        const value = parseInt(recordingLengthInput, 10);
+    const handleClipLengthBlur = () => {
+        const value = parseInt(clipLengthInput, 10);
         
         if (isNaN(value)) {
             // Reset to current valid value
-            setRecordingLengthInput(recordingLength.toString());
+            setClipLengthInput(clipLength.toString());
         } else {
             // Clamp between 5 and 120 seconds
             const clampedValue = Math.max(5, Math.min(120, value));
-            setRecordingLength(clampedValue);
-            setRecordingLengthInput(clampedValue.toString());
+            setClipLength(clampedValue);
+            setClipLengthInput(clampedValue.toString());
         }
     };
     // Handle Enter key press in recording length input
-    const handleRecordingLengthKeyDown = (e) => {
+    const handleClipLengthKeyDown = (e) => {
         if (e.key === 'Enter') {
             handleRecordingLengthBlur();
         }
@@ -140,12 +140,12 @@ const SettingsPage = () => {
         setSavedMessage('');
         
         // First make sure recording length is valid by triggering blur validation
-        handleRecordingLengthBlur();
+        handleClipLengthBlur();
         
         try {
             const settings = {
                 hotkey,
-                recordingLength,
+                clipLength,
 								pixelWidth,
 								pixelHeight,
 								fps
@@ -204,20 +204,20 @@ const SettingsPage = () => {
                     </div>
                 </div>
                 
-                {/* Recording Length Settings */}
+                {/* Clip Length Settings */}
                 <div className="settings-group">
                     <h3>Recording Length</h3>
-                    <div className="recording-length-setter">
-                        <label htmlFor="recording-length">Clip Length (seconds):</label>
+                    <div className="clip-length-setter">
+                        <label htmlFor="clip-length">Clip Length (seconds):</label>
                         <input
-                            id="recording-length"
+                            id="clip-length"
                             type="number"
                             min="5"
                             max="120"
-                            value={recordingLengthInput}
-                            onChange={handleRecordingLengthInputChange}
-                            onBlur={handleRecordingLengthBlur}
-                            onKeyDown={handleRecordingLengthKeyDown}
+                            value={clipLengthInput}
+                            onChange={handleClipLengthInputChange}
+                            onBlur={handleClipLengthBlur}
+                            onKeyDown={handleClipLengthKeyDown}
                         />
                     </div>
 										{/* Pixel Width & Height */}

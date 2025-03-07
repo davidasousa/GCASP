@@ -13,6 +13,9 @@ const App = () => {
 	
 	// State for settings
 	const [clipLength, setClipLength] = useState(20); // Default clip length in seconds
+	const [pixelWidth, setPixelWidth] = useState(1080); 
+	const [pixelHeight, setPixelHeight] = useState(1920); 
+	const [fps, setFps] = useState(30); 
 	
 	// Load settings on component mount
 	useEffect(() => {
@@ -20,7 +23,10 @@ const App = () => {
 			try {
 				const settings = await window.electron.getSettings();
 				if (settings) {
-					setClipLength(settings.recordingLength || 20);
+					setClipLength(settings.recordingLength);
+					setPixelWidth(settings.pixelWidth);
+					setPixelHeight(settings.pixelHeight);
+					setFps(settings.fps);
 				}
 			} catch (error) {
 				console.error('Error loading settings:', error);
