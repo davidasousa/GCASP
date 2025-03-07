@@ -4,12 +4,26 @@ import '../app.css';
 const SettingsPage = () => {
     // State for hotkey settings
     const [hotkey, setHotkey] = useState('F9');
+
+		// Recorder State
     const [isListening, setIsListening] = useState(false);
-    const [recordingLength, setRecordingLength] = useState(20);
-    const [recordingLengthInput, setRecordingLengthInput] = useState('20'); // Separate state for input
     const [isSaving, setSaving] = useState(false);
+
+		// User Settings -> Input For Clamping & Error Detection
+    const [recordingLength, setRecordingLength] = useState(20);
+    const [pixelWidth, setPixelWidth] = useState(1080);
+    const [pixelHeight, setPixelHeight] = useState(1080);
+    const [fps, setFps] = useState(30);
+
+    const [recordingLengthInput, setRecordingLengthInput] = useState('20');
+    const [pixelWidthInput, setPixelWidthInput] = useState('1080');
+    const [pixelHeightInput, setPixelHeightInput] = useState('1080');
+    const [fpsInput, setFpsInput] = useState(30);
+
+		// Displayed Message Buffer
     const [savedMessage, setSavedMessage] = useState('');
     
+		// Recording Button
     const hotkeyInputRef = useRef(null);
 
     // Load settings when component mounts
@@ -18,10 +32,22 @@ const SettingsPage = () => {
             try {
                 const settings = await window.electron.getSettings();
                 if (settings) {
-                    setHotkey(settings.hotkey || 'F9');
-                    const savedLength = settings.recordingLength || 20;
-                    setRecordingLength(savedLength);
-                    setRecordingLengthInput(savedLength.toString());
+										// Loading User Settings
+                    setHotkey(settings.hotkey);
+                    const savedRecordingLength = settings.recordingLength;
+                    const savedPixelWidth = settings.pixelWidth;
+                    const savedPixelLength = settings.pixelHeight;
+                    const savedFps = settings.fps;
+										// Setting Use State Values
+                    setRecordingLength(savedRecordingLength);
+                    setPixelWidth(savedPixelWidth);
+                    setPixelHeight(savedPixelHeight);
+                    setFps(savedFps);
+										// Setting Use State Inputs
+                    setRecordingLengthInput(savedRecordingLength.toString());
+                    setPixelWidthInput(savedPixelWidth.toString());
+                    setPixelHeightInput(savedPixelHeight.toString());
+                    setFpsInput(savedFps.toString());
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -73,7 +99,6 @@ const SettingsPage = () => {
     const handleRecordingLengthInputChange = (e) => {
         setRecordingLengthInput(e.target.value);
     };
-
     // Handle blur event to validate and clamp the input
     const handleRecordingLengthBlur = () => {
         const value = parseInt(recordingLengthInput, 10);
@@ -88,12 +113,25 @@ const SettingsPage = () => {
             setRecordingLengthInput(clampedValue.toString());
         }
     };
-
     // Handle Enter key press in recording length input
     const handleRecordingLengthKeyDown = (e) => {
         if (e.key === 'Enter') {
             handleRecordingLengthBlur();
         }
+    };
+
+		// Handle Setting Video Dimensions
+    const handlePixelWidthInputChange = (e) => {
+        setPixelWidthInput(e.target.value);
+    };
+
+    const handlePixelHeightInputChange = (e) => {
+        setPixelHeightInput(e.target.value);
+    };
+
+		// Handle Setting Fps
+    const handleFpsInputChange = (e) => {
+        setFpsInput(e.target.value);
     };
 
     // Save settings
@@ -107,7 +145,10 @@ const SettingsPage = () => {
         try {
             const settings = {
                 hotkey,
-                recordingLength
+                recordingLength,
+								pixelWidth,
+								pixelHeight,
+								fps
             };
             
             const result = await window.electron.saveSettings(settings);
@@ -177,6 +218,43 @@ const SettingsPage = () => {
                             onChange={handleRecordingLengthInputChange}
                             onBlur={handleRecordingLengthBlur}
                             onKeyDown={handleRecordingLengthKeyDown}
+                        />
+                    </div>
+										{/* Pixel Width & Height */}
+                    <h3>Video Width</h3>
+                    <div className="video-width-setter">
+                        <label htmlFor="video-width">Video Width (px):</label>
+                        <input
+                            id="video-width"
+                            type="number"
+                            min="480"
+                            max="1080"
+                            value={pixelWidthInput}
+                            onChange={handlePixelWidthInputChange} 	
+                        />
+                    </div>
+                    <h3>Video Height</h3>
+                    <div className="video-Height-setter">
+                        <label htmlFor="video-height">Video Width (px):</label>
+                        <input
+                            id="video-height"
+                            type="number"
+                            min="480"
+                            max="1080"
+                            value={pixelHeightInput}
+                            onChange={handlePixelHeightInputChange} 	
+                        />
+                    </div>
+                    <h3>Framerate</h3>
+                    <div className="fps-setter">
+                        <label htmlFor="fps">Framerate:</label>
+                        <input
+                            id="fps"
+                            type="number"
+                            min="10"
+                            max="60"
+                            value={fpsInput}
+                            onChange={handleFpsInputChange} 	
                         />
                     </div>
                     <p className="setting-help">
