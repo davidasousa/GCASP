@@ -28,7 +28,6 @@ let activeProcess = null; // Track the active FFmpeg process
 const SEGMENT_LENGTH = 5; // Recording Length In Seconds
 // MAX_SEGMENTS will be calculated dynamically based on settings
 
-// Configuration - can be overridden from .env
 const config = {
 	// Default to 1080p (1920x1080) if not specified in env
 	width: process.env.CAPTURE_WIDTH ? parseInt(process.env.CAPTURE_WIDTH) : 1920,
@@ -74,18 +73,6 @@ async function recordSegment() {
 			.replace('Z', '');
 		
 		const outputPath = path.join(recordingsPath, `clip_${timestamp}.mp4`);
-		/*
-		const args = [
-			'-y',
-			'-f', 'gdigrab',
-			'-i', 'desktop',
-			'-t', '5',
-			'-c:v', 'libx264',
-			'-pix_fmt', 'yuv420p',
-			outputPath
-		];
-		*/
-		
 		// Set up platform-specific capture commands for main monitor only
 		let captureArgs;
 		// Windows: Use gdigrab with primary monitor only

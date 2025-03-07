@@ -71,7 +71,6 @@ const SettingsPage = () => {
 
     // Handle recording length input change without immediate clamping
     const handleRecordingLengthInputChange = (e) => {
-        // Allow user to type any value
         setRecordingLengthInput(e.target.value);
     };
 

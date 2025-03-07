@@ -58,7 +58,7 @@ const App = () => {
 	}, []);
 
 	// Handler for recording button - uses splicing approach
-	const handleRecordNow = async () => {
+	const handleRecordClip = async () => {
 		if (isClipping) {
 			console.log("Already creating a clip");
 			return;
@@ -104,7 +104,7 @@ const App = () => {
 					</Routes>
 				</main>
 				<div className="record-button">
-					<button onClick={handleRecordNow} disabled={isClipping}>
+					<button onClick={handleRecordClip} disabled={isClipping}>
 						{isClipping ? "Creating Clip..." : "Record Clip"}
 					</button>
 				</div>
