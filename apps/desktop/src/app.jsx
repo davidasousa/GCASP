@@ -23,7 +23,10 @@ const App = () => {
 			try {
 				const settings = await window.electron.getSettings();
 				if (settings) {
+					// Clipping Settings
 					setClipLength(settings.recordingLength);
+
+					// Recorder Settings					
 					setPixelWidth(settings.pixelWidth);
 					setPixelHeight(settings.pixelHeight);
 					setFps(settings.fps);

@@ -11,12 +11,12 @@ const SettingsPage = () => {
 
 		// User Settings -> Input For Clamping & Error Detection
     const [clipLength, setClipLength] = useState(20);
-    const [pixelWidth, setPixelWidth] = useState(1080);
+    const [pixelWidth, setPixelWidth] = useState(1920);
     const [pixelHeight, setPixelHeight] = useState(1080);
     const [fps, setFps] = useState(30);
 
     const [clipLengthInput, setClipLengthInput] = useState('20');
-    const [pixelWidthInput, setPixelWidthInput] = useState('1080');
+    const [pixelWidthInput, setPixelWidthInput] = useState('1920');
     const [pixelHeightInput, setPixelHeightInput] = useState('1080');
     const [fpsInput, setFpsInput] = useState(30);
 
@@ -36,7 +36,7 @@ const SettingsPage = () => {
                     setHotkey(settings.hotkey);
                     const savedClipLength = settings.clipLength;
                     const savedPixelWidth = settings.pixelWidth;
-                    const savedPixelLength = settings.pixelHeight;
+                    const savedPixelHeight = settings.pixelHeight;
                     const savedFps = settings.fps;
 										// Setting Use State Values
                     setClipLength(savedClipLength);
@@ -124,6 +124,23 @@ const SettingsPage = () => {
     const handlePixelWidthInputChange = (e) => {
         setPixelWidthInput(e.target.value);
     };
+		const handlePixelWidthBlur = () => {
+				const value = parseInt(pixelWidthInput, 10);
+        if (isNaN(value)) {
+            // Reset to current valid value
+            setPixelWidthInput(clipLength.toString());
+        } else {
+            // Clamp between 5 and 120 seconds
+            const clampedValue = Math.max(320, Math.min(1920, value));
+            setPixelWidth(clampedValue);
+            setPixelWidthInput(clampedValue.toString());
+        }
+		}
+    const handlePixelWidthKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handlePixelWidthBlur();
+        }
+    };
 
     const handlePixelHeightInputChange = (e) => {
         setPixelHeightInput(e.target.value);
@@ -150,6 +167,7 @@ const SettingsPage = () => {
 								pixelHeight,
 								fps
             };
+						console.log(settings);
             
             const result = await window.electron.saveSettings(settings);
             if (result.success) {
@@ -166,6 +184,7 @@ const SettingsPage = () => {
             setSavedMessage(`Error saving settings: ${error.message}`);
         } finally {
             setSaving(false);
+						await window.electron.flushRestartRecorder();
         }
     };
 
@@ -231,6 +250,8 @@ const SettingsPage = () => {
                             max="1080"
                             value={pixelWidthInput}
                             onChange={handlePixelWidthInputChange} 	
+                            onBlur={handlePixelWidthBlur}
+                            onKeyDown={handlePixelWidthKeyDown}
                         />
                     </div>
                     <h3>Video Height</h3>

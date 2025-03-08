@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import { spawn } from 'child_process';
 import { createClip, startContinuousRecording, stopContinuousRecording } from './recorder';
 import { loadSettings, saveSettings, initSettings } from './settings';
+import { safelyDeleteRecordings } from './main';
 
 const exec = promisify(require('child_process').exec);
 
@@ -472,9 +473,18 @@ export function setupIpcHandlers() {
 			return { success: false, error: error.message };
 		}
 	});
+
+	// Flushing & Restarting The Recorder
+	ipcMain.handle('flush-restart-recorder', () => {
+		safelyDeleteRecordings();
+		stopContinuousRecording();
+		setTimeout(() => {}, 500);
+		startContinuousRecording();
+	});
 }
 
 // Make sure to unregister shortcuts when the app is about to quit
 export function cleanupIpcHandlers() {
     unregisterHotkeys();
 }
+
