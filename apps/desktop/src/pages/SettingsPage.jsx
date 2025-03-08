@@ -128,7 +128,7 @@ const SettingsPage = () => {
 				const value = parseInt(pixelWidthInput, 10);
         if (isNaN(value)) {
             // Reset to current valid value
-            setPixelWidthInput(clipLength.toString());
+            setPixelWidthInput(pixelWidth.toString());
         } else {
             // Clamp between 5 and 120 seconds
             const clampedValue = Math.max(320, Math.min(1920, value));
@@ -145,10 +145,42 @@ const SettingsPage = () => {
     const handlePixelHeightInputChange = (e) => {
         setPixelHeightInput(e.target.value);
     };
+		const handlePixelHeightBlur = () => {
+				const value = parseInt(pixelHeightInput, 10);
+        if (isNaN(value)) {
+            // Reset to current valid value
+            setPixelHeightInput(pixelHeight.toString());
+        } else {
+            const clampedValue = Math.max(320, Math.min(1080, value));
+            setPixelHeight(clampedValue);
+            setPixelHeightInput(clampedValue.toString());
+        }
+		}
+    const handlePixelHeightKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handlePixelHeightBlur();
+        }
+    };
 
 		// Handle Setting Fps
     const handleFpsInputChange = (e) => {
         setFpsInput(e.target.value);
+    };
+		const handleFpsBlur = () => {
+				const value = parseInt(fpsInput, 10);
+        if (isNaN(value)) {
+            // Reset to current valid value
+            setFpsInput(fps.toString());
+        } else {
+            const clampedValue = Math.max(5, Math.min(60, value));
+            setFps(clampedValue);
+            setFpsInput(clampedValue.toString());
+        }
+		};
+    const handleFpsKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleFpsBlur();
+        }
     };
 
     // Save settings
@@ -158,6 +190,9 @@ const SettingsPage = () => {
         
         // First make sure recording length is valid by triggering blur validation
         handleClipLengthBlur();
+        handlePixelWidthBlur();
+        handlePixelHeightBlur();
+        handleFpsBlur();
         
         try {
             const settings = {
@@ -264,6 +299,8 @@ const SettingsPage = () => {
                             max="1080"
                             value={pixelHeightInput}
                             onChange={handlePixelHeightInputChange} 	
+                            onBlur={handlePixelHeightBlur}
+                            onKeyDown={handlePixelHeightKeyDown}
                         />
                     </div>
                     <h3>Framerate</h3>
@@ -276,6 +313,8 @@ const SettingsPage = () => {
                             max="60"
                             value={fpsInput}
                             onChange={handleFpsInputChange} 	
+                            onBlur={handleFpsBlur}
+                            onKeyDown={handleFpsKeyDown}
                         />
                     </div>
                     <p className="setting-help">
