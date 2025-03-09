@@ -274,6 +274,9 @@ const SettingsPage = () => {
                             onKeyDown={handleClipLengthKeyDown}
                         />
                     </div>
+                    <p className="setting-help">
+                        Set how many seconds of gameplay will be saved when you press the clip hotkey (5-120 seconds).
+                    </p>
 										{/* Pixel Width & Height */}
                     <h3>Video Width</h3>
                     <div className="video-width-setter">
@@ -291,7 +294,7 @@ const SettingsPage = () => {
                     </div>
                     <h3>Video Height</h3>
                     <div className="video-Height-setter">
-                        <label htmlFor="video-height">Video Width (px):</label>
+                        <label htmlFor="video-height">Video Height (px):</label>
                         <input
                             id="video-height"
                             type="number"
@@ -317,9 +320,6 @@ const SettingsPage = () => {
                             onKeyDown={handleFpsKeyDown}
                         />
                     </div>
-                    <p className="setting-help">
-                        Set how many seconds of gameplay will be saved when you press the clip hotkey (5-120 seconds).
-                    </p>
                 </div>
                 
                 {/* Save Button */}

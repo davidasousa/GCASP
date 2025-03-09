@@ -13,8 +13,8 @@ const App = () => {
 	
 	// State for settings
 	const [clipLength, setClipLength] = useState(20); // Default clip length in seconds
-	const [pixelWidth, setPixelWidth] = useState(1080); 
-	const [pixelHeight, setPixelHeight] = useState(1920); 
+	const [pixelWidth, setPixelWidth] = useState(1920); 
+	const [pixelHeight, setPixelHeight] = useState(1080); 
 	const [fps, setFps] = useState(30); 
 	
 	// Load settings on component mount
