@@ -142,26 +142,6 @@ const SettingsPage = () => {
         }
     };
 
-    const handlePixelHeightInputChange = (e) => {
-        setPixelHeightInput(e.target.value);
-    };
-		const handlePixelHeightBlur = () => {
-				const value = parseInt(pixelHeightInput, 10);
-        if (isNaN(value)) {
-            // Reset to current valid value
-            setPixelHeightInput(pixelHeight.toString());
-        } else {
-            const clampedValue = Math.max(320, Math.min(1080, value));
-            setPixelHeight(clampedValue);
-            setPixelHeightInput(clampedValue.toString());
-        }
-		}
-    const handlePixelHeightKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            handlePixelHeightBlur();
-        }
-    };
-
 		// Handle Setting Fps
     const handleFpsInputChange = (e) => {
         setFpsInput(e.target.value);
@@ -191,7 +171,6 @@ const SettingsPage = () => {
         // First make sure recording length is valid by triggering blur validation
         handleClipLengthBlur();
         handlePixelWidthBlur();
-        handlePixelHeightBlur();
         handleFpsBlur();
         
         try {
@@ -202,8 +181,7 @@ const SettingsPage = () => {
 								pixelHeight,
 								fps
             };
-						console.log(settings);
-            
+
             const result = await window.electron.saveSettings(settings);
             if (result.success) {
                 setSavedMessage('Settings saved successfully!');
@@ -277,35 +255,24 @@ const SettingsPage = () => {
                     <p className="setting-help">
                         Set how many seconds of gameplay will be saved when you press the clip hotkey (5-120 seconds).
                     </p>
-										{/* Pixel Width & Height */}
+
+										{/* Video Width */}
                     <h3>Video Width</h3>
                     <div className="video-width-setter">
-                        <label htmlFor="video-width">Video Width (px):</label>
-                        <input
-                            id="video-width"
-                            type="number"
-                            min="480"
-                            max="1080"
-                            value={pixelWidthInput}
-                            onChange={handlePixelWidthInputChange} 	
-                            onBlur={handlePixelWidthBlur}
-                            onKeyDown={handlePixelWidthKeyDown}
-                        />
+										 	<label htmlFor="video-width">Video Width (px):</label>
+											<select
+												id="video-width"
+												value={pixelWidthInput}
+												onChange={handlePixelWidthInputChange}
+											 	onBlur={handlePixelWidthBlur}
+											>
+												<option value="">Select a width</option>
+												<option value="360">360</option>
+												<option value="720">720</option>
+												<option value="1080">1080</option>
+											</select>
                     </div>
-                    <h3>Video Height</h3>
-                    <div className="video-Height-setter">
-                        <label htmlFor="video-height">Video Height (px):</label>
-                        <input
-                            id="video-height"
-                            type="number"
-                            min="480"
-                            max="1080"
-                            value={pixelHeightInput}
-                            onChange={handlePixelHeightInputChange} 	
-                            onBlur={handlePixelHeightBlur}
-                            onKeyDown={handlePixelHeightKeyDown}
-                        />
-                    </div>
+
                     <h3>Framerate</h3>
                     <div className="fps-setter">
                         <label htmlFor="fps">Framerate:</label>

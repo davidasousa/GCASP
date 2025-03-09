@@ -86,7 +86,7 @@ async function recordSegment() {
 			'-framerate', config.fps.toString(),
 			'-offset_x', '0',
 			'-offset_y', '0',
-			'-video_size', `${config.pixelWidth}x${config.pixelHeight}`,
+			'-video_size', `1920x1080`,
 			'-draw_mouse', '1',
 			'-i', 'desktop'
 		];
@@ -99,7 +99,7 @@ async function recordSegment() {
 			'-c:v', 'libx264',
 			'-preset', 'ultrafast', // Fastest encoding
 			'-pix_fmt', 'yuv420p',
-			'-vf', 'scale=1920:1080', // Scale down to 1080p for efficient storage
+			'-vf', `scale=-1:${config.pixelWidth}`, 
 			outputPath
 		];
 		
