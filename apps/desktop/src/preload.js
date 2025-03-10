@@ -8,6 +8,12 @@ contextBridge.exposeInMainWorld('electron', {
 	getSettings: () => ipcRenderer.invoke('get-settings'),
 	saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
 	
+	// Screen dimensions
+	getScreenDimensions: () => ipcRenderer.invoke('get-screen-dimensions'),
+
+	// Get all monitors
+	getMonitors: () => ipcRenderer.invoke('get-monitors'),
+	
 	// Get list of local videos
 	getLocalVideos: () => ipcRenderer.invoke('get-local-videos'),
 	
@@ -30,9 +36,6 @@ contextBridge.exposeInMainWorld('electron', {
 	
 	// Save edited video
 	saveEditedVideo: (params) => ipcRenderer.invoke('save-edited-video', params),
-
-	// Flush & Restart Recorder
-	flushRestartRecorder: () => ipcRenderer.invoke('flush-restart-recorder'),
 	
 	// Listen for new recordings
 	onNewRecording: (callback) => 
