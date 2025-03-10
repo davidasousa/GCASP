@@ -63,7 +63,8 @@ function getRecordingConfig() {
 		width: settings.resolution?.width || 1920,
 		height: settings.resolution?.height || 1080,
 		fps: settings.fps || 30,
-		selectedMonitor: settings.selectedMonitor || "0"
+		selectedMonitor: settings.selectedMonitor || "0",
+		selectedApp: settings.selectedApp,
 	};
 	
 	return cachedConfig;
@@ -195,12 +196,13 @@ async function recordSegment() {
 			// Fallback if cache is empty for some reason
 			initializeDisplayCache();
 		}
-		
+
 		const selectedMonitorIndex = parseInt(config.selectedMonitor, 10);
 		const selectedDisplay = cachedDisplays[selectedMonitorIndex] || cachedDisplays[0];
-		
+
 		// Capture the entire selected monitor at its native resolution
-		const captureArgs = [
+		const captureArgs = !(config.selectedApp.localeCompare("Full Screen")) ? 
+		([
 			'-f', 'gdigrab',
 			'-framerate', config.fps.toString(),
 			'-offset_x', selectedDisplay.bounds.x.toString(),
@@ -208,7 +210,10 @@ async function recordSegment() {
 			'-video_size', `${selectedDisplay.bounds.width}x${selectedDisplay.bounds.height}`,
 			'-draw_mouse', '1',
 			'-i', 'desktop'
-		];
+		]) : ([ // Recording A Specific Application
+			'-f', 'gdigrab',
+			'-framerate', config.fps.toString(),
+		]);
 
 		// Build FFmpeg command for this segment
 		const args = [
@@ -233,8 +238,23 @@ async function recordSegment() {
 		await new Promise((resolve, reject) => {
 			const ffmpegProcess = spawn(getFFmpegPath(), args);
 			activeProcess = ffmpegProcess; // Store the reference to current process
+
+			ffmpegProcess.stdout.on('data', (data) => {
+				console.log(`stdout: ${data.toString()}`);
+			});
+
+			// Capture stderr (standard error)
+			ffmpegProcess.stderr.on('data', (data) => {
+				console.error(`stderr: ${data.toString()}`);
+			});
+
+			// Capture the exit code
+			ffmpegProcess.on('close', (code) => {
+				console.log(`FFmpeg process exited with code ${code}`);
+			});
 			
 			ffmpegProcess.on('close', (code) => {
+
 				activeProcess = null; // Clear the reference when process ends
 				
 				if (code === 0) {

@@ -16,6 +16,12 @@ const SettingsPage = () => {
 	const [selectedFPS, setSelectedFPS] = useState(30);
 	const [monitors, setMonitors] = useState([]);
 	const [selectedMonitor, setSelectedMonitor] = useState("0");
+
+	// State For Possible Application Inputs
+	const [runningProcesses, setRunningProcesses] = useState([]);
+	const [selectedProcess, setSelectedProcess] = useState("Full Screen");
+	const [areProcessesReady, setAreProcessesReady] = useState(false)
+
 	
 	const hotkeyInputRef = useRef(null);
 
@@ -59,6 +65,16 @@ const SettingsPage = () => {
 		};
 
 		loadSettingsAndMonitors();
+	}, []);
+
+	useEffect(() => {
+		const loadProcesses = async () => {
+			const processes = await window.electron.fetchRunningProcesses();
+			setRunningProcesses(processes);
+			setAreProcessesReady(true);
+		}
+
+		loadProcesses();
 	}, []);
 
 	// Generate available resolutions based on screen dimensions
@@ -183,6 +199,11 @@ const SettingsPage = () => {
 		setSelectedMonitor(e.target.value);
 	};
 
+	// Handle Application Change
+	const handleApplicationChange = (e) => {
+		setSelectedProcess(e.target.value);
+	};
+
 	// Save settings
 	const saveSettings = async () => {
 		setSaving(true);
@@ -193,11 +214,12 @@ const SettingsPage = () => {
 		
 		try {
 			const settings = {
-				hotkey,
-				recordingLength,
-				resolution: selectedResolution,
-				fps: selectedFPS,
-				selectedMonitor
+				hotkey: hotkey,
+				clipLength: recordingLength,
+				selectedResolution: selectedResolution,
+				selectedFPS: selectedFPS,
+				selectedMonitor: selectedMonitor,
+				selectedApp: selectedProcess
 			};
 			
 			const result = await window.electron.saveSettings(settings);
@@ -348,7 +370,31 @@ const SettingsPage = () => {
 						Changing monitor selection will restart the recording buffer.
 					</p>
 				</div>
-				
+
+				{/* Conditional rendering directly in JSX */}
+				<div className="settings-group">
+					<h3>Application Selection</h3>
+					<div className="application-selector">
+						<label htmlFor="application-select">Select Application to Record:</label>
+
+						{/* Conditional rendering of the select dropdown or loading state */}
+						{areProcessesReady ? (
+							<select 
+								id="application-select"
+								onChange={handleApplicationChange}
+							>
+								{runningProcesses.map((process, index) => (
+									<option key={index} value={process}>
+										{process}
+									</option>
+								))}
+							</select>
+						) : (
+							<div>Loading processes...</div> // Fallback loading message when not ready
+						)}
+					</div>
+				</div>
+
 				{/* Save Button */}
 				<div className="settings-actions">
 					<button
