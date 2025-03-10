@@ -10,7 +10,10 @@ const settingsPath = path.join(gcaspDataPath, 'settings.json');
 // Default settings
 const defaultSettings = {
     hotkey: 'F9',
-    recordingLength: 20, // seconds
+    clipLength: 20, // seconds
+		pixelWidth: 1080,
+		pixelHeight: 1920,
+		fps: 30
 };
 
 // Load settings from the settings file

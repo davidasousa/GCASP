@@ -49,7 +49,7 @@ app.whenReady().then(() => {
 });
 
 // Safely delete recordings with error handling
-function safelyDeleteRecordings() {
+export function safelyDeleteRecordings() {
 	try {
 		const files = fs.readdirSync(recordingsPath);
 		files.filter(file => file.endsWith('.mp4'))

@@ -4,12 +4,26 @@ import '../app.css';
 const SettingsPage = () => {
     // State for hotkey settings
     const [hotkey, setHotkey] = useState('F9');
+
+		// Recorder State
     const [isListening, setIsListening] = useState(false);
-    const [recordingLength, setRecordingLength] = useState(20);
-    const [recordingLengthInput, setRecordingLengthInput] = useState('20'); // Separate state for input
     const [isSaving, setSaving] = useState(false);
+
+		// User Settings -> Input For Clamping & Error Detection
+    const [clipLength, setClipLength] = useState(20);
+    const [pixelWidth, setPixelWidth] = useState(1920);
+    const [pixelHeight, setPixelHeight] = useState(1080);
+    const [fps, setFps] = useState(30);
+
+    const [clipLengthInput, setClipLengthInput] = useState('20');
+    const [pixelWidthInput, setPixelWidthInput] = useState('1920');
+    const [pixelHeightInput, setPixelHeightInput] = useState('1080');
+    const [fpsInput, setFpsInput] = useState(30);
+
+		// Displayed Message Buffer
     const [savedMessage, setSavedMessage] = useState('');
     
+		// Recording Button
     const hotkeyInputRef = useRef(null);
 
     // Load settings when component mounts
@@ -18,10 +32,22 @@ const SettingsPage = () => {
             try {
                 const settings = await window.electron.getSettings();
                 if (settings) {
-                    setHotkey(settings.hotkey || 'F9');
-                    const savedLength = settings.recordingLength || 20;
-                    setRecordingLength(savedLength);
-                    setRecordingLengthInput(savedLength.toString());
+										// Loading User Settings
+                    setHotkey(settings.hotkey);
+                    const savedClipLength = settings.clipLength;
+                    const savedPixelWidth = settings.pixelWidth;
+                    const savedPixelHeight = settings.pixelHeight;
+                    const savedFps = settings.fps;
+										// Setting Use State Values
+                    setClipLength(savedClipLength);
+                    setPixelWidth(savedPixelWidth);
+                    setPixelHeight(savedPixelHeight);
+                    setFps(savedFps);
+										// Setting Use State Inputs
+                    setClipLengthInput(savedClipLength.toString());
+                    setPixelWidthInput(savedPixelWidth.toString());
+                    setPixelHeightInput(savedPixelHeight.toString());
+                    setFpsInput(savedFps.toString());
                 }
             } catch (error) {
                 console.error('Error loading settings:', error);
@@ -70,30 +96,70 @@ const SettingsPage = () => {
     };
 
     // Handle recording length input change without immediate clamping
-    const handleRecordingLengthInputChange = (e) => {
-        // Allow user to type any value
-        setRecordingLengthInput(e.target.value);
+    const handleClipLengthInputChange = (e) => {
+        setClipLengthInput(e.target.value);
     };
-
     // Handle blur event to validate and clamp the input
-    const handleRecordingLengthBlur = () => {
-        const value = parseInt(recordingLengthInput, 10);
+    const handleClipLengthBlur = () => {
+        const value = parseInt(clipLengthInput, 10);
         
         if (isNaN(value)) {
             // Reset to current valid value
-            setRecordingLengthInput(recordingLength.toString());
+            setClipLengthInput(clipLength.toString());
         } else {
             // Clamp between 5 and 120 seconds
             const clampedValue = Math.max(5, Math.min(120, value));
-            setRecordingLength(clampedValue);
-            setRecordingLengthInput(clampedValue.toString());
+            setClipLength(clampedValue);
+            setClipLengthInput(clampedValue.toString());
+        }
+    };
+    // Handle Enter key press in recording length input
+    const handleClipLengthKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleRecordingLengthBlur();
         }
     };
 
-    // Handle Enter key press in recording length input
-    const handleRecordingLengthKeyDown = (e) => {
+		// Handle Setting Video Dimensions
+    const handlePixelWidthInputChange = (e) => {
+        setPixelWidthInput(e.target.value);
+    };
+		const handlePixelWidthBlur = () => {
+				const value = parseInt(pixelWidthInput, 10);
+        if (isNaN(value)) {
+            // Reset to current valid value
+            setPixelWidthInput(pixelWidth.toString());
+        } else {
+            // Clamp between 5 and 120 seconds
+            const clampedValue = Math.max(320, Math.min(1920, value));
+            setPixelWidth(clampedValue);
+            setPixelWidthInput(clampedValue.toString());
+        }
+		}
+    const handlePixelWidthKeyDown = (e) => {
         if (e.key === 'Enter') {
-            handleRecordingLengthBlur();
+            handlePixelWidthBlur();
+        }
+    };
+
+		// Handle Setting Fps
+    const handleFpsInputChange = (e) => {
+        setFpsInput(e.target.value);
+    };
+		const handleFpsBlur = () => {
+				const value = parseInt(fpsInput, 10);
+        if (isNaN(value)) {
+            // Reset to current valid value
+            setFpsInput(fps.toString());
+        } else {
+            const clampedValue = Math.max(5, Math.min(60, value));
+            setFps(clampedValue);
+            setFpsInput(clampedValue.toString());
+        }
+		};
+    const handleFpsKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleFpsBlur();
         }
     };
 
@@ -103,14 +169,19 @@ const SettingsPage = () => {
         setSavedMessage('');
         
         // First make sure recording length is valid by triggering blur validation
-        handleRecordingLengthBlur();
+        handleClipLengthBlur();
+        handlePixelWidthBlur();
+        handleFpsBlur();
         
         try {
             const settings = {
                 hotkey,
-                recordingLength
+                clipLength,
+								pixelWidth,
+								pixelHeight,
+								fps
             };
-            
+
             const result = await window.electron.saveSettings(settings);
             if (result.success) {
                 setSavedMessage('Settings saved successfully!');
@@ -126,6 +197,7 @@ const SettingsPage = () => {
             setSavedMessage(`Error saving settings: ${error.message}`);
         } finally {
             setSaving(false);
+						await window.electron.flushRestartRecorder();
         }
     };
 
@@ -164,25 +236,57 @@ const SettingsPage = () => {
                     </div>
                 </div>
                 
-                {/* Recording Length Settings */}
+                {/* Clip Length Settings */}
                 <div className="settings-group">
                     <h3>Recording Length</h3>
-                    <div className="recording-length-setter">
-                        <label htmlFor="recording-length">Clip Length (seconds):</label>
+                    <div className="clip-length-setter">
+                        <label htmlFor="clip-length">Clip Length (seconds):</label>
                         <input
-                            id="recording-length"
+                            id="clip-length"
                             type="number"
                             min="5"
                             max="120"
-                            value={recordingLengthInput}
-                            onChange={handleRecordingLengthInputChange}
-                            onBlur={handleRecordingLengthBlur}
-                            onKeyDown={handleRecordingLengthKeyDown}
+                            value={clipLengthInput}
+                            onChange={handleClipLengthInputChange}
+                            onBlur={handleClipLengthBlur}
+                            onKeyDown={handleClipLengthKeyDown}
                         />
                     </div>
                     <p className="setting-help">
                         Set how many seconds of gameplay will be saved when you press the clip hotkey (5-120 seconds).
                     </p>
+
+										{/* Video Width */}
+                    <h3>Video Width</h3>
+                    <div className="video-width-setter">
+										 	<label htmlFor="video-width">Video Width (px):</label>
+											<select
+												id="video-width"
+												value={pixelWidthInput}
+												onChange={handlePixelWidthInputChange}
+											 	onBlur={handlePixelWidthBlur}
+											>
+												<option value="">Select a width</option>
+												<option value="360">360</option>
+												<option value="720">720</option>
+												<option value="1080">1080</option>
+											</select>
+                    </div>
+
+                    <h3>Framerate</h3>
+                    <div className="fps-setter">
+                        <label htmlFor="fps">Framerate:</label>
+                        <input
+                            id="fps"
+                            type="number"
+                            min="10"
+                            max="60"
+                            value={fpsInput}
+                            onChange={handleFpsInputChange} 	
+                            onBlur={handleFpsBlur}
+                            onKeyDown={handleFpsKeyDown}
+                        />
+                    </div>
                 </div>
                 
                 {/* Save Button */}

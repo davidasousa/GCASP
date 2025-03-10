@@ -13,6 +13,9 @@ const App = () => {
 	
 	// State for settings
 	const [clipLength, setClipLength] = useState(20); // Default clip length in seconds
+	const [pixelWidth, setPixelWidth] = useState(1920); 
+	const [pixelHeight, setPixelHeight] = useState(1080); 
+	const [fps, setFps] = useState(30); 
 	
 	// Load settings on component mount
 	useEffect(() => {
@@ -20,7 +23,13 @@ const App = () => {
 			try {
 				const settings = await window.electron.getSettings();
 				if (settings) {
-					setClipLength(settings.recordingLength || 20);
+					// Clipping Settings
+					setClipLength(settings.recordingLength);
+
+					// Recorder Settings					
+					setPixelWidth(settings.pixelWidth);
+					setPixelHeight(settings.pixelHeight);
+					setFps(settings.fps);
 				}
 			} catch (error) {
 				console.error('Error loading settings:', error);
@@ -58,7 +67,7 @@ const App = () => {
 	}, []);
 
 	// Handler for recording button - uses splicing approach
-	const handleRecordNow = async () => {
+	const handleRecordClip = async () => {
 		if (isClipping) {
 			console.log("Already creating a clip");
 			return;
@@ -104,7 +113,7 @@ const App = () => {
 					</Routes>
 				</main>
 				<div className="record-button">
-					<button onClick={handleRecordNow} disabled={isClipping}>
+					<button onClick={handleRecordClip} disabled={isClipping}>
 						{isClipping ? "Creating Clip..." : "Record Clip"}
 					</button>
 				</div>

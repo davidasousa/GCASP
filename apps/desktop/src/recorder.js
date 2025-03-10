@@ -28,7 +28,7 @@ let activeProcess = null; // Track the active FFmpeg process
 const SEGMENT_LENGTH = 5; // Recording Length In Seconds
 // MAX_SEGMENTS will be calculated dynamically based on settings
 
-// Configuration - can be overridden from .env
+/*
 const config = {
 	// Default to 1080p (1920x1080) if not specified in env
 	width: process.env.CAPTURE_WIDTH ? parseInt(process.env.CAPTURE_WIDTH) : 1920,
@@ -36,11 +36,12 @@ const config = {
 	// Maximum framerate
 	fps: process.env.CAPTURE_FPS ? parseInt(process.env.CAPTURE_FPS) : 30
 };
+*/
+let config = loadSettings();
 
 // Get the maximum number of segments to keep based on settings
 function getMaxSegments() {
-	const settings = loadSettings();
-	const desiredClipLength = settings.recordingLength || 20; // Default to 20 seconds
+	const desiredClipLength = config.clipLength || 20; // Default to 20 seconds
 	// Calculate segments needed (round up to ensure we have enough)
 	return Math.ceil(desiredClipLength / SEGMENT_LENGTH) + 1; // +1 for safety
 }
@@ -49,6 +50,9 @@ function getMaxSegments() {
 export function startContinuousRecording() {
 	if (isRecording) return;
 	isRecording = true;
+
+	// Reload Configs
+	config = loadSettings();
 	
 	// Ensure directories exist
 	if (!fs.existsSync(recordingsPath)) {
@@ -74,18 +78,6 @@ async function recordSegment() {
 			.replace('Z', '');
 		
 		const outputPath = path.join(recordingsPath, `clip_${timestamp}.mp4`);
-		/*
-		const args = [
-			'-y',
-			'-f', 'gdigrab',
-			'-i', 'desktop',
-			'-t', '5',
-			'-c:v', 'libx264',
-			'-pix_fmt', 'yuv420p',
-			outputPath
-		];
-		*/
-		
 		// Set up platform-specific capture commands for main monitor only
 		let captureArgs;
 		// Windows: Use gdigrab with primary monitor only
@@ -94,7 +86,7 @@ async function recordSegment() {
 			'-framerate', config.fps.toString(),
 			'-offset_x', '0',
 			'-offset_y', '0',
-			'-video_size', `${config.width}x${config.height}`,
+			'-video_size', `1920x1080`,
 			'-draw_mouse', '1',
 			'-i', 'desktop'
 		];
@@ -107,7 +99,7 @@ async function recordSegment() {
 			'-c:v', 'libx264',
 			'-preset', 'ultrafast', // Fastest encoding
 			'-pix_fmt', 'yuv420p',
-			'-vf', 'scale=1920:1080', // Scale down to 1080p for efficient storage
+			'-vf', `scale=-1:${config.pixelWidth}`, 
 			outputPath
 		];
 		
@@ -115,7 +107,7 @@ async function recordSegment() {
 		await new Promise((resolve, reject) => {
 			const ffmpegProcess = spawn(getFFmpegPath(), args);
 			activeProcess = ffmpegProcess; // Store the reference to current process
-			
+
 			ffmpegProcess.on('close', (code) => {
 				activeProcess = null; // Clear the reference when process ends
 				
