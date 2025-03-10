@@ -197,8 +197,6 @@ async function recordSegment() {
 			initializeDisplayCache();
 		}
 
-		console.log(config.selectedApp);
-		
 		const selectedMonitorIndex = parseInt(config.selectedMonitor, 10);
 		const selectedDisplay = cachedDisplays[selectedMonitorIndex] || cachedDisplays[0];
 
@@ -212,10 +210,9 @@ async function recordSegment() {
 			'-video_size', `${selectedDisplay.bounds.width}x${selectedDisplay.bounds.height}`,
 			'-draw_mouse', '1',
 			'-i', 'desktop'
-		]) : ([
+		]) : ([ // Recording A Specific Application
 			'-f', 'gdigrab',
 			'-framerate', config.fps.toString(),
-			'-i', 'firefox.exe'
 		]);
 
 		// Build FFmpeg command for this segment
