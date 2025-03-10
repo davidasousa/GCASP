@@ -155,6 +155,9 @@ export function setupIpcHandlers() {
 		
 		const monitorChanged = newSettings.selectedMonitor && 
 			currentSettings.selectedMonitor !== newSettings.selectedMonitor;
+
+		const applicationChanged = newSettings.selectedApp && 
+			currentSettings.selectedApp !== newSettings.selectedApp;
 		
 		// Save the new settings
 		const success = saveSettings(newSettings);
@@ -165,7 +168,7 @@ export function setupIpcHandlers() {
 		}
 		
 		// If resolution, FPS, or selected monitor changed, restart recording with new settings
-		if (success && (resolutionChanged || fpsChanged || monitorChanged)) {
+		if (success && (resolutionChanged || fpsChanged || monitorChanged || applicationChanged)) {
 			console.log('Resolution, FPS, or monitor changed, restarting recording...');
 			await restartRecordingWithNewSettings();
 		}
@@ -527,7 +530,7 @@ export function setupIpcHandlers() {
 	// Fetching Windows Processes
 	ipcMain.handle('fetch-running-processes', async () => {
 		const tasklist = spawn('powershell.exe', ['tasklist']);
-		let visibleProcesses = [];
+		let visibleProcesses = ["Full Screen"]; // Full Screen Just In Case
 		let output = '';
 
 		tasklist.stdout.on('data', (data) => {

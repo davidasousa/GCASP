@@ -39,7 +39,7 @@ contextBridge.exposeInMainWorld('electron', {
 
 	// Fetch Running Windows Processes
 	fetchRunningProcesses: () => ipcRenderer.invoke('fetch-running-processes'),
-	
+
 	// Listen for new recordings
 	onNewRecording: (callback) => 
 		ipcRenderer.on('new-recording', (event, data) => callback(data)),

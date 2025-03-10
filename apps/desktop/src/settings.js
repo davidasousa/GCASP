@@ -11,7 +11,9 @@ const defaultSettings = {
 	hotkey: 'F9',
 	recordingLength: 20, // seconds
 	resolution: { width: 1920, height: 1080 },
-	fps: 30
+	fps: 30,
+	selectedMonitor: "0",
+	selectedApp: "Full Screen"
 };
 
 // Load settings from the settings file

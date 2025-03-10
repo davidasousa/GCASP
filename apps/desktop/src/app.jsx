@@ -16,6 +16,7 @@ const App = () => {
 	const [pixelWidth, setPixelWidth] = useState(1920); 
 	const [pixelHeight, setPixelHeight] = useState(1080); 
 	const [fps, setFps] = useState(30); 
+	const [application, setApplication] = useState("Full Screen"); 
 	
 	// Load settings on component mount
 	useEffect(() => {
@@ -30,6 +31,9 @@ const App = () => {
 					setPixelWidth(settings.pixelWidth);
 					setPixelHeight(settings.pixelHeight);
 					setFps(settings.fps);
+
+					// Application Settings
+					setApplication(settings.application);
 				}
 			} catch (error) {
 				console.error('Error loading settings:', error);
