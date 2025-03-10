@@ -1,11 +1,10 @@
-import { ipcMain, app, globalShortcut } from 'electron';
+import { ipcMain, app, globalShortcut, screen } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
 import { spawn } from 'child_process';
-import { createClip, startContinuousRecording, stopContinuousRecording } from './recorder';
+import { createClip, startContinuousRecording, stopContinuousRecording, restartRecordingWithNewSettings } from './recorder';
 import { loadSettings, saveSettings, initSettings } from './settings';
-import { safelyDeleteRecordings } from './main';
 
 const exec = promisify(require('child_process').exec);
 
@@ -106,18 +105,69 @@ export function setupIpcHandlers() {
 	// Start the continuous recording when IPC handlers are set up
 	startContinuousRecording();
 
+	// Get screen dimensions
+	ipcMain.handle('get-screen-dimensions', () => {
+		const primaryDisplay = screen.getPrimaryDisplay();
+		return {
+			width: primaryDisplay.bounds.width,
+			height: primaryDisplay.bounds.height
+		};
+	});
+	
+	// Get all monitors
+	ipcMain.handle('get-monitors', async () => {
+		// Get all displays from Electron screen API
+		const displays = screen.getAllDisplays();
+		
+		// Format the displays into a usable format
+		const monitors = displays.map((display, index) => {
+			return {
+				id: index.toString(),
+				name: `Monitor ${index + 1}${display.id === screen.getPrimaryDisplay().id ? ' (Primary)' : ''}`,
+				width: display.bounds.width,
+				height: display.bounds.height,
+				x: display.bounds.x,
+				y: display.bounds.y,
+				isPrimary: display.id === screen.getPrimaryDisplay().id
+			};
+		});
+		
+		return monitors;
+	});
+
 	// Get settings
 	ipcMain.handle('get-settings', () => {
 		return loadSettings();
 	});
 
 	// Save settings
-	ipcMain.handle('save-settings', (event, newSettings) => {
+	ipcMain.handle('save-settings', async (event, newSettings) => {
+		// Get the current settings to check for changes
+		const currentSettings = loadSettings();
+		
+		// Check if resolution, FPS, or monitor has changed
+		const resolutionChanged = 
+			newSettings.resolution && 
+			(currentSettings.resolution?.width !== newSettings.resolution.width || 
+			 currentSettings.resolution?.height !== newSettings.resolution.height);
+		
+		const fpsChanged = newSettings.fps && currentSettings.fps !== newSettings.fps;
+		
+		const monitorChanged = newSettings.selectedMonitor && 
+			currentSettings.selectedMonitor !== newSettings.selectedMonitor;
+		
+		// Save the new settings
 		const success = saveSettings(newSettings);
 		
 		// If hotkey was changed, update the registered hotkey
 		if (success && newSettings.hotkey && newSettings.hotkey !== registeredHotkey) {
 			registerHotkey(newSettings.hotkey);
+		}
+		
+		// If resolution, FPS, or selected monitor changed, restart recording with new settings
+		if (success && (resolutionChanged || fpsChanged || monitorChanged)) {
+			console.log('Resolution, FPS, or monitor changed, restarting recording...');
+			await restartRecordingWithNewSettings();
 		}
 		
 		return { success };
@@ -473,18 +523,9 @@ export function setupIpcHandlers() {
 			return { success: false, error: error.message };
 		}
 	});
-
-	// Flushing & Restarting The Recorder
-	ipcMain.handle('flush-restart-recorder', () => {
-		safelyDeleteRecordings();
-		stopContinuousRecording();
-		setTimeout(() => {}, 500);
-		startContinuousRecording();
-	});
 }
 
 // Make sure to unregister shortcuts when the app is about to quit
 export function cleanupIpcHandlers() {
     unregisterHotkeys();
 }
-

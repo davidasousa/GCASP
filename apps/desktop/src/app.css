@@ -771,3 +771,59 @@ body {
     color: #721c24;
     border: 1px solid #f5c6cb;
 }
+
+/* Resolution, FPS, and monitor selector styles */
+.resolution-selector,
+.fps-selector,
+.monitor-selector {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.resolution-selector label,
+.fps-selector label,
+.monitor-selector label {
+	display: block;
+	margin-bottom: 5px;
+}
+
+.settings-select {
+	padding: 8px;
+	font-size: 1rem;
+	border: 1px solid #ccc;
+	border-radius: 4px;
+	background-color: #fff;
+	width: 100%;
+	max-width: 250px;
+}
+
+.setting-warning {
+	font-size: 0.9rem;
+	color: #dc3545;
+	background-color: #f8d7da;
+	padding: 5px 10px;
+	border-radius: 4px;
+	margin-top: 5px;
+}
+
+/* Responsive adjustments for select boxes */
+@media (min-width: 768px) {
+	.resolution-selector,
+	.fps-selector,
+	.monitor-selector {
+		flex-direction: row;
+		align-items: center;
+	}
+	
+	.resolution-selector label,
+	.fps-selector label,
+	.monitor-selector label {
+		width: 150px;
+		margin-bottom: 0;
+	}
+	
+	.settings-select {
+		flex: 1;
+	}
+}

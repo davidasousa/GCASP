@@ -24,24 +24,55 @@ let isRecording = false;
 let recordingSegments = [];
 let activeProcess = null; // Track the active FFmpeg process
 
+// Cache for display information
+let cachedDisplays = [];
+let cachedConfig = null;
+
 // Segment configuration
 const SEGMENT_LENGTH = 5; // Recording Length In Seconds
 // MAX_SEGMENTS will be calculated dynamically based on settings
 
-/*
-const config = {
-	// Default to 1080p (1920x1080) if not specified in env
-	width: process.env.CAPTURE_WIDTH ? parseInt(process.env.CAPTURE_WIDTH) : 1920,
-	height: process.env.CAPTURE_HEIGHT ? parseInt(process.env.CAPTURE_HEIGHT) : 1080,
-	// Maximum framerate
-	fps: process.env.CAPTURE_FPS ? parseInt(process.env.CAPTURE_FPS) : 30
-};
-*/
-let config = loadSettings();
+// Initialize display cache
+function initializeDisplayCache() {
+	try {
+		const { screen } = require('electron');
+		cachedDisplays = screen.getAllDisplays();
+		console.log(`Display cache initialized with ${cachedDisplays.length} monitors`);
+		return true;
+	} catch (error) {
+		console.error('Error initializing display cache:', error);
+		return false;
+	}
+}
+
+// Update display cache (call this when settings change)
+function updateDisplayCache() {
+	return initializeDisplayCache();
+}
+
+// Get current recording configuration from settings
+function getRecordingConfig() {
+	// If we already have a cached config, use it
+	if (cachedConfig) {
+		return cachedConfig;
+	}
+	
+	// Otherwise load from settings
+	const settings = loadSettings();
+	cachedConfig = {
+		width: settings.resolution?.width || 1920,
+		height: settings.resolution?.height || 1080,
+		fps: settings.fps || 30,
+		selectedMonitor: settings.selectedMonitor || "0"
+	};
+	
+	return cachedConfig;
+}
 
 // Get the maximum number of segments to keep based on settings
 function getMaxSegments() {
-	const desiredClipLength = config.clipLength || 20; // Default to 20 seconds
+	const settings = loadSettings();
+	const desiredClipLength = settings.recordingLength || 20; // Default to 20 seconds
 	// Calculate segments needed (round up to ensure we have enough)
 	return Math.ceil(desiredClipLength / SEGMENT_LENGTH) + 1; // +1 for safety
 }
@@ -50,9 +81,6 @@ function getMaxSegments() {
 export function startContinuousRecording() {
 	if (isRecording) return;
 	isRecording = true;
-
-	// Reload Configs
-	config = loadSettings();
 	
 	// Ensure directories exist
 	if (!fs.existsSync(recordingsPath)) {
@@ -62,8 +90,88 @@ export function startContinuousRecording() {
 		fs.mkdirSync(clipsPath, { recursive: true });
 	}
 	
+	// Initialize display cache if not already done
+	if (cachedDisplays.length === 0) {
+		initializeDisplayCache();
+	}
+	
 	// Start the recording loop
 	recordSegment();
+}
+
+// Stop the continuous recording process
+export function stopContinuousRecording() {
+	isRecording = false;
+	
+	// Terminate any active FFmpeg process
+	if (activeProcess) {
+		try {
+			// Send SIGTERM to gracefully terminate the process
+			if (process.platform === 'win32') {
+				// On Windows, use taskkill
+				try {
+					execSync(`taskkill /pid ${activeProcess.pid} /f /t`);
+				} catch (e) {
+					console.log('Error terminating FFmpeg process with taskkill:', e);
+				}
+			} else {
+				// On Unix systems
+				activeProcess.kill('SIGTERM');
+			}
+		} catch (e) {
+			console.log('Error terminating FFmpeg process:', e);
+		}
+		activeProcess = null;
+	}
+}
+
+// Clear all recording segments and files
+function clearRecordingSegments() {
+	// First clear the array
+	recordingSegments = [];
+	
+	// Then delete all recording files
+	try {
+		const files = fs.readdirSync(recordingsPath);
+		files.filter(file => file.endsWith('.mp4'))
+			.forEach(file => {
+				try {
+					const filePath = path.join(recordingsPath, file);
+					fs.unlinkSync(filePath);
+					console.log(`Deleted recording segment: ${filePath}`);
+				} catch (err) {
+					console.log(`Could not delete file: ${file} - ${err.message}`);
+				}
+			});
+	} catch (err) {
+		console.error('Error during clearing recordings:', err);
+	}
+}
+
+// Restart recording with new settings
+export async function restartRecordingWithNewSettings() {
+	console.log('Restarting recording with new settings...');
+	
+	// First stop current recording
+	stopContinuousRecording();
+	
+	// Wait a moment for the process to fully terminate
+	await new Promise(resolve => setTimeout(resolve, 500));
+	
+	// Clear all segments and recording files
+	clearRecordingSegments();
+	
+	// Update cached configuration from settings
+	cachedConfig = null; // Force reload of settings
+	getRecordingConfig(); // Load new settings into cache
+	
+	// Update display cache
+	updateDisplayCache();
+	
+	// Start recording again with new settings
+	startContinuousRecording();
+	
+	return true;
 }
 
 // Record a single segment in the continuous recording loop
@@ -78,15 +186,26 @@ async function recordSegment() {
 			.replace('Z', '');
 		
 		const outputPath = path.join(recordingsPath, `clip_${timestamp}.mp4`);
-		// Set up platform-specific capture commands for main monitor only
-		let captureArgs;
-		// Windows: Use gdigrab with primary monitor only
-		captureArgs = [
+		
+		// Get current config from cache
+		const config = getRecordingConfig();
+		
+		// Use cached display information instead of querying each time
+		if (cachedDisplays.length === 0) {
+			// Fallback if cache is empty for some reason
+			initializeDisplayCache();
+		}
+		
+		const selectedMonitorIndex = parseInt(config.selectedMonitor, 10);
+		const selectedDisplay = cachedDisplays[selectedMonitorIndex] || cachedDisplays[0];
+		
+		// Capture the entire selected monitor at its native resolution
+		const captureArgs = [
 			'-f', 'gdigrab',
 			'-framerate', config.fps.toString(),
-			'-offset_x', '0',
-			'-offset_y', '0',
-			'-video_size', `1920x1080`,
+			'-offset_x', selectedDisplay.bounds.x.toString(),
+			'-offset_y', selectedDisplay.bounds.y.toString(),
+			'-video_size', `${selectedDisplay.bounds.width}x${selectedDisplay.bounds.height}`,
 			'-draw_mouse', '1',
 			'-i', 'desktop'
 		];
@@ -98,16 +217,23 @@ async function recordSegment() {
 			'-t', SEGMENT_LENGTH.toString(), // Segment length in seconds
 			'-c:v', 'libx264',
 			'-preset', 'ultrafast', // Fastest encoding
-			'-pix_fmt', 'yuv420p',
-			'-vf', `scale=-1:${config.pixelWidth}`, 
-			outputPath
+			'-pix_fmt', 'yuv420p'
 		];
+		
+		// Only add scaling if the selected resolution is different from the native resolution
+		if (config.width !== selectedDisplay.bounds.width || config.height !== selectedDisplay.bounds.height) {
+			// Scale to the target resolution while preserving aspect ratio
+			args.push('-vf', `scale=${config.width}:${config.height}:force_original_aspect_ratio=decrease,pad=${config.width}:${config.height}:(ow-iw)/2:(oh-ih)/2`);
+		}
+		
+		// Add output path
+		args.push(outputPath);
 		
 		// Record segment
 		await new Promise((resolve, reject) => {
 			const ffmpegProcess = spawn(getFFmpegPath(), args);
 			activeProcess = ffmpegProcess; // Store the reference to current process
-
+			
 			ffmpegProcess.on('close', (code) => {
 				activeProcess = null; // Clear the reference when process ends
 				
@@ -155,32 +281,6 @@ async function recordSegment() {
 		if (isRecording) {
 			setTimeout(recordSegment, 1000);
 		}
-	}
-}
-
-// Stop the continuous recording process
-export function stopContinuousRecording() {
-	isRecording = false;
-	
-	// Terminate any active FFmpeg process
-	if (activeProcess) {
-		try {
-			// Send SIGTERM to gracefully terminate the process
-			if (process.platform === 'win32') {
-				// On Windows, use taskkill
-				try {
-					execSync(`taskkill /pid ${activeProcess.pid} /f /t`);
-				} catch (e) {
-					console.log('Error terminating FFmpeg process with taskkill:', e);
-				}
-			} else {
-				// On Unix systems
-				activeProcess.kill('SIGTERM');
-			}
-		} catch (e) {
-			console.log('Error terminating FFmpeg process:', e);
-		}
-		activeProcess = null;
 	}
 }
 
