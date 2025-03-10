@@ -523,6 +523,52 @@ export function setupIpcHandlers() {
 			return { success: false, error: error.message };
 		}
 	});
+
+	// Fetching Windows Processes
+	ipcMain.handle('fetch-running-processes', async () => {
+		const tasklist = spawn('powershell.exe', ['tasklist']);
+		let visibleProcesses = [];
+		let output = '';
+
+		tasklist.stdout.on('data', (data) => {
+			output += data.toString();
+		});
+
+		return new Promise((resolve) => {
+			tasklist.on('close', () => {
+				const taskListArray = output.split('\n').slice(3); // Skip Intro Lines
+				let promises = taskListArray.map((line) => {
+					const pidMatch = line.match(/\s+(\d+)\s+(\S+)/);
+					if (!pidMatch) { return Promise.resolve(); }
+					if (line.toLowerCase().includes('service')) { return Promise.resolve(); }
+					if (line.toLowerCase().includes('svchost')) { return Promise.resolve(); }
+
+					const pid = pidMatch[1];
+					const processName = pidMatch.input.split(/\s+/)[0];
+
+					return new Promise((resolve) => {
+						const ps = spawn('powershell.exe', ['-Command', `
+							$process = Get-Process -Id ${pid}
+							if ($process.MainWindowHandle -ne 0) { Write-Output "${pid}" }
+						`]);
+
+						ps.stdout.on('data', (data) => {
+							visibleProcesses.push(processName);
+						});
+
+						ps.on('close', () => {
+							resolve();  // Resolve the promise after the check is done
+						});
+					});
+				});
+
+				Promise.all(promises).then(() => {
+					resolve(visibleProcesses); // Resolve with the final list of visible processes
+				});
+			});
+		});
+	});
+
 }
 
 // Make sure to unregister shortcuts when the app is about to quit

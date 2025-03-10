@@ -61,6 +61,20 @@ const SettingsPage = () => {
 		loadSettingsAndMonitors();
 	}, []);
 
+	// State For Possible Application Inputs
+	const [runningProcesses, setRunningProcesses] = useState([]);
+	const [areProcessesReady, setAreProcessesReady] = useState(false)
+
+	useEffect(() => {
+		const loadProcesses = async () => {
+			const processes = await window.electron.fetchRunningProcesses();
+			setRunningProcesses(processes);
+			setAreProcessesReady(true);
+		}
+
+		loadProcesses();
+	}, []);
+
 	// Generate available resolutions based on screen dimensions
 	const generateAvailableResolutions = (screenWidth, screenHeight) => {
 		const screenAspectRatio = screenWidth / screenHeight;
@@ -348,7 +362,28 @@ const SettingsPage = () => {
 						Changing monitor selection will restart the recording buffer.
 					</p>
 				</div>
-				
+
+				{/* Conditional rendering directly in JSX */}
+				<div className="settings-group">
+					<h3>Application Selection</h3>
+					<div className="application-selector">
+						<label htmlFor="application-select">Select Application to Record:</label>
+
+						{/* Conditional rendering of the select dropdown or loading state */}
+						{areProcessesReady ? (
+							<select id="application-select">
+								{runningProcesses.map((process, index) => (
+									<option key={index} value={process}>
+										{process}
+									</option>
+								))}
+							</select>
+						) : (
+							<div>Loading processes...</div> // Fallback loading message when not ready
+						)}
+					</div>
+				</div>
+
 				{/* Save Button */}
 				<div className="settings-actions">
 					<button
