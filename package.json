@@ -41,5 +41,7 @@
       "^.+\\.(js|jsx)$": "babel-jest"
     }
   },
-  "dependencies": {}
+  "dependencies": {
+    "winston": "^3.17.0"
+  }
 }
