@@ -47,5 +47,13 @@ contextBridge.exposeInMainWorld('electron', {
 		
 	// Listen for clip completion
 	onClipDone: (callback) => 
-		ipcRenderer.on('clip-done', (event, data) => callback(data))
+		ipcRenderer.on('clip-done', (event, data) => callback(data)),
+
+	// Logging functions for renderer process
+	log: {
+		error: (message, meta = {}) => ipcRenderer.invoke('log', { level: 'error', message, meta }),
+		warn: (message, meta = {}) => ipcRenderer.invoke('log', { level: 'warn', message, meta }),
+		info: (message, meta = {}) => ipcRenderer.invoke('log', { level: 'info', message, meta }),
+		debug: (message, meta = {}) => ipcRenderer.invoke('log', { level: 'debug', message, meta })
+	}
 });
