@@ -26,16 +26,21 @@ const SettingsPage = () => {
 				// Load monitors first
 				const monitorsList = await window.electron.getMonitors();
 				setMonitors(monitorsList);
+				window.electron.log.debug('Monitors loaded', { count: monitorsList.length });
 				
 				// Load screen dimensions
 				const screenDimensions = await window.electron.getScreenDimensions();
+				window.electron.log.debug('Screen dimensions loaded', screenDimensions);
 				
 				// Generate available resolutions based on screen dimensions
 				const resolutions = generateAvailableResolutions(screenDimensions.width, screenDimensions.height);
 				setAvailableResolutions(resolutions);
+				window.electron.log.debug('Available resolutions generated', { count: resolutions.length });
 				
-				// Then load settings
+				// Then load settings (using cached settings from main process)
 				const settings = await window.electron.getSettings();
+				window.electron.log.debug('Settings loaded for SettingsPage', settings);
+				
 				if (settings) {
 					setHotkey(settings.hotkey || 'F9');
 					const savedLength = settings.recordingLength || 20;
@@ -52,13 +57,18 @@ const SettingsPage = () => {
 					
 					setSelectedFPS(settings.fps || 30);
 					setSelectedMonitor(settings.selectedMonitor || "0");
+					
+					window.electron.log.debug('Settings state updated in SettingsPage component');
 				}
 			} catch (error) {
 				console.error('Error loading settings, screen dimensions, or monitors:', error);
+				window.electron.log.error('Error initializing SettingsPage', { error: error.toString() });
 			}
 		};
 
 		loadSettingsAndMonitors();
+		
+		// No need for polling interval - settings will be cached in main process
 	}, []);
 
 	// Generate available resolutions based on screen dimensions
@@ -187,6 +197,7 @@ const SettingsPage = () => {
 	const saveSettings = async () => {
 		setSaving(true);
 		setSavedMessage('');
+		window.electron.log.info('Saving settings from SettingsPage');
 		
 		// First make sure recording length is valid by triggering blur validation
 		handleRecordingLengthBlur();
@@ -200,11 +211,17 @@ const SettingsPage = () => {
 				selectedMonitor
 			};
 			
+			window.electron.log.debug('Saving new settings', settings);
+			
 			const result = await window.electron.saveSettings(settings);
 			if (result.success) {
 				setSavedMessage('Settings saved successfully!');
+				window.electron.log.info('Settings saved successfully from SettingsPage');
 			} else {
 				setSavedMessage('Failed to save settings');
+				window.electron.log.error('Failed to save settings', { 
+					error: result.error || 'Unknown error' 
+				});
 			}
 			
 			// Clear saved message after 3 seconds
@@ -213,6 +230,7 @@ const SettingsPage = () => {
 			}, 3000);
 		} catch (error) {
 			setSavedMessage(`Error saving settings: ${error.message}`);
+			window.electron.log.error('Error saving settings', { error: error.toString() });
 		} finally {
 			setSaving(false);
 		}

@@ -7,6 +7,10 @@ contextBridge.exposeInMainWorld('electron', {
 	// Settings functions
 	getSettings: () => ipcRenderer.invoke('get-settings'),
 	saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+	onSettingsChanged: (callback) => {
+		// Listen for settings-changed event from main process
+		ipcRenderer.on('settings-changed', (_, newSettings) => callback(newSettings));
+	},
 	
 	// Screen dimensions
 	getScreenDimensions: () => ipcRenderer.invoke('get-screen-dimensions'),

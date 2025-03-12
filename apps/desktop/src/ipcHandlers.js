@@ -4,16 +4,18 @@ import fs from 'fs';
 import { promisify } from 'util';
 import { spawn } from 'child_process';
 import { createClip, startContinuousRecording, stopContinuousRecording, restartRecordingWithNewSettings } from './recorder';
-import { loadSettings, saveSettings, initSettings } from './settings';
+import { getCurrentSettings, saveSettings, initSettings, onSettingsChanged } from './settings';
 import logger from './logger';
 
-// Use Node.js exec with promisify
 const exec = promisify(require('child_process').exec);
 
 // Set up paths for recordings and clips
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
 const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
 logger.debug(`IPC Handler initialization - Recordings path: ${recordingsPath}, Clips path: ${clipsPath}`);
+
+// Cache for the current settings
+let cachedSettings = null;
 
 // Ensure directories exist
 const ensureDirectories = () => {
@@ -59,9 +61,8 @@ function registerHotkey(hotkey) {
 				.replace('Z', '');
 			logger.debug(`Generated timestamp for clip: ${timestamp}`);
 			
-			// Load current settings to get clip length
-			logger.debug('Loading settings for clip length');
-			const settings = loadSettings();
+			// Use cached settings instead of loading from disk
+			const settings = cachedSettings;
 			const clipLength = settings.recordingLength || 20;
 			logger.debug(`Using clip length: ${clipLength} seconds`);
 			
@@ -122,6 +123,39 @@ function unregisterHotkeys() {
 	}
 }
 
+// Handle settings changes
+function handleSettingsChanged(newSettings) {
+	logger.debug('Settings changed, updating application state...');
+	
+	// Update cached settings
+	const oldSettings = cachedSettings;
+	cachedSettings = newSettings;
+	
+	// Check if hotkey changed
+	if (oldSettings && oldSettings.hotkey !== newSettings.hotkey) {
+		logger.info(`Hotkey changed from ${oldSettings.hotkey} to ${newSettings.hotkey}`);
+		registerHotkey(newSettings.hotkey);
+	}
+	
+	// Check if recording settings changed
+	const resolutionChanged = 
+		oldSettings && 
+		(oldSettings.resolution?.width !== newSettings.resolution?.width || 
+		oldSettings.resolution?.height !== newSettings.resolution?.height);
+	
+	const fpsChanged = oldSettings && oldSettings.fps !== newSettings.fps;
+	
+	const monitorChanged = oldSettings && oldSettings.selectedMonitor !== newSettings.selectedMonitor;
+	
+	// If resolution, FPS, or selected monitor changed, restart recording with new settings
+	if (resolutionChanged || fpsChanged || monitorChanged) {
+		logger.info('Recording settings changed, restarting recording...');
+		restartRecordingWithNewSettings().catch(error => {
+			logger.error('Failed to restart recording with new settings:', error);
+		});
+	}
+}
+
 export function setupIpcHandlers() {
 	logger.info('Setting up IPC handlers...');
 	
@@ -134,17 +168,15 @@ export function setupIpcHandlers() {
 
 	// Initialize settings
 	logger.debug('Initializing settings...');
-	const settings = initSettings();
-	logger.debug('Settings initialized', {
-		hotkey: settings.hotkey,
-		recordingLength: settings.recordingLength,
-		resolution: settings.resolution,
-		fps: settings.fps
-	});
+	cachedSettings = initSettings();
+	logger.debug('Settings initialized', cachedSettings);
+
+	// Register for settings changes
+	onSettingsChanged(handleSettingsChanged);
 
 	// Register the default hotkey on startup
-	logger.debug(`Registering default hotkey: ${settings.hotkey}`);
-	const hotkeyResult = registerHotkey(settings.hotkey);
+	logger.debug(`Registering default hotkey: ${cachedSettings.hotkey}`);
+	const hotkeyResult = registerHotkey(cachedSettings.hotkey);
 	logger.debug(`Hotkey registration result: ${hotkeyResult ? 'success' : 'failed'}`);
 
 	// Start the continuous recording when IPC handlers are set up
@@ -207,16 +239,15 @@ export function setupIpcHandlers() {
 		}
 	});
 
-	// Get settings
+	// Get settings - now returns cached settings instead of loading from disk
 	logger.debug('Registering get-settings handler');
 	ipcMain.handle('get-settings', () => {
 		logger.debug('get-settings handler called');
 		try {
-			const settings = loadSettings();
-			logger.debug('Settings loaded', settings);
-			return settings;
+			logger.debug('Returning cached settings');
+			return cachedSettings;
 		} catch (error) {
-			logger.error('Error loading settings:', error);
+			logger.error('Error getting settings:', error);
 			throw error;
 		}
 	});
@@ -226,65 +257,10 @@ export function setupIpcHandlers() {
 	ipcMain.handle('save-settings', async (event, newSettings) => {
 		logger.debug('save-settings handler called', { newSettings });
 		try {
-			// Get the current settings to check for changes
-			const currentSettings = loadSettings();
-			logger.debug('Current settings loaded for comparison', currentSettings);
-			
-			// Check if resolution, FPS, or monitor has changed
-			const resolutionChanged = 
-				newSettings.resolution && 
-				(currentSettings.resolution?.width !== newSettings.resolution.width || 
-				currentSettings.resolution?.height !== newSettings.resolution.height);
-			
-			const fpsChanged = newSettings.fps && currentSettings.fps !== newSettings.fps;
-			
-			const monitorChanged = newSettings.selectedMonitor && 
-				currentSettings.selectedMonitor !== newSettings.selectedMonitor;
-			
-			// Log detected changes
-			if (resolutionChanged) {
-				logger.info('Resolution change detected', {
-					old: currentSettings.resolution,
-					new: newSettings.resolution
-				});
-			}
-			
-			if (fpsChanged) {
-				logger.info('FPS change detected', {
-					old: currentSettings.fps,
-					new: newSettings.fps
-				});
-			}
-			
-			if (monitorChanged) {
-				logger.info('Monitor change detected', {
-					old: currentSettings.selectedMonitor,
-					new: newSettings.selectedMonitor
-				});
-			}
-			
-			// Save the new settings
+			// Save the new settings - the saveSettings function will handle updating the cache
 			logger.debug('Saving new settings...');
 			const success = saveSettings(newSettings);
 			logger.info(`Settings save ${success ? 'successful' : 'failed'}`);
-			
-			// If hotkey was changed, update the registered hotkey
-			if (success && newSettings.hotkey && newSettings.hotkey !== registeredHotkey) {
-				logger.info(`Hotkey changed from ${registeredHotkey} to ${newSettings.hotkey}`);
-				registerHotkey(newSettings.hotkey);
-			}
-			
-			// If resolution, FPS, or selected monitor changed, restart recording with new settings
-			if (success && (resolutionChanged || fpsChanged || monitorChanged)) {
-				logger.info('Restarting recording with new settings...');
-				try {
-					await restartRecordingWithNewSettings();
-					logger.info('Recording restarted with new settings');
-				} catch (error) {
-					logger.error('Failed to restart recording with new settings:', error);
-					return { success: false, error: error.message };
-				}
-			}
 			
 			return { success };
 		} catch (error) {
@@ -458,8 +434,11 @@ export function setupIpcHandlers() {
 	ipcMain.handle('trigger-clip', async (event, clipTimestamp, clipSettings) => {
 		logger.info('trigger-clip handler called', { clipTimestamp, clipSettings });
 		try {
-			// Use the same settings format for both implementations
-			const settings = clipSettings || { clipLength: 14 };
+			// Use cached settings if no clip settings provided
+			const settings = clipSettings || { 
+				clipLength: cachedSettings.recordingLength || 20 
+			};
+			
 			logger.debug('Clip settings', settings);
 			
 			// Create the clip

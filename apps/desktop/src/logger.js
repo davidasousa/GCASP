@@ -20,21 +20,17 @@ function createLogger() {
 	}
 
 	// Define console format with colors and timestamps
-    const consoleFormat = winston.format.combine(
-        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        winston.format.colorize({ level: true }),
-        winston.format.printf(({ level, message, timestamp, ...meta }) => {
-            const { service, ...restMeta } = meta;
-            const metaStr = Object.keys(restMeta).length
-                ? ` ${JSON.stringify(restMeta)}`
-                : '';
-    
-            // Apply ANSI escape codes to make timestamp green
-            const greenTimestamp = `\x1b[32m${timestamp}\x1b[0m`;
-    
-            return `${greenTimestamp} [${level}]: ${message}${metaStr}`;
-        })
-    );
+	const consoleFormat = winston.format.combine(
+		winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+		winston.format.colorize({ all: true }),
+		winston.format.printf(({ level, message, timestamp, ...meta }) => {
+			// Exclude service field from meta for cleaner output
+			const { service, ...restMeta } = meta;
+			const metaStr = Object.keys(restMeta).length ? 
+				` ${JSON.stringify(restMeta)}` : '';
+			return `${timestamp} [${level}]: ${message}${metaStr}`;
+		})
+	);
 
 	// Define file format without colors but with timestamps
 	const fileFormat = winston.format.combine(
@@ -42,6 +38,7 @@ function createLogger() {
 		winston.format.errors({ stack: true }),
 		winston.format.splat(),
 		winston.format.printf(({ level, message, timestamp, ...meta }) => {
+			// Exclude service field from meta for cleaner output
 			const { service, ...restMeta } = meta;
 			const metaStr = Object.keys(restMeta).length ? 
 				` ${JSON.stringify(restMeta, null, 2)}` : '';
@@ -112,14 +109,43 @@ function createLogger() {
 // Create and export the logger
 const logger = createLogger();
 
-// Add renderer process logging via IPC
+// Flag to check if renderer logging has been set up
+let rendererLoggingSetup = false;
+
+// Set up renderer process logging via IPC
 const setupRendererLogging = (ipcMain) => {
-	ipcMain.handle('log', (event, { level, message, meta }) => {
-		// Add source context for renderer logs
-		const contextMeta = { ...meta, source: 'renderer' };
-		logger.log(level, message, contextMeta);
-	});
+	// Prevent duplicate registration
+	if (rendererLoggingSetup) {
+		logger.debug('Renderer logging already set up, skipping');
+		return;
+	}
+
+	try {
+		// Add IPC handler for renderer process logging
+		ipcMain.handle('log', (event, { level, message, meta = {} }) => {
+			try {
+				// Add source context for renderer logs
+				const contextMeta = { ...meta, source: 'renderer' };
+				logger.log(level, message, contextMeta);
+				return { success: true };
+			} catch (error) {
+				console.error('Error in log handler:', error);
+				return { success: false, error: error.message };
+			}
+		});
+		
+		rendererLoggingSetup = true;
+		logger.debug('Renderer process logging handler registered successfully');
+	} catch (error) {
+		console.error('Failed to set up renderer logging:', error);
+		logger.error('Failed to register log handler for renderer process:', error);
+	}
+};
+
+// Check if renderer logging has been set up
+const isRendererLoggingSetup = () => {
+	return rendererLoggingSetup;
 };
 
 export default logger;
-export { setupRendererLogging };
+export { setupRendererLogging, isRendererLoggingSetup };

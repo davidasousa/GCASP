@@ -7,7 +7,7 @@ import { setupVideoProtocol } from './videoProtocol';
 import { setupIpcHandlers, cleanupIpcHandlers } from './ipcHandlers';
 import { ensureAppDirectories, deleteRecordings } from './utilities';
 import { stopContinuousRecording } from './recorder';
-import logger from './logger';
+import logger, { setupRendererLogging } from './logger';
 
 // Get user's videos directory
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
@@ -29,6 +29,20 @@ protocol.registerSchemesAsPrivileged([
 ]);
 logger.debug('Protocol registration completed');
 
+// Set up renderer logging IPC handler first, before any other IPC setup
+function setupLogging() {
+	logger.debug('Setting up renderer process logging via IPC...');
+	try {
+		// Set up renderer process logging
+		setupRendererLogging(ipcMain);
+		logger.debug('Renderer process logging configured successfully');
+		return true;
+	} catch (error) {
+		logger.error('Failed to set up renderer logging:', error);
+		return false;
+	}
+}
+
 app.whenReady().then(() => {
 	logger.info('Electron app ready, initializing...');
 	
@@ -42,15 +56,8 @@ app.whenReady().then(() => {
 	setupVideoProtocol();
 	logger.debug('Video protocol handler configured');
 
-	// Setup renderer process logging
-	logger.debug('Setting up renderer process logging via IPC...');
-	
-	try {
-		setupRendererLogging(ipcMain);
-		logger.debug('Renderer process logging configured successfully');
-	} catch (error) {
-		logger.error('Failed to set up renderer logging:', error);
-	}
+	// Set up renderer logging first, before any other IPC handlers
+	setupLogging();
 	
 	// Setup IPC handlers (this will also start the continuous recording)
 	logger.debug('Setting up IPC handlers and starting continuous recording...');
@@ -67,6 +74,23 @@ app.whenReady().then(() => {
 			contextIsolation: true,
 			preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY
 		}
+	});
+
+	// Add window event listeners for logging
+	mainWindow.on('close', () => {
+		logger.debug('Main window close event triggered');
+	});
+	
+	mainWindow.on('closed', () => {
+		logger.info('Main window closed');
+	});
+	
+	mainWindow.on('focus', () => {
+		logger.debug('Main window focused');
+	});
+	
+	mainWindow.on('blur', () => {
+		logger.debug('Main window lost focus');
 	});
 	
 	mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
@@ -150,14 +174,31 @@ app.on('window-all-closed', () => {
 		logger.debug('Performing final cleanup...');
 		safelyDeleteRecordings();
 		
-		logger.info('Application quitting...');
-		app.quit();
+		if (process.platform !== 'darwin') {
+			logger.info('Application quitting...');
+			app.quit();
+		} else {
+			logger.info('On macOS - app will stay in dock until explicitly quit');
+		}
+	}, 500); // 500ms delay should be enough
+});
 
-	}, 500);
+// Additional app events for logging
+app.on('activate', () => {
+	logger.info('App activated (macOS)');
+	// Handle macOS dock click when windows are closed
+	if (BrowserWindow.getAllWindows().length === 0) {
+		logger.debug('Creating a new window on activation (macOS)');
+		// Create a new window
+	}
 });
 
 app.on('browser-window-created', (event, window) => {
 	logger.debug('New browser window created', { windowId: window.id });
+});
+
+app.on('gpu-process-crashed', (event, killed) => {
+	logger.error('GPU process crashed', { wasKilled: killed });
 });
 
 app.on('render-process-gone', (event, webContents, details) => {
