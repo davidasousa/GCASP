@@ -19,28 +19,44 @@ function createLogger() {
 		console.log(`Created user log directory at: ${appDataLogDir}`);
 	}
 
-	// Define log format
-	const logFormat = winston.format.combine(
+	// Define console format with colors and timestamps
+    const consoleFormat = winston.format.combine(
+        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+        winston.format.colorize({ level: true }),
+        winston.format.printf(({ level, message, timestamp, ...meta }) => {
+            const { service, ...restMeta } = meta;
+            const metaStr = Object.keys(restMeta).length
+                ? ` ${JSON.stringify(restMeta)}`
+                : '';
+    
+            // Apply ANSI escape codes to make timestamp green
+            const greenTimestamp = `\x1b[32m${timestamp}\x1b[0m`;
+    
+            return `${greenTimestamp} [${level}]: ${message}${metaStr}`;
+        })
+    );
+
+	// Define file format without colors but with timestamps
+	const fileFormat = winston.format.combine(
 		winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
 		winston.format.errors({ stack: true }),
 		winston.format.splat(),
 		winston.format.printf(({ level, message, timestamp, ...meta }) => {
-			return `${timestamp} [${level.toUpperCase()}]: ${message} ${Object.keys(meta).length ? JSON.stringify(meta, null, 2) : ''}`;
+			const { service, ...restMeta } = meta;
+			const metaStr = Object.keys(restMeta).length ? 
+				` ${JSON.stringify(restMeta, null, 2)}` : '';
+			return `${timestamp} [${level.toUpperCase()}]: ${message}${metaStr}`;
 		})
 	);
 
 	// Create logger
 	const logger = winston.createLogger({
 		level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-		format: logFormat,
-		defaultMeta: { service: 'desktop-app' },
+		format: fileFormat,
 		transports: [
-			// Write logs to console
+			// Write logs to console with colors
 			new winston.transports.Console({
-				format: winston.format.combine(
-					winston.format.colorize(),
-					logFormat
-				)
+				format: consoleFormat
 			}),
 			// Write logs to project directory (for developers)
 			new winston.transports.File({ 
@@ -105,11 +121,5 @@ const setupRendererLogging = (ipcMain) => {
 	});
 };
 
-// Helper methods for common use cases
-const logError = (message, meta = {}) => logger.error(message, meta);
-const logWarn = (message, meta = {}) => logger.warn(message, meta);
-const logInfo = (message, meta = {}) => logger.info(message, meta);
-const logDebug = (message, meta = {}) => logger.debug(message, meta);
-
 export default logger;
-export { setupRendererLogging, logError, logWarn, logInfo, logDebug };
+export { setupRendererLogging };
