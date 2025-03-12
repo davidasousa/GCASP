@@ -7,7 +7,7 @@ import { setupVideoProtocol } from './videoProtocol';
 import { setupIpcHandlers, cleanupIpcHandlers } from './ipcHandlers';
 import { ensureAppDirectories, deleteRecordings } from './utilities';
 import { stopContinuousRecording } from './recorder';
-import logger, { logInfo, logError, logWarn, logDebug } from './logger';
+import logger from './logger';
 
 // Get user's videos directory
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
@@ -46,8 +46,6 @@ app.whenReady().then(() => {
 	logger.debug('Setting up renderer process logging via IPC...');
 	
 	try {
-		// Import and setup renderer logging
-		const { setupRendererLogging } = require('./logger');
 		setupRendererLogging(ipcMain);
 		logger.debug('Renderer process logging configured successfully');
 	} catch (error) {
