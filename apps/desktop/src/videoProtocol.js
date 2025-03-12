@@ -2,6 +2,9 @@ import { protocol, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { URL } from 'url';
+import { getModuleLogger } from './logger';
+
+const logger = getModuleLogger('videoProtocol.js');
 
 // Custom conversion helper
 function nodeStreamToWebStream(nodeStream) {
@@ -24,12 +27,18 @@ const ALLOWED_EXTENSIONS = ['.mp4'];
 
 // Ensure directories exist
 const ensureDirectories = () => {
-    if (!fs.existsSync(recordingsPath)) {
-        fs.mkdirSync(recordingsPath, { recursive: true, mode: 0o700 });
-    }
-    if (!fs.existsSync(clipsPath)) {
-        fs.mkdirSync(clipsPath, { recursive: true, mode: 0o700 });
-    }
+	if (!fs.existsSync(recordingsPath)) {
+		logger.info(`Creating recordings directory at ${recordingsPath}`);
+		fs.mkdirSync(recordingsPath, { recursive: true, mode: 0o700 });
+	} else {
+		logger.debug(`Recordings directory exists: ${recordingsPath}`);
+	}
+	if (!fs.existsSync(clipsPath)) {
+		logger.info(`Creating clips directory at ${clipsPath}`);
+		fs.mkdirSync(clipsPath, { recursive: true, mode: 0o700 });
+	} else {
+		logger.debug(`Clips directory exists: ${clipsPath}`);
+	}
 };
 
 // Path security check to prevent directory traversal
@@ -42,11 +51,13 @@ const isPathWithinDirectory = (directory, targetPath) => {
 const isSafeFilename = (filename) => {
     // Block filenames with path traversal attempts
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        logger.debug('Blocked path traversal attempt:', filename);
         return false;
     }
     
     // Block filenames with null bytes or control characters
     if (/[\x00-\x1f]/.test(filename)) {
+        logger.debug('Blocked control character in filename:', filename);
         return false;
     }
     
@@ -56,6 +67,7 @@ const isSafeFilename = (filename) => {
 
 // Find video in either directory
 const findVideoFile = (videoId) => {
+    //logger.debug(`Searching for video with ID: ${videoId}`);
     // Check in clips directory first (most likely location)
     const clipFiles = fs.readdirSync(clipsPath);
     
@@ -66,6 +78,7 @@ const findVideoFile = (videoId) => {
     );
     
     if (exactMatch) {
+        //logger.debug(`Found exact match in clips: ${exactMatch}`);
         return { file: exactMatch, dir: clipsPath };
     }
     
@@ -76,6 +89,7 @@ const findVideoFile = (videoId) => {
     );
     
     if (partialMatch) {
+        //logger.debug(`Found partial match in clips: ${partialMatch}`);
         return { file: partialMatch, dir: clipsPath };
     }
     
@@ -89,6 +103,7 @@ const findVideoFile = (videoId) => {
     );
     
     if (exactMatch) {
+        //logger.debug(`Found exact match in recordings: ${exactMatch}`);
         return { file: exactMatch, dir: recordingsPath };
     }
     
@@ -99,14 +114,18 @@ const findVideoFile = (videoId) => {
     );
     
     if (partialMatch) {
+        //logger.debug(`Found partial match in recordings: ${partialMatch}`);
         return { file: partialMatch, dir: recordingsPath };
     }
+
+    logger.debug(`No video file found for ID: ${videoId}`);
     
     // Not found in either directory
     return null;
 };
 
 export function setupVideoProtocol() {
+    logger.info('Setting up GCASP video protocol handler');
     // Ensure directories exist
     ensureDirectories();
 
@@ -116,7 +135,7 @@ export function setupVideoProtocol() {
             const videoId = decodeURIComponent(requestUrl.hostname);
 
             if (!videoId || !isSafeFilename(videoId)) {
-                console.error('Invalid or unsafe video ID requested:', videoId);
+                logger.error('Invalid or unsafe video ID requested:', videoId);
                 return new Response('Invalid request', { status: 400 });
             }
 
@@ -124,19 +143,20 @@ export function setupVideoProtocol() {
             const videoInfo = findVideoFile(videoId);
 
             if (!videoInfo) {
-                console.error('Video file not found for ID:', videoId);
+                logger.error('Video file not found for ID:', videoId);
                 return new Response('Video not found', { status: 404 });
             }
 
             const videoPath = path.join(videoInfo.dir, videoInfo.file);
 
             if (!isPathWithinDirectory(videoInfo.dir, videoPath)) {
-                console.error('Attempted directory traversal:', videoPath);
+                logger.error('Attempted directory traversal:', videoPath);
                 return new Response('Access denied', { status: 403 });
             }
 
             const stats = await fs.promises.stat(videoPath);
             if (!stats.isFile()) {
+                logger.error('Invalid file type for video:', videoPath);
                 return new Response('Invalid file type', { status: 400 });
             }
 
@@ -144,10 +164,11 @@ export function setupVideoProtocol() {
             const rangeHeader = request.headers.get('range');
 
             if (rangeHeader) {
+                //logger.debug(`Range header provided: ${rangeHeader}`);
                 // More robust range parsing
                 const matches = rangeHeader.match(/bytes=(\d*)-(\d*)/);
                 if (!matches) {
-                    console.log('Invalid range format:', rangeHeader);
+                    logger.warn('Invalid range format:', rangeHeader);
                     // Fall back to sending the whole file
                     const nodeStream = fs.createReadStream(videoPath);
                     const webStream = nodeStreamToWebStream(nodeStream);
@@ -189,11 +210,13 @@ export function setupVideoProtocol() {
                     'Cache-Control': 'no-cache, no-store, must-revalidate'
                 };
 
+                //logger.debug(`Serving byte range: ${start}-${end}, chunk size: ${chunksize}`);
                 const nodeStream = fs.createReadStream(videoPath, { start, end });
                 const webStream = nodeStreamToWebStream(nodeStream);
                 return new Response(webStream, { status: 206, headers });
             }
 
+            logger.debug('No range header provided, serving full file');
             const nodeStream = fs.createReadStream(videoPath);
             const webStream = nodeStreamToWebStream(nodeStream);
             return new Response(webStream, {
@@ -206,7 +229,7 @@ export function setupVideoProtocol() {
                 }
             });
         } catch (error) {
-            console.error('Protocol handler error:', error);
+            logger.error('Protocol handler error:', error);
             return new Response('Internal error', { status: 500 });
         }
     });
