@@ -5,7 +5,9 @@ import { promisify } from 'util';
 import { spawn } from 'child_process';
 import { createClip, startContinuousRecording, stopContinuousRecording, restartRecordingWithNewSettings } from './recorder';
 import { getCurrentSettings, saveSettings, initSettings, onSettingsChanged } from './settings';
-import logger from './logger';
+import { getModuleLogger } from './logger';
+
+const logger = getModuleLogger('ipcHandler.js');
 
 const exec = promisify(require('child_process').exec);
 

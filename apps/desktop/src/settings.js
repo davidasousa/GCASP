@@ -1,7 +1,9 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import logger from './logger';
+import { getModuleLogger } from './logger';
+
+const logger = getModuleLogger('settings.js');
 
 // Define path for GCASP settings
 const gcaspDataPath = path.join(app.getPath('appData'), 'GCASP');

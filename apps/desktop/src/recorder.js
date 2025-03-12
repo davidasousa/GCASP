@@ -5,7 +5,9 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import { execSync } from 'child_process';
 import { getCurrentSettings } from './settings';
-import logger from './logger';
+import { getModuleLogger } from './logger';
+
+const logger = getModuleLogger('recorder.js');
 
 // Load environment variables
 dotenv.config();

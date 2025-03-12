@@ -3,6 +3,30 @@ import winston from 'winston';
 import path from 'path';
 import fs from 'fs';
 
+// Helper custom printf format that prints timestamp, module label, level, and message.
+const customPrintf = winston.format.printf(({ level, message, timestamp, label, ...meta }) => {
+    const metaKeys = Object.keys(meta);
+    const metaStr = metaKeys.length > 0 ? ` ${JSON.stringify(meta)}` : '';
+    // If label is missing, default to "unknown"
+    const labelStr = label ? `[${label}]` : '[unknown]';
+    return `${timestamp} ${labelStr} [${level}]: ${message}${metaStr}`;
+});
+
+// Define console format with colors, timestamps, and module label
+const consoleFormat = winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.colorize({ all: true }),
+    customPrintf
+);
+
+// Define file format without colors but with timestamps and module label
+const fileFormat = winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }),
+    winston.format.splat(),
+    customPrintf
+);
+
 // Initialize the logger for Backend server
 function createLogger() {
 	// Ensure log directory exists
@@ -12,36 +36,6 @@ function createLogger() {
 		fs.mkdirSync(projectLogDir, { recursive: true });
 		console.log(`Created project log directory at: ${projectLogDir}`);
 	}
-
-	// Define console format with colors and timestamps
-    const consoleFormat = winston.format.combine(
-        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        winston.format.colorize({ level: true }),
-        winston.format.printf(({ level, message, timestamp, ...meta }) => {
-            const { service, ...restMeta } = meta;
-            const metaStr = Object.keys(restMeta).length
-                ? ` ${JSON.stringify(restMeta)}`
-                : '';
-    
-            // Apply ANSI escape codes to make timestamp green
-            const greenTimestamp = `\x1b[32m${timestamp}\x1b[0m`;
-    
-            return `${greenTimestamp} [${level}]: ${message}${metaStr}`;
-        })
-    );
-
-	// Define file format without colors but with timestamps
-	const fileFormat = winston.format.combine(
-		winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-		winston.format.errors({ stack: true }),
-		winston.format.splat(),
-		winston.format.printf(({ level, message, timestamp, ...meta }) => {
-			const { service, ...restMeta } = meta;
-			const metaStr = Object.keys(restMeta).length ? 
-				` ${JSON.stringify(restMeta, null, 2)}` : '';
-			return `${timestamp} [${level.toUpperCase()}]: ${message}${metaStr}`;
-		})
-	);
 
 	// Create logger
 	const logger = winston.createLogger({
@@ -76,15 +70,22 @@ function createLogger() {
 	});
 
 	// Log startup information
-	logger.info('Logger initialized for GCASP Backend');
-	logger.info(`Node version: ${process.version}`);
-	logger.info(`Platform: ${process.platform}`);
-	logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    const selfLogger = logger.child({ label: 'logger.js' });
+    
+	selfLogger.info('Logger initialized for GCASP Backend');
+	selfLogger.info(`Node version: ${process.version}`);
+	selfLogger.info(`Platform: ${process.platform}`);
+	selfLogger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
 	return logger;
 }
 
 // Create and export the logger
 const logger = createLogger();
+
+// Helper to get a child logger with a module label.
+export function getModuleLogger(moduleLabel) {
+	return logger.child({ label: moduleLabel });
+}
 
 export default logger;

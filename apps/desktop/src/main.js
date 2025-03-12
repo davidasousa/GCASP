@@ -7,7 +7,9 @@ import { setupVideoProtocol } from './videoProtocol';
 import { setupIpcHandlers, cleanupIpcHandlers } from './ipcHandlers';
 import { ensureAppDirectories, deleteRecordings } from './utilities';
 import { stopContinuousRecording } from './recorder';
-import logger, { setupRendererLogging } from './logger';
+import { setupRendererLogging, getModuleLogger } from './logger';
+
+const logger = getModuleLogger('main.js');
 
 // Get user's videos directory
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');

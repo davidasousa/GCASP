@@ -68,28 +68,6 @@ const SettingsPage = () => {
 
 		loadSettingsAndMonitors();
 		
-		// Add listener for settings changes to update UI state
-		const handleSettingsChanged = (newSettings) => {
-			window.electron.log.debug('Settings changed event received in SettingsPage', newSettings);
-			if (newSettings) {
-				setHotkey(newSettings.hotkey || 'F9');
-				const savedLength = newSettings.recordingLength || 20;
-				setRecordingLength(savedLength);
-				setRecordingLengthInput(savedLength.toString());
-				
-				// Set resolution and FPS from new settings
-				if (newSettings.resolution) {
-					setSelectedResolution(newSettings.resolution);
-				}
-				
-				setSelectedFPS(newSettings.fps || 30);
-				setSelectedMonitor(newSettings.selectedMonitor || "0");
-				
-				window.electron.log.debug('Settings state updated in SettingsPage component based on change event');
-			}
-		};
-		
-		window.electron.onSettingsChanged(handleSettingsChanged);
 	}, []);
 
 	// Generate available resolutions based on screen dimensions

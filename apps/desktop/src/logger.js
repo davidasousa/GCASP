@@ -3,6 +3,30 @@ import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
+// Helper custom printf format that prints timestamp, module label, level, and message.
+const customPrintf = winston.format.printf(({ level, message, timestamp, label, ...meta }) => {
+	const metaKeys = Object.keys(meta);
+	const metaStr = metaKeys.length > 0 ? ` ${JSON.stringify(meta)}` : '';
+	// If label is missing, default to "unknown"
+	const labelStr = label ? `[${label}]` : '[unknown]';
+	return `${timestamp} ${labelStr} [${level}]: ${message}${metaStr}`;
+});
+
+// Define console format with colors, timestamps, and module label
+const consoleFormat = winston.format.combine(
+	winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+	winston.format.colorize({ all: true }),
+	customPrintf
+);
+
+// Define file format without colors but with timestamps and module label
+const fileFormat = winston.format.combine(
+	winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+	winston.format.errors({ stack: true }),
+	winston.format.splat(),
+	customPrintf
+);
+
 // Initialize the logger for Electron main process
 function createLogger() {
 	// Ensure log directories exist
@@ -18,33 +42,6 @@ function createLogger() {
 		fs.mkdirSync(appDataLogDir, { recursive: true });
 		console.log(`Created user log directory at: ${appDataLogDir}`);
 	}
-
-	// Define console format with colors and timestamps
-	const consoleFormat = winston.format.combine(
-		winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-		winston.format.colorize({ all: true }),
-		winston.format.printf(({ level, message, timestamp, ...meta }) => {
-			// Exclude service field from meta for cleaner output
-			const { service, ...restMeta } = meta;
-			const metaStr = Object.keys(restMeta).length ? 
-				` ${JSON.stringify(restMeta)}` : '';
-			return `${timestamp} [${level}]: ${message}${metaStr}`;
-		})
-	);
-
-	// Define file format without colors but with timestamps
-	const fileFormat = winston.format.combine(
-		winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-		winston.format.errors({ stack: true }),
-		winston.format.splat(),
-		winston.format.printf(({ level, message, timestamp, ...meta }) => {
-			// Exclude service field from meta for cleaner output
-			const { service, ...restMeta } = meta;
-			const metaStr = Object.keys(restMeta).length ? 
-				` ${JSON.stringify(restMeta, null, 2)}` : '';
-			return `${timestamp} [${level.toUpperCase()}]: ${message}${metaStr}`;
-		})
-	);
 
 	// Create logger
 	const logger = winston.createLogger({
@@ -95,19 +92,26 @@ function createLogger() {
 		],
 	});
 
+    const selfLogger = logger.child({ label: 'logger.js' });
+
 	// Log startup information
-	logger.info('Logger initialized for GCASP Desktop');
-	logger.info(`App version: ${app.getVersion()}`);
-	logger.info(`Electron version: ${process.versions.electron}`);
-	logger.info(`Chrome version: ${process.versions.chrome}`);
-	logger.info(`Node version: ${process.versions.node}`);
-	logger.info(`Platform: ${process.platform}`);
+    selfLogger.info('Logger initialized for GCASP Desktop');
+    selfLogger.info(`App version: ${app.getVersion()}`);
+    selfLogger.info(`Electron version: ${process.versions.electron}`);
+    selfLogger.info(`Chrome version: ${process.versions.chrome}`);
+    selfLogger.info(`Node version: ${process.versions.node}`);
+    selfLogger.info(`Platform: ${process.platform}`);
 
 	return logger;
 }
 
 // Create and export the logger
 const logger = createLogger();
+
+// Helper to get a child logger with a module label
+export function getModuleLogger(moduleLabel) {
+	return logger.child({ label: moduleLabel });
+}
 
 // Flag to check if renderer logging has been set up
 let rendererLoggingSetup = false;
