@@ -239,13 +239,13 @@ export function setupIpcHandlers() {
 		}
 	});
 
-	// Get settings - now returns cached settings instead of loading from disk
+	// Get settings
 	logger.debug('Registering get-settings handler');
 	ipcMain.handle('get-settings', () => {
 		logger.debug('get-settings handler called');
 		try {
 			logger.debug('Returning cached settings');
-			return cachedSettings;
+			return cachedSettings || getCurrentSettings();
 		} catch (error) {
 			logger.error('Error getting settings:', error);
 			throw error;

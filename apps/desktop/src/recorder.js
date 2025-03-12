@@ -4,7 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { execSync } from 'child_process';
-import { loadSettings } from './settings';
+import { getCurrentSettings } from './settings';
 
 // Load environment variables
 dotenv.config();
@@ -57,8 +57,8 @@ function getRecordingConfig() {
 		return cachedConfig;
 	}
 	
-	// Otherwise load from settings
-	const settings = loadSettings();
+	// Otherwise load from settings using cached version
+	const settings = getCurrentSettings();
 	cachedConfig = {
 		width: settings.resolution?.width || 1920,
 		height: settings.resolution?.height || 1080,
@@ -71,7 +71,7 @@ function getRecordingConfig() {
 
 // Get the maximum number of segments to keep based on settings
 function getMaxSegments() {
-	const settings = loadSettings();
+	const settings = getCurrentSettings();
 	const desiredClipLength = settings.recordingLength || 20; // Default to 20 seconds
 	// Calculate segments needed (round up to ensure we have enough)
 	return Math.ceil(desiredClipLength / SEGMENT_LENGTH) + 1; // +1 for safety

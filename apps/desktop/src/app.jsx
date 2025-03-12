@@ -38,8 +38,19 @@ const App = () => {
 		
 		loadSettings();
 		
+		// Add a listener for settings changes
+		const handleSettingsChanged = (newSettings) => {
+			console.log('Settings changed event received in App component', newSettings);
+			window.electron.log.debug('Settings changed event received in App component', newSettings);
+			if (newSettings) {
+				setSettings(newSettings);
+			}
+		};
+		
+		window.electron.onSettingsChanged(handleSettingsChanged);
+		
 		return () => {
-			// No intervals to clear
+
 		};
 	}, []);
 	
