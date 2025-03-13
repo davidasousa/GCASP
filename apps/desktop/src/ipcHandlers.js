@@ -198,7 +198,8 @@ export function setupIpcHandlers() {
 			const primaryDisplay = screen.getPrimaryDisplay();
 			const dimensions = {
 				width: primaryDisplay.bounds.width,
-				height: primaryDisplay.bounds.height
+				height: primaryDisplay.bounds.height,
+				scaleFactor: primaryDisplay.scaleFactor
 			};
 			logger.debug('Retrieved screen dimensions', dimensions);
 			return dimensions;

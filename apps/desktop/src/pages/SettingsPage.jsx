@@ -33,7 +33,11 @@ const SettingsPage = () => {
 				window.electron.log.debug('Screen dimensions loaded', screenDimensions);
 				
 				// Generate available resolutions based on screen dimensions
-				const resolutions = generateAvailableResolutions(screenDimensions.width, screenDimensions.height);
+				const resolutions = generateAvailableResolutions(
+					screenDimensions.width, 
+					screenDimensions.height,
+					screenDimensions.scaleFactor // Pass the scale factor if available
+				);
 				setAvailableResolutions(resolutions);
 				window.electron.log.debug('Available resolutions generated', { count: resolutions.length });
 				
@@ -71,52 +75,106 @@ const SettingsPage = () => {
 	}, []);
 
 	// Generate available resolutions based on screen dimensions
-	const generateAvailableResolutions = (screenWidth, screenHeight) => {
+	const generateAvailableResolutions = (screenWidth, screenHeight, scaleFactor = 1) => {
 		const screenAspectRatio = screenWidth / screenHeight;
 		
-		// Define all possible resolutions to consider
-		const allPossibleResolutions = [
-			{ width: 3840, height: 2160 }, // 4K UHD
-			{ width: 2560, height: 1440 }, // 1440p
+		// Common standards - always include these regardless of screen size
+		const standardResolutions = [
 			{ width: 1920, height: 1080 }, // 1080p (always include)
 			{ width: 1280, height: 720 },  // 720p (always include)
 			{ width: 854, height: 480 }    // 480p (always include)
 		];
 		
+		// Higher resolutions - only include if they'd fit on screen
+		const higherResolutions = [
+			{ width: 3840, height: 2160 }, // 4K UHD
+			{ width: 2560, height: 1440 }, // 1440p
+		];
+		
 		// Create a map to track which resolutions to include (prevents duplicates)
 		const resolutionMap = new Map();
 		
-		// Add native resolution first
+		// If scaleFactor is > 1, we have a scaled display, and the actual physical resolution
+		// might be higher than what screenWidth and screenHeight report
+		// Estimate physical dimensions by accounting for scaling
+		const estimatedPhysicalWidth = Math.round(screenWidth * scaleFactor);
+		const estimatedPhysicalHeight = Math.round(screenHeight * scaleFactor);
+		
+		// If we detected a substantial scaling factor and the estimated dimensions look like
+		// a standard resolution, add it as a "Physical" option
+		if (scaleFactor > 1.1) { // Threshold to avoid rounding errors
+			// Special case for common resolutions with scaling
+			// Check common physical resolutions that match the estimated dimensions
+			const commonPhysicalResolutions = [
+				{ width: 1920, height: 1080 }, // 1080p
+				{ width: 2560, height: 1440 }, // 1440p
+				{ width: 3840, height: 2160 }, // 4K
+			];
+			
+			// Find if our estimated dimensions approximately match any common resolution
+			// Allow small differences to account for scaling calculation imprecision
+			const tolerance = 50; // pixels
+			for (const res of commonPhysicalResolutions) {
+				if (Math.abs(estimatedPhysicalWidth - res.width) <= tolerance && 
+					Math.abs(estimatedPhysicalHeight - res.height) <= tolerance) {
+					// We found a close match to a standard resolution - use exact values
+					const physicalKey = `${res.width}x${res.height}`;
+					resolutionMap.set(physicalKey, {
+						width: res.width,
+						height: res.height,
+						label: `${res.width}x${res.height} (Physical)`,
+						isNative: false,
+						isPhysical: true
+					});
+					break;
+				}
+			}
+		}
+		
+		// Add detected resolution (what Electron sees - may be scaled)
 		const nativeKey = `${screenWidth}x${screenHeight}`;
 		resolutionMap.set(nativeKey, { 
 			width: screenWidth, 
 			height: screenHeight, 
-			label: `${screenWidth}x${screenHeight} (Native)`,
+			label: `${screenWidth}x${screenHeight}${scaleFactor > 1.1 ? ' (Scaled)' : ' (Native)'}`,
 			isNative: true
 		});
 		
-		// Process all possible resolutions
-		allPossibleResolutions.forEach(res => {
+		// Add standard resolutions - always include these
+		standardResolutions.forEach(res => {
 			const key = `${res.width}x${res.height}`;
 			
-			// Skip if this is exactly the same as native (already added)
-			if (key === nativeKey) return;
+			// Skip if already added
+			if (resolutionMap.has(key)) return;
+			
+			resolutionMap.set(key, {
+				width: res.width,
+				height: res.height,
+				label: `${res.width}x${res.height}`,
+				isNative: false
+			});
+		});
+		
+		// Add higher resolutions if they match aspect ratio and fit within the screen
+		// Use the higher of detected or estimated physical size to be safe
+		const maxWidth = Math.max(screenWidth, estimatedPhysicalWidth);
+		const maxHeight = Math.max(screenHeight, estimatedPhysicalHeight);
+		
+		higherResolutions.forEach(res => {
+			const key = `${res.width}x${res.height}`;
+			
+			// Skip if already added
+			if (resolutionMap.has(key)) return;
 			
 			// Check aspect ratio similarity
 			const resAspectRatio = res.width / res.height;
 			const aspectRatioDiff = Math.abs(resAspectRatio - screenAspectRatio) / screenAspectRatio;
 			const isAspectRatioCompatible = aspectRatioDiff <= 0.05;
 			
-			// Categories of resolutions to include:
-			const isStandardHD = res.width <= 1920; // Always include 1080p, 720p, 480p
-			const isHigherRes = res.width > 1920;   // 1440p, 4K - only if native is big enough
-			
-			// Include resolution if:
-			// 1. It's a standard HD resolution (1080p or lower) OR
-			// 2. It's higher res, native is big enough, and aspect ratio matches
-			if (isStandardHD || 
-				(isHigherRes && res.width <= screenWidth && res.height <= screenHeight && isAspectRatioCompatible)) {
-				
+			// Only add higher resolutions if:
+			// 1. They fit on the screen (accounting for possible scaling)
+			// 2. They have a compatible aspect ratio
+			if (res.width <= maxWidth && res.height <= maxHeight && isAspectRatioCompatible) {
 				resolutionMap.set(key, {
 					width: res.width,
 					height: res.height,
@@ -131,6 +189,11 @@ const SettingsPage = () => {
 			// Native resolution always first
 			if (a.isNative && !b.isNative) return -1;
 			if (!a.isNative && b.isNative) return 1;
+			
+			// Physical resolution next (if we detected one)
+			if (a.isPhysical && !b.isPhysical) return -1;
+			if (!a.isPhysical && b.isPhysical) return 1;
+			
 			// Then sort by total pixel count (largest to smallest)
 			return (b.width * b.height) - (a.width * a.height);
 		});
