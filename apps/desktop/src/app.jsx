@@ -1,10 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
 import SharedPage from './pages/SharedPage';
 import SettingsPage from './pages/SettingsPage';
 import EditPage from './pages/EditPage';
+import Notification from './components/Notification';
+import successSound from './resources/clip-success.mp3';
+import errorSound from './resources/clip-error.mp3';
 import './app.css';
 
 const App = () => {
@@ -13,6 +16,40 @@ const App = () => {
 	
 	// State for settings
 	const [settings, setSettings] = useState(null);
+    
+    // State for notification
+    const [notification, setNotification] = useState({
+        visible: false,
+        message: '',
+        type: 'success' // 'success' or 'error'
+    });
+    
+    // Audio references
+    const successAudioRef = useRef(null);
+    const errorAudioRef = useRef(null);
+    
+    // Initialize audio elements
+    useEffect(() => {
+        // Create success sound
+        successAudioRef.current = new Audio(successSound);
+        successAudioRef.current.volume = 0.5; // Set volume to 50%
+        
+        // Create error sound
+        errorAudioRef.current = new Audio(errorSound);
+        errorAudioRef.current.volume = 0.5; // Set volume to 50%
+        
+        return () => {
+            // Cleanup audio elements
+            if (successAudioRef.current) {
+                successAudioRef.current.pause();
+                successAudioRef.current.src = '';
+            }
+            if (errorAudioRef.current) {
+                errorAudioRef.current.pause();
+                errorAudioRef.current.src = '';
+            }
+        };
+    }, []);
 	
 	// Load settings on component mount
 	useEffect(() => {
@@ -69,6 +106,43 @@ const App = () => {
 			console.log('Clip created:', filename);
 			window.electron.log.info('Clip created', { filename });
 			setIsClipping(false);
+			
+			// Play success sound
+			if (successAudioRef.current) {
+				successAudioRef.current.currentTime = 0;
+				successAudioRef.current.play().catch(err => {
+					console.error('Error playing success sound:', err);
+				});
+			}
+			
+			// Show success notification
+			setNotification({
+				visible: true,
+				message: 'Clip created successfully!',
+				type: 'success'
+			});
+		});
+		
+		// Add this new event listener for clip errors
+		window.electron.onClipError((errorData) => {
+			console.error('Clip error:', errorData);
+			window.electron.log.error('Clip error', { error: errorData });
+			setIsClipping(false);
+			
+			// Play error sound
+			if (errorAudioRef.current) {
+				errorAudioRef.current.currentTime = 0;
+				errorAudioRef.current.play().catch(err => {
+					console.error('Error playing error sound:', err);
+				});
+			}
+			
+			// Show error notification
+			setNotification({
+				visible: true,
+				message: `Clipping failed: ${errorData.error || 'Unknown error'}`,
+				type: 'error'
+			});
 		});
 		
 		return () => {
@@ -110,13 +184,48 @@ const App = () => {
 					error: result ? result.error : "Unknown error" 
 				});
 				setIsClipping(false);
+                
+                // Play error sound
+                if (errorAudioRef.current) {
+                    errorAudioRef.current.currentTime = 0;
+                    errorAudioRef.current.play().catch(err => {
+                        console.error('Error playing error sound:', err);
+                    });
+                }
+                
+                // Show error notification
+                setNotification({
+                    visible: true,
+                    message: `Clipping failed: ${result ? result.error : "Unknown error"}`,
+                    type: 'error'
+                });
 			}
 		} catch (error) {
 			console.error("Error during clipping:", error);
 			window.electron.log.error("Error during clipping", { error: error.toString() });
 			setIsClipping(false);
+            
+            // Play error sound
+            if (errorAudioRef.current) {
+                errorAudioRef.current.currentTime = 0;
+                errorAudioRef.current.play().catch(err => {
+                    window.electron.log.error('Error playing error sound:', err);
+                });
+            }
+            
+            // Show error notification
+            setNotification({
+                visible: true,
+                message: `Error during clipping: ${error.message}`,
+                type: 'error'
+            });
 		}
 	};
+    
+    // Close notification
+    const handleCloseNotification = () => {
+        setNotification(prev => ({ ...prev, visible: false }));
+    };
 
 	return (
 		<Router>
@@ -135,6 +244,12 @@ const App = () => {
 						{isClipping ? "Creating Clip..." : "Record Clip"}
 					</button>
 				</div>
+                <Notification
+                    visible={notification.visible}
+                    message={notification.message}
+                    type={notification.type}
+                    onClose={handleCloseNotification}
+                />
 			</div>
 		</Router>
 	);

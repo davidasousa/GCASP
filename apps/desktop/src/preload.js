@@ -53,6 +53,10 @@ contextBridge.exposeInMainWorld('electron', {
 	onClipDone: (callback) => 
 		ipcRenderer.on('clip-done', (event, data) => callback(data)),
 
+	// Add this new listener for clip errors
+	onClipError: (callback) =>
+		ipcRenderer.on('clip-error', (event, data) => callback(data)),
+
 	// Logging functions for renderer process
 	log: {
 		error: (message, meta = {}) => ipcRenderer.invoke('log', { level: 'error', message, meta }),

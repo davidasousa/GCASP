@@ -1,4 +1,4 @@
-import { ipcMain, app, globalShortcut, screen } from 'electron';
+import { ipcMain, app, globalShortcut, screen, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
@@ -43,7 +43,6 @@ const ensureDirectories = () => {
 // Variable to store the registered hotkey
 let registeredHotkey = null;
 
-// Register the hotkey for recording clips
 function registerHotkey(hotkey) {
 	logger.info(`Attempting to register hotkey: ${hotkey}`);
 	
@@ -85,14 +84,53 @@ function registerHotkey(hotkey) {
 						path: result.path,
 						timestamp: timestamp
 					});
+                    
+                    // Notify all browser windows about the new clip
+                    const windows = BrowserWindow.getAllWindows();
+                    windows.forEach(window => {
+                        if (!window.isDestroyed()) {
+                            // Send new-recording event
+                            window.webContents.send('new-recording', {
+                                id: path.parse(result.filename).name,
+                                filename: result.filename,
+                                timestamp: new Date()
+                            });
+                            
+                            // Send clip-done event
+                            window.webContents.send('clip-done', result.filename);
+                        }
+                    });
 				} else {
 					logger.error(`Failed to create clip: ${result.error}`, {
 						timestamp: timestamp,
 						settings: clipSettings
 					});
+                    
+                    // *** Add these lines to notify about clip errors ***
+                    const windows = BrowserWindow.getAllWindows();
+                    windows.forEach(window => {
+                        if (!window.isDestroyed()) {
+                            // Send clip-error event
+                            window.webContents.send('clip-error', {
+                                error: result.error || 'Unknown error',
+                                timestamp: new Date()
+                            });
+                        }
+                    });
 				}
 			} catch (error) {
 				logger.error('Exception during hotkey clip creation:', error);
+                
+                const windows = BrowserWindow.getAllWindows();
+                windows.forEach(window => {
+                    if (!window.isDestroyed()) {
+                        // Send clip-error event for exceptions too
+                        window.webContents.send('clip-error', {
+                            error: error.message || 'Exception during clip creation',
+                            timestamp: new Date()
+                        });
+                    }
+                });
 			}
 		});
 		
