@@ -74,37 +74,65 @@ const SettingsPage = () => {
 	const generateAvailableResolutions = (screenWidth, screenHeight) => {
 		const screenAspectRatio = screenWidth / screenHeight;
 		
-		// Common resolution options
-		const commonResolutions = [
-			{ width: 1920, height: 1080 }, // 1080p
-			{ width: 1280, height: 720 },  // 720p
-			{ width: 854, height: 480 },   // 480p
+		// Define all possible resolutions to consider
+		const allPossibleResolutions = [
+			{ width: 3840, height: 2160 }, // 4K UHD
+			{ width: 2560, height: 1440 }, // 1440p
+			{ width: 1920, height: 1080 }, // 1080p (always include)
+			{ width: 1280, height: 720 },  // 720p (always include)
+			{ width: 854, height: 480 }    // 480p (always include)
 		];
 		
-		// Start with native resolution
-		const resolutions = [
-			{ 
-				width: screenWidth, 
-				height: screenHeight, 
-				label: `${screenWidth}x${screenHeight} (Native)` 
-			}
-		];
+		// Create a map to track which resolutions to include (prevents duplicates)
+		const resolutionMap = new Map();
 		
-		// Add common resolutions that are smaller than screen and have similar aspect ratio
-		commonResolutions.forEach(res => {
-			if (res.width <= screenWidth && res.height <= screenHeight) {
-				const resAspectRatio = res.width / res.height;
-				// Check if aspect ratio is within 5% tolerance
-				const aspectRatioDiff = Math.abs(resAspectRatio - screenAspectRatio) / screenAspectRatio;
+		// Add native resolution first
+		const nativeKey = `${screenWidth}x${screenHeight}`;
+		resolutionMap.set(nativeKey, { 
+			width: screenWidth, 
+			height: screenHeight, 
+			label: `${screenWidth}x${screenHeight} (Native)`,
+			isNative: true
+		});
+		
+		// Process all possible resolutions
+		allPossibleResolutions.forEach(res => {
+			const key = `${res.width}x${res.height}`;
+			
+			// Skip if this is exactly the same as native (already added)
+			if (key === nativeKey) return;
+			
+			// Check aspect ratio similarity
+			const resAspectRatio = res.width / res.height;
+			const aspectRatioDiff = Math.abs(resAspectRatio - screenAspectRatio) / screenAspectRatio;
+			const isAspectRatioCompatible = aspectRatioDiff <= 0.05;
+			
+			// Categories of resolutions to include:
+			const isStandardHD = res.width <= 1920; // Always include 1080p, 720p, 480p
+			const isHigherRes = res.width > 1920;   // 1440p, 4K - only if native is big enough
+			
+			// Include resolution if:
+			// 1. It's a standard HD resolution (1080p or lower) OR
+			// 2. It's higher res, native is big enough, and aspect ratio matches
+			if (isStandardHD || 
+				(isHigherRes && res.width <= screenWidth && res.height <= screenHeight && isAspectRatioCompatible)) {
 				
-				if (aspectRatioDiff <= 0.05) {
-					resolutions.push({
-						width: res.width,
-						height: res.height,
-						label: `${res.width}x${res.height}`
-					});
-				}
+				resolutionMap.set(key, {
+					width: res.width,
+					height: res.height,
+					label: `${res.width}x${res.height}`,
+					isNative: false
+				});
 			}
+		});
+		
+		// Convert map to array and sort
+		const resolutions = Array.from(resolutionMap.values()).sort((a, b) => {
+			// Native resolution always first
+			if (a.isNative && !b.isNative) return -1;
+			if (!a.isNative && b.isNative) return 1;
+			// Then sort by total pixel count (largest to smallest)
+			return (b.width * b.height) - (a.width * a.height);
 		});
 		
 		return resolutions;
