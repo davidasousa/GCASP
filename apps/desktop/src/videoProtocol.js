@@ -67,29 +67,36 @@ const isSafeFilename = (filename) => {
 
 // Find video in either directory
 const findVideoFile = (videoId) => {
-    //logger.debug(`Searching for video with ID: ${videoId}`);
+    // If the videoId appears to be an IP-like string (e.g. "0.0.0.2"),
+    // extract the last segment so that "0.0.0.2" becomes "2".
+    if (videoId.includes('.')) {
+        const parts = videoId.split('.');
+        videoId = parts[parts.length - 1];
+    }
+
+    // Normalize videoId by ensuring it starts with 'clip_'
+    const normalizedVideoId = videoId.startsWith('clip_') ? videoId : `clip_${videoId}`;
+
     // Check in clips directory first (most likely location)
     const clipFiles = fs.readdirSync(clipsPath);
     
     // First try exact prefix match in clips
-    let exactMatch = clipFiles.find(file => 
-        file.startsWith(`clip_${videoId}`) && 
+    let exactMatch = clipFiles.find(file =>
+        file.startsWith(normalizedVideoId) &&
         ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
     );
     
     if (exactMatch) {
-        //logger.debug(`Found exact match in clips: ${exactMatch}`);
         return { file: exactMatch, dir: clipsPath };
     }
     
     // Try to find by id anywhere in the filename in clips
-    let partialMatch = clipFiles.find(file => 
-        file.includes(videoId) && 
+    let partialMatch = clipFiles.find(file =>
+        file.includes(videoId) &&
         ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
     );
     
     if (partialMatch) {
-        //logger.debug(`Found partial match in clips: ${partialMatch}`);
         return { file: partialMatch, dir: clipsPath };
     }
     
@@ -97,24 +104,22 @@ const findVideoFile = (videoId) => {
     const recordingFiles = fs.readdirSync(recordingsPath);
     
     // Try exact prefix match in recordings
-    exactMatch = recordingFiles.find(file => 
-        file.startsWith(`clip_${videoId}`) && 
+    exactMatch = recordingFiles.find(file =>
+        file.startsWith(normalizedVideoId) &&
         ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
     );
     
     if (exactMatch) {
-        //logger.debug(`Found exact match in recordings: ${exactMatch}`);
         return { file: exactMatch, dir: recordingsPath };
     }
     
     // Try to find by id anywhere in the filename in recordings
-    partialMatch = recordingFiles.find(file => 
-        file.includes(videoId) && 
+    partialMatch = recordingFiles.find(file =>
+        file.includes(videoId) &&
         ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
     );
     
     if (partialMatch) {
-        //logger.debug(`Found partial match in recordings: ${partialMatch}`);
         return { file: partialMatch, dir: recordingsPath };
     }
 
@@ -134,6 +139,13 @@ export function setupVideoProtocol() {
             const requestUrl = new URL(request.url);
             const videoId = decodeURIComponent(requestUrl.hostname);
 
+            // Enforce maximum title length
+            const MAX_VIDEO_TITLE_LENGTH = 75;
+            if (videoId.length > MAX_VIDEO_TITLE_LENGTH) {
+                logger.error('Video title too long:', videoId);
+                return new Response('Invalid request: video title too long', { status: 400 });
+            }
+            
             if (!videoId || !isSafeFilename(videoId)) {
                 logger.error('Invalid or unsafe video ID requested:', videoId);
                 return new Response('Invalid request', { status: 400 });
@@ -161,6 +173,12 @@ export function setupVideoProtocol() {
             }
 
             const fileSize = stats.size;
+            const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB limit
+            if (fileSize > MAX_FILE_SIZE) {
+                logger.error(`File size ${fileSize} exceeds limit of ${MAX_FILE_SIZE}`);
+                return new Response('File too large', { status: 413 });
+            }
+
             const rangeHeader = request.headers.get('range');
 
             if (rangeHeader) {

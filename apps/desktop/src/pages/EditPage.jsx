@@ -2,6 +2,22 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import VideoPlayer from '../components/VideoPlayer';
 
+// Added constant for maximum video title length (per character)
+const MAX_VIDEO_TITLE_LENGTH = 50;
+
+// Added helper function to enforce safe title rules (no "..", "/", "\", or control characters)
+const isSafeTitle = (title) => {
+    // Block titles with path traversal attempts and escape characters
+    if (title.includes('..') || title.includes('/') || title.includes('\\')) {
+        return false;
+    }
+    // Block titles with null bytes or control characters
+    if (/[\x00-\x1f]/.test(title)) {
+        return false;
+    }
+    return true;
+};
+
 const EditPage = () => {
     const { videoId } = useParams();
     const navigate = useNavigate();
@@ -113,6 +129,17 @@ const EditPage = () => {
 
     // Save the edited video
     const saveChanges = async () => {
+        // Enforce maximum title length
+        if (title.length > MAX_VIDEO_TITLE_LENGTH) {
+            setError(`Title is too long. Maximum allowed is ${MAX_VIDEO_TITLE_LENGTH} characters.`);
+            return;
+        }
+        // Enforce safe title check
+        if (!isSafeTitle(title)) {
+            setError('Title contains invalid characters.');
+            return;
+        }
+        
         try {
             setLoading(true);
             setError(null);
@@ -218,9 +245,33 @@ const EditPage = () => {
                             id="title-input"
                             type="text" 
                             value={title} 
-                            onChange={(e) => setTitle(e.target.value)} 
+                            onChange={(e) => {
+                                const newTitle = e.target.value;
+                                // Enforce safe title check without removing existing comments
+                                if (!isSafeTitle(newTitle)) {
+                                    setError('Title contains invalid characters.');
+                                } else if (newTitle.length > MAX_VIDEO_TITLE_LENGTH) {
+                                    setError(`Title is too long. Maximum allowed is ${MAX_VIDEO_TITLE_LENGTH} characters.`);
+                                } else {
+                                    // Clear error only if it was due to title length or invalid characters
+                                    if (error && (error.includes('too long') || error.includes('invalid characters'))) {
+                                        setError(null);
+                                    }
+                                }
+                                setTitle(newTitle);
+                            }}
                             className="title-input"
                         />
+                        {title.length > MAX_VIDEO_TITLE_LENGTH && (
+                            <p className="error-message">
+                                Title is too long. Maximum allowed is {MAX_VIDEO_TITLE_LENGTH} characters.
+                            </p>
+                        )}
+                        {(!isSafeTitle(title) && title.length <= MAX_VIDEO_TITLE_LENGTH) && (
+                            <p className="error-message">
+                                Title contains invalid characters.
+                            </p>
+                        )}
                     </div>
                     
                     {/* Time Controls */}
@@ -313,7 +364,7 @@ const EditPage = () => {
                         <button 
                             onClick={saveChanges}
                             className="save-button"
-                            disabled={loading}
+                            disabled={loading || title.length > MAX_VIDEO_TITLE_LENGTH || !isSafeTitle(title)}
                         >
                             {loading ? 'Saving...' : 'Save Changes'}
                         </button>
