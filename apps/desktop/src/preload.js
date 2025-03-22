@@ -57,6 +57,10 @@ contextBridge.exposeInMainWorld('electron', {
 	onClipError: (callback) =>
 		ipcRenderer.on('clip-error', (event, data) => callback(data)),
 
+	// Listen for hotkey press events
+	onHotkeyPressed: (callback) => 
+		ipcRenderer.on('hotkey-pressed', () => callback()),
+
 	// Logging functions for renderer process
 	log: {
 		error: (message, meta = {}) => ipcRenderer.invoke('log', { level: 'error', message, meta }),

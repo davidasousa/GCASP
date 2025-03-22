@@ -55,6 +55,18 @@ function registerHotkey(hotkey) {
 		const success = globalShortcut.register(hotkey, async () => {
 			logger.info(`Hotkey ${hotkey} pressed - creating clip`);
 			
+			// Notify all windows immediately that the hotkey was pressed
+			const windows = BrowserWindow.getAllWindows();
+			windows.forEach(window => {
+				if (!window.isDestroyed()) {
+					window.webContents.send('hotkey-pressed');
+				}
+			});
+			
+			// Record the exact time the hotkey was pressed
+			const hotkeyPressTime = Date.now();
+			logger.debug(`Hotkey press time: ${new Date(hotkeyPressTime).toISOString()}`);
+			
 			// Generate a timestamp for the clip
 			const timestamp = new Date().toISOString()
 				.replace(/[:.]/g, '-')
@@ -72,13 +84,14 @@ function registerHotkey(hotkey) {
 				clipLength: clipLength
 			};
 			
-			// Create the clip
+			// Create the clip with the hotkeyPressTime
 			try {
-				logger.debug('Calling createClip function with timestamp and settings', { 
+				logger.debug('Calling createClip function with timestamp, settings, and hotkey time', { 
 					timestamp, 
-					clipLength 
+					clipLength,
+					hotkeyPressTime
 				});
-				const result = await createClip(timestamp, clipSettings);
+				const result = await createClip(timestamp, clipSettings, hotkeyPressTime);
 				if (result.success) {
 					logger.info(`Clip created successfully: ${result.filename}`, {
 						path: result.path,
@@ -106,7 +119,6 @@ function registerHotkey(hotkey) {
 						settings: clipSettings
 					});
                     
-                    // *** Add these lines to notify about clip errors ***
                     const windows = BrowserWindow.getAllWindows();
                     windows.forEach(window => {
                         if (!window.isDestroyed()) {

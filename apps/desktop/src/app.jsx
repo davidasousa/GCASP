@@ -8,6 +8,7 @@ import EditPage from './pages/EditPage';
 import Notification from './components/Notification';
 import successSound from './resources/clip-success.mp3';
 import errorSound from './resources/clip-error.mp3';
+import hotkeySound from './resources/hotkey-press.mp3';
 import './app.css';
 
 const App = () => {
@@ -27,6 +28,7 @@ const App = () => {
     // Audio references
     const successAudioRef = useRef(null);
     const errorAudioRef = useRef(null);
+	const hotkeyAudioRef = useRef(null);
     
     // Initialize audio elements
     useEffect(() => {
@@ -37,6 +39,10 @@ const App = () => {
         // Create error sound
         errorAudioRef.current = new Audio(errorSound);
         errorAudioRef.current.volume = 0.5; // Set volume to 50%
+
+		// Create hotkey sound
+		hotkeyAudioRef.current = new Audio(hotkeySound);
+		hotkeyAudioRef.current.volume = 0.25; // Set volume to 25%
         
         return () => {
             // Cleanup audio elements
@@ -48,6 +54,10 @@ const App = () => {
                 errorAudioRef.current.pause();
                 errorAudioRef.current.src = '';
             }
+			if (hotkeyAudioRef.current) {
+				hotkeyAudioRef.current.pause();
+				hotkeyAudioRef.current.src = '';
+			}
         };
     }, []);
 	
@@ -143,6 +153,19 @@ const App = () => {
 				message: `Clipping failed: ${errorData.error || 'Unknown error'}`,
 				type: 'error'
 			});
+		});
+
+		window.electron.onHotkeyPressed(() => {
+			console.log('Hotkey pressed, playing sound');
+			window.electron.log.info('Hotkey pressed, playing sound');
+			
+			// Play hotkey sound
+			if (hotkeyAudioRef.current) {
+				hotkeyAudioRef.current.currentTime = 0;
+				hotkeyAudioRef.current.play().catch(err => {
+					console.error('Error playing hotkey sound:', err);
+				});
+			}
 		});
 		
 		return () => {
