@@ -9,7 +9,7 @@ import Notification from './components/Notification';
 import successSound from './resources/clip-success.mp3';
 import errorSound from './resources/clip-error.mp3';
 import hotkeySound from './resources/hotkey-press.mp3';
-import './app.css';
+import './styles/index.css';
 
 const App = () => {
 	// State for clip creation

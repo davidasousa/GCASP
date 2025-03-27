@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import '../app.css';
+import '../styles/index.css';
 
 const SettingsPage = () => {
 	// State for settings

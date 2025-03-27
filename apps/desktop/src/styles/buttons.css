@@ -1,0 +1,122 @@
+/* Button styles */
+
+/* Delete button (in header & modal) */
+.delete-button {
+    background: red;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.delete-button:hover {
+    background: darkred;
+}
+
+.delete-button:active {
+    transform: scale(0.98);
+}
+
+/* Refresh button */
+.refresh-button {
+    padding: 8px 12px;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background: #f5f5f5;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    margin-bottom: 10px;
+}
+
+.refresh-button:hover {
+    background: #e0e0e0;
+}
+
+.refresh-button:active {
+    transform: scale(0.98);
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.button-group .refresh-button {
+    padding: 8px 12px;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background: #f5f5f5;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.button-group .refresh-button:hover {
+    background: #e0e0e0;
+}
+
+.button-group .refresh-button:active {
+    transform: scale(0.98);
+}
+
+/* Record button */
+.record-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 100;
+}
+
+.record-button button {
+    padding: 10px 20px;
+    background-color: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.record-button button:hover {
+    background-color: #ff0000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.record-button button:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Pagination */
+.pagination {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.pagination button {
+    margin: 0 5px;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.pagination button:hover {
+    background: #e0e0e0;
+}
+
+.pagination button:active {
+    transform: scale(0.98);
+}
+
+.pagination span {
+    margin: 0 10px;
+}

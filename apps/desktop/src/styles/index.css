@@ -1,0 +1,20 @@
+/* Main index.css file that imports all other CSS modules */
+
+/* Base styles */
+@import './base.css';
+
+/* Layout components */
+@import './sidebar.css';
+
+/* UI Components */
+@import './buttons.css';
+@import './modal.css';
+@import './video.css';
+@import './notification.css';
+
+/* Pages */
+@import './edit-page.css';
+@import './settings-page.css';
+
+/* Utilities */
+@import './utilities.css';

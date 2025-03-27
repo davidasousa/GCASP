@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import logo from '../resources/gcasp-text-logo.png';
-import '../app.css';
+import '../styles/index.css';
 
 const Sidebar = () => {
     return (
