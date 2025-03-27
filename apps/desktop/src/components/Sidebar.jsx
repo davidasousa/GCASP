@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import logo from '../resources/gcasp_testlogo.jpg';
+import logo from '../resources/gcasp-text-logo.png';
 import '../app.css';
 
 const Sidebar = () => {
