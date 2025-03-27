@@ -16,7 +16,8 @@ const defaultSettings = {
 	hotkey: 'F9',
 	recordingLength: 20, // seconds
 	resolution: { width: 1920, height: 1080 },
-	fps: 30
+	fps: 30,
+	minimizeToTray: true // New setting for system tray functionality, default to ON
 };
 
 // Create a cache of the current settings
@@ -283,6 +284,13 @@ function repairInvalidSettings(settings) {
 		repaired = true;
 	}
 	
+	// Check minimizeToTray (new setting)
+	if (settings.minimizeToTray === undefined || typeof settings.minimizeToTray !== 'boolean') {
+		logger.warn(`Invalid minimizeToTray setting detected: ${settings.minimizeToTray}, resetting to default`);
+		repairedSettings.minimizeToTray = defaultSettings.minimizeToTray;
+		repaired = true;
+	}
+	
 	if (repaired) {
 		logger.info('Invalid settings were detected and repaired');
 	} else {
@@ -377,6 +385,14 @@ export function cleanupSettings() {
 		fileWatcher = null;
 		logger.debug('Settings file watcher stopped');
 	}
+}
+
+// Toggle tray functionality
+export function toggleTrayEnabled(enabled) {
+	logger.debug(`Toggling tray enabled: ${enabled}`);
+	const settings = getCurrentSettings();
+	settings.minimizeToTray = enabled;
+	return saveSettings({ minimizeToTray: enabled });
 }
 
 // Register for settings change notifications in main process
