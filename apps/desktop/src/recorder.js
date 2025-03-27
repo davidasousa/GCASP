@@ -49,7 +49,19 @@ const SEGMENT_LENGTH = 5; // Recording Length In Seconds
 function initializeDisplayCache() {
     try {
         const { screen } = require('electron');
-        cachedDisplays = screen.getAllDisplays();
+        cachedDisplays = screen.getAllDisplays().map(display => {
+            // Calculate actual physical dimensions using the scale factor
+            const physicalWidth = Math.round(display.bounds.width * display.scaleFactor);
+            const physicalHeight = Math.round(display.bounds.height * display.scaleFactor);
+            
+            return {
+                ...display,
+                physicalWidth,
+                physicalHeight,
+                isScaled: display.scaleFactor > 1
+            };
+        });
+        
         logger.info(`Display cache initialized with ${cachedDisplays.length} monitors`);
         return true;
     } catch (error) {
@@ -263,15 +275,23 @@ async function recordSegment() {
 		const selectedMonitorIndex = parseInt(config.selectedMonitor, 10);
 		const selectedDisplay = cachedDisplays[selectedMonitorIndex] || cachedDisplays[0];
 		
-		logger.debug(`Capturing from monitor ${config.selectedMonitor}: ${selectedDisplay.bounds.width}x${selectedDisplay.bounds.height}`);
+		const captureWidth = selectedDisplay.isScaled 
+		? selectedDisplay.physicalWidth 
+		: selectedDisplay.bounds.width;
 		
-		// Capture the entire selected monitor at its native resolution
+		const captureHeight = selectedDisplay.isScaled 
+			? selectedDisplay.physicalHeight 
+			: selectedDisplay.bounds.height;
+	
+		logger.debug(`Capturing from monitor ${config.selectedMonitor}: ${captureWidth}x${captureHeight} (Scale factor: ${selectedDisplay.scaleFactor})`);
+	
+		// Capture the entire selected monitor at its physical resolution
 		const captureArgs = [
 			'-f', 'gdigrab',
 			'-framerate', config.fps.toString(),
 			'-offset_x', selectedDisplay.bounds.x.toString(),
 			'-offset_y', selectedDisplay.bounds.y.toString(),
-			'-video_size', `${selectedDisplay.bounds.width}x${selectedDisplay.bounds.height}`,
+			'-video_size', `${captureWidth}x${captureHeight}`,
 			'-draw_mouse', '1',
 			'-i', 'desktop'
 		];
@@ -288,8 +308,8 @@ async function recordSegment() {
 			'-pix_fmt', 'yuv420p'
 		];
 		
-		// Only add scaling if the selected resolution is different from the native resolution
-		if (config.width !== selectedDisplay.bounds.width || config.height !== selectedDisplay.bounds.height) {
+		// Only add scaling if the selected resolution is different from the capture dimensions
+		if (config.width !== captureWidth || config.height !== captureHeight) {
 			// Scale to the target resolution while preserving aspect ratio
 			args.push('-vf', `scale=${config.width}:${config.height}:force_original_aspect_ratio=decrease,pad=${config.width}:${config.height}:(ow-iw)/2:(oh-ih)/2`);
 		}
