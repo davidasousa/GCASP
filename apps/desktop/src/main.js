@@ -277,12 +277,8 @@ app.on('window-all-closed', () => {
 		logger.debug('Performing final cleanup...');
 		safelyDeleteRecordings();
 		
-		if (process.platform !== 'darwin') {
-			logger.info('Application quitting...');
-			app.quit();
-		} else {
-			logger.info('On macOS - app will stay in dock until explicitly quit');
-		}
+		logger.info('Application quitting...');
+		app.quit();
 	}, 500); // 500ms delay should be enough
 });
 
@@ -318,6 +314,8 @@ app.on('before-quit', () => {
 		tray = null;
 		logger.debug('Tray icon destroyed before quit');
 	}
+	
+	safelyDeleteRecordings();
 	
 	logger.info('Application ready to quit');
 });
