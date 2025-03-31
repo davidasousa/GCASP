@@ -1,4 +1,4 @@
-import { ipcMain, app, globalShortcut, screen } from 'electron';
+import { ipcMain, app, globalShortcut, screen, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
@@ -43,7 +43,6 @@ const ensureDirectories = () => {
 // Variable to store the registered hotkey
 let registeredHotkey = null;
 
-// Register the hotkey for recording clips
 function registerHotkey(hotkey) {
 	logger.info(`Attempting to register hotkey: ${hotkey}`);
 	
@@ -55,6 +54,18 @@ function registerHotkey(hotkey) {
 		registeredHotkey = hotkey;
 		const success = globalShortcut.register(hotkey, async () => {
 			logger.info(`Hotkey ${hotkey} pressed - creating clip`);
+			
+			// Notify all windows immediately that the hotkey was pressed
+			const windows = BrowserWindow.getAllWindows();
+			windows.forEach(window => {
+				if (!window.isDestroyed()) {
+					window.webContents.send('hotkey-pressed');
+				}
+			});
+			
+			// Record the exact time the hotkey was pressed
+			const hotkeyPressTime = Date.now();
+			logger.debug(`Hotkey press time: ${new Date(hotkeyPressTime).toISOString()}`);
 			
 			// Generate a timestamp for the clip
 			const timestamp = new Date().toISOString()
@@ -73,26 +84,65 @@ function registerHotkey(hotkey) {
 				clipLength: clipLength
 			};
 			
-			// Create the clip
+			// Create the clip with the hotkeyPressTime
 			try {
-				logger.debug('Calling createClip function with timestamp and settings', { 
+				logger.debug('Calling createClip function with timestamp, settings, and hotkey time', { 
 					timestamp, 
-					clipLength 
+					clipLength,
+					hotkeyPressTime
 				});
-				const result = await createClip(timestamp, clipSettings);
+				const result = await createClip(timestamp, clipSettings, hotkeyPressTime);
 				if (result.success) {
 					logger.info(`Clip created successfully: ${result.filename}`, {
 						path: result.path,
 						timestamp: timestamp
 					});
+                    
+                    // Notify all browser windows about the new clip
+                    const windows = BrowserWindow.getAllWindows();
+                    windows.forEach(window => {
+                        if (!window.isDestroyed()) {
+                            // Send new-recording event
+                            window.webContents.send('new-recording', {
+                                id: path.parse(result.filename).name,
+                                filename: result.filename,
+                                timestamp: new Date()
+                            });
+                            
+                            // Send clip-done event
+                            window.webContents.send('clip-done', result.filename);
+                        }
+                    });
 				} else {
 					logger.error(`Failed to create clip: ${result.error}`, {
 						timestamp: timestamp,
 						settings: clipSettings
 					});
+                    
+                    const windows = BrowserWindow.getAllWindows();
+                    windows.forEach(window => {
+                        if (!window.isDestroyed()) {
+                            // Send clip-error event
+                            window.webContents.send('clip-error', {
+                                error: result.error || 'Unknown error',
+                                timestamp: new Date()
+                            });
+                        }
+                    });
 				}
 			} catch (error) {
 				logger.error('Exception during hotkey clip creation:', error);
+                
+                const windows = BrowserWindow.getAllWindows();
+                windows.forEach(window => {
+                    if (!window.isDestroyed()) {
+                        // Send clip-error event for exceptions too
+                        window.webContents.send('clip-error', {
+                            error: error.message || 'Exception during clip creation',
+                            timestamp: new Date()
+                        });
+                    }
+                });
 			}
 		});
 		
@@ -198,7 +248,8 @@ export function setupIpcHandlers() {
 			const primaryDisplay = screen.getPrimaryDisplay();
 			const dimensions = {
 				width: primaryDisplay.bounds.width,
-				height: primaryDisplay.bounds.height
+				height: primaryDisplay.bounds.height,
+				scaleFactor: primaryDisplay.scaleFactor
 			};
 			logger.debug('Retrieved screen dimensions', dimensions);
 			return dimensions;
