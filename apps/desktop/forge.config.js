@@ -1,28 +1,33 @@
+const path = require('path');
 const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 module.exports = {
   packagerConfig: {
     asar: true,
+    icon: path.join(__dirname, 'src', 'resources', 'gcasp-icon.ico'),
+    executableName: 'GCASP',
+    win32metadata: {
+      CompanyName: 'G-CASP Team',
+      FileDescription: 'Gaming Capture Application & Social Platform',
+      OriginalFilename: 'GCASP.exe',
+      ProductName: 'GCASP',
+      InternalName: 'GCASP',
+    }
   },
   rebuildConfig: {},
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {},
+      config: {
+        name: 'GCASP',
+        setupIcon: path.join(__dirname, 'src', 'resources', 'gcasp-icon.ico')
+      },
     },
     {
       name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
-    },
+      platforms: ['win32']
+    }
   ],
   plugins: [
     {
@@ -32,7 +37,7 @@ module.exports = {
     {
       name: '@electron-forge/plugin-webpack',
       config: {
-				devContentSecurityPolicy: "'default-src * connect-src self * 3001'",
+        devContentSecurityPolicy: "'default-src * connect-src self * 3001'",
         mainConfig: './webpack.main.config.js',
         renderer: {
           config: './webpack.renderer.config.js',
@@ -60,5 +65,5 @@ module.exports = {
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
       [FuseV1Options.OnlyLoadAppFromAsar]: true,
     }),
-  ],
+  ]
 };

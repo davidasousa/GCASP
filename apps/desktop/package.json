@@ -9,6 +9,8 @@
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
+    "make:installer": "electron-forge make --target @electron-forge/maker-squirrel",
+    "make:zip": "electron-forge make --target @electron-forge/maker-zip",
     "publish": "electron-forge publish"
   },
   "author": {

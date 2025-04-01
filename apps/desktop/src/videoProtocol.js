@@ -67,28 +67,40 @@ const isSafeFilename = (filename) => {
 
 // Find video in either directory
 const findVideoFile = (videoId) => {
-    // If the videoId appears to be an IP-like string (e.g. "0.0.0.2"),
-    // extract the last segment so that "0.0.0.2" becomes "2".
-    if (videoId.includes('.')) {
-        const parts = videoId.split('.');
-        videoId = parts[parts.length - 1];
-    }
+	// If the videoId appears to be an IP-like string (e.g. "0.0.0.2"),
+	// extract the last segment so that "0.0.0.2" becomes "2".
+	if (videoId.includes('.')) {
+		const parts = videoId.split('.');
+		videoId = parts[parts.length - 1];
+	}
 
-    // Normalize videoId by ensuring it starts with 'clip_'
-    const normalizedVideoId = videoId.startsWith('clip_') ? videoId : `clip_${videoId}`;
+	// Normalize videoId by ensuring it starts with 'clip_'
+	const normalizedVideoId = videoId.startsWith('clip_') ? videoId : `clip_${videoId}`;
 
-    // Check in clips directory first (most likely location)
-    const clipFiles = fs.readdirSync(clipsPath);
-    
-    // First try exact prefix match in clips
-    let exactMatch = clipFiles.find(file =>
-        file.startsWith(normalizedVideoId) &&
-        ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
-    );
-    
-    if (exactMatch) {
-        return { file: exactMatch, dir: clipsPath };
-    }
+	// Check in clips directory first
+	const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
+	const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
+	
+	// Make sure these directories exist
+	if (!fs.existsSync(clipsPath)) {
+		fs.mkdirSync(clipsPath, { recursive: true });
+	}
+	if (!fs.existsSync(recordingsPath)) {
+		fs.mkdirSync(recordingsPath, { recursive: true });
+	}
+	
+	// Read directory contents
+	const clipFiles = fs.readdirSync(clipsPath);
+	
+	// First try exact prefix match in clips
+	let exactMatch = clipFiles.find(file =>
+		file.startsWith(normalizedVideoId) &&
+		ALLOWED_EXTENSIONS.includes(path.extname(file).toLowerCase())
+	);
+	
+	if (exactMatch) {
+		return { file: exactMatch, dir: clipsPath };
+	}
     
     // Try to find by id anywhere in the filename in clips
     let partialMatch = clipFiles.find(file =>
