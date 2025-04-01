@@ -42,7 +42,7 @@ let currentSegmentStartTime = 0;
 let currentSegmentIndex = 0;
 
 // Segment configuration
-const SEGMENT_LENGTH = 5; // Recording Length In Seconds
+const SEGMENT_LENGTH = 3; // Recording Length In Seconds
 // MAX_SEGMENTS will be calculated dynamically based on settings
 
 // Initialize display cache
@@ -390,7 +390,6 @@ async function recordSegment() {
 	}
 }
 
-// Create a clip by splicing together segments
 // Function to get elapsed time in current segment
 function getCurrentSegmentElapsedTime() {
 	if (currentSegmentStartTime === 0) {
@@ -401,7 +400,7 @@ function getCurrentSegmentElapsedTime() {
 	return Math.min(elapsed, SEGMENT_LENGTH); // Cap at segment length
 }
 
-// Updated createClip function that uses precise timing
+// Create a clip by splicing together segments
 export async function createClip(clipTimestamp, clipSettings, hotkeyTime = null) {
 	if (recordingSegments.length === 0) {
 		logger.warn('Cannot create clip: No recording segments available');
@@ -423,8 +422,7 @@ export async function createClip(clipTimestamp, clipSettings, hotkeyTime = null)
 		// Ensure clip length is within bounds
 		const clipLength = Math.max(5, Math.min(120, settings.clipLength));
 		
-		// Capture hotkey press time and current segment elapsed time
-		const hotkeyPressTime = hotkeyTime || Date.now();
+		// Capture current segment elapsed time
 		const elapsedTimeInCurrentSegment = getCurrentSegmentElapsedTime();
 		
 		// Keep track of the current segment index when hotkey was pressed
@@ -589,45 +587,6 @@ export async function createClip(clipTimestamp, clipSettings, hotkeyTime = null)
 		logger.error('Error creating clip:', error);
 		return { success: false, error: error.message };
 	}
-}
-
-// Create a simple clip from the most recent segment (fallback method)
-export async function createSimpleClip() {
-    if (recordingSegments.length === 0) {
-        logger.warn('Cannot create simple clip: No recording segments available');
-        return { success: false, error: 'No recording segments available' };
-    }
-    
-    try {
-        // Get most recent segment
-        const latestSegment = recordingSegments[recordingSegments.length - 1];
-        logger.info(`Creating simple clip from most recent segment: ${path.basename(latestSegment.path)}`);
-        
-        // Create timestamp for the clip
-        const timestamp = new Date().toISOString()
-            .replace(/[:.]/g, '-')
-            .replace('T', '_')
-            .replace('Z', '');
-        
-        const clipFilename = `clip_${timestamp}.mp4`;
-        const clipPath = path.join(clipsPath, clipFilename);
-        
-        // Copy the segment to the clips directory
-        // Use readFile/writeFile instead of copyFile to avoid locks
-        logger.debug(`Copying segment data to ${clipPath}`);
-        const videoData = await fs.promises.readFile(latestSegment.path);
-        await fs.promises.writeFile(clipPath, videoData);
-        
-        logger.info(`Simple clip created successfully: ${clipFilename}`);
-        return {
-            success: true,
-            filename: clipFilename,
-            path: clipPath
-        };
-    } catch (error) {
-        logger.error('Error creating simple clip:', error);
-        return { success: false, error: error.message };
-    }
 }
 
 // Handle cleanup if module is unloaded

@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electron', {
 		ipcRenderer.on('settings-changed', (_, newSettings) => callback(newSettings));
 	},
 	
+	// Toggle tray functionality
+	toggleTrayEnabled: (enabled) => ipcRenderer.invoke('toggle-tray-enabled', enabled),
+	
 	// Screen dimensions
 	getScreenDimensions: () => ipcRenderer.invoke('get-screen-dimensions'),
 

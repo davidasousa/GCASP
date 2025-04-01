@@ -1,5 +1,4 @@
-// main.js
-import { app, protocol, ipcMain, BrowserWindow } from 'electron';
+import { app, protocol, ipcMain, BrowserWindow, Menu, Tray, nativeImage } from 'electron';
 import path from 'path';
 import { net } from 'electron';
 import fs from 'fs';
@@ -8,6 +7,7 @@ import { setupIpcHandlers, cleanupIpcHandlers } from './ipcHandlers';
 import { ensureAppDirectories, deleteRecordings } from './utilities';
 import { stopContinuousRecording } from './recorder';
 import { setupRendererLogging, getModuleLogger } from './logger';
+import { getCurrentSettings } from './settings';
 
 const logger = getModuleLogger('main.js');
 
@@ -15,6 +15,11 @@ const logger = getModuleLogger('main.js');
 const recordingsPath = path.join(app.getPath('videos'), 'GCASP/recordings');
 logger.info(`Starting GCASP application`);
 logger.info(`Recordings path: ${recordingsPath}`);
+
+// Global references to prevent garbage collection
+let mainWindow = null;
+let tray = null;
+let forceQuit = false;
 
 // Register gcasp:// as a secure protocol
 logger.debug('Registering gcasp:// protocol...');
@@ -45,6 +50,60 @@ function setupLogging() {
 	}
 }
 
+// Create tray icon and menu
+function createTray() {
+	logger.debug('Creating tray icon...');
+	
+	try {
+		// Find the icon path - in a packaged app this path is different
+		// We try to handle both development and production scenarios
+		const iconPath = path.join(app.getAppPath(), 'src', 'resources', 'gcasp-trayicon-logo.png');
+		logger.debug(`Using tray icon from: ${iconPath}`);
+		
+		// Create tray instance
+		tray = new Tray(iconPath);
+		tray.setToolTip('GCASP - Gaming Capture Application & Social Platform');
+		
+		// Create tray menu
+		const contextMenu = Menu.buildFromTemplate([
+			{
+				label: 'Open GCASP',
+				click: () => {
+					logger.debug('Tray: Open GCASP clicked');
+					if (mainWindow) {
+						mainWindow.show();
+					}
+				}
+			},
+			{ type: 'separator' },
+			{
+				label: 'Exit',
+				click: () => {
+					logger.debug('Tray: Exit clicked');
+					forceQuit = true;
+					app.quit();
+				}
+			}
+		]);
+		
+		tray.setContextMenu(contextMenu);
+		
+		// Add single-click handler to open app directly when clicking icon
+		tray.on('click', () => {
+			logger.debug('Tray icon clicked');
+			if (mainWindow) {
+				mainWindow.show();
+			}
+		});
+		
+		logger.info('Tray icon created successfully');
+		return true;
+	} catch (error) {
+		logger.error('Failed to create tray icon:', error);
+		return false;
+	}
+}
+
 app.whenReady().then(() => {
 	logger.info('Electron app ready, initializing...');
 	
@@ -68,7 +127,7 @@ app.whenReady().then(() => {
 
 	// Create the main window
 	logger.debug('Creating main application window...');
-	const mainWindow = new BrowserWindow({
+	mainWindow = new BrowserWindow({
 		width: 1200,
 		height: 800,
 		webPreferences: {
@@ -79,12 +138,22 @@ app.whenReady().then(() => {
 	});
 
 	// Add window event listeners for logging
-	mainWindow.on('close', () => {
+	mainWindow.on('close', (event) => {
 		logger.debug('Main window close event triggered');
+		
+		// Check if should minimize to tray
+		const settings = getCurrentSettings();
+		if (!forceQuit && settings.minimizeToTray) {
+			event.preventDefault();
+			mainWindow.hide();
+			logger.info('Window hidden instead of closed (minimize to tray active)');
+			return false;
+		}
 	});
 	
 	mainWindow.on('closed', () => {
 		logger.info('Main window closed');
+		mainWindow = null;
 	});
 	
 	mainWindow.on('focus', () => {
@@ -93,6 +162,10 @@ app.whenReady().then(() => {
 	
 	mainWindow.on('blur', () => {
 		logger.debug('Main window lost focus');
+	});
+	
+	mainWindow.on('minimize', () => {
+		logger.debug('Main window minimized');
 	});
 	
 	mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
@@ -121,6 +194,27 @@ app.whenReady().then(() => {
 		.catch((error) => {
 			logger.error('Error loading main window URL', { error: error.message });
 		});
+	
+	// Create tray icon if needed
+	const settings = getCurrentSettings();
+	if (settings.minimizeToTray) {
+		createTray();
+	}
+	
+	// Register IPC handler for toggling tray functionality
+	ipcMain.handle('toggle-tray-enabled', (event, enabled) => {
+		logger.debug(`Toggle tray enabled: ${enabled}`);
+		
+		if (enabled && !tray) {
+			createTray();
+		} else if (!enabled && tray) {
+			tray.destroy();
+			tray = null;
+			logger.debug('Tray icon destroyed');
+		}
+		
+		return { success: true };
+	});
 	
 	logger.info('Application startup complete');
 });
@@ -160,6 +254,13 @@ export function safelyDeleteRecordings() {
 app.on('window-all-closed', () => {
 	logger.info('All windows closed, preparing to shut down...');
 	
+	// Check if should quit or just hide
+	const settings = getCurrentSettings();
+	if (settings.minimizeToTray && !forceQuit) {
+		logger.info('Not quitting app due to minimizeToTray setting');
+		return;
+	}
+	
 	// Stop continuous recording when app closes
 	logger.debug('Stopping continuous recording...');
 	stopContinuousRecording();
@@ -176,12 +277,8 @@ app.on('window-all-closed', () => {
 		logger.debug('Performing final cleanup...');
 		safelyDeleteRecordings();
 		
-		if (process.platform !== 'darwin') {
-			logger.info('Application quitting...');
-			app.quit();
-		} else {
-			logger.info('On macOS - app will stay in dock until explicitly quit');
-		}
+		logger.info('Application quitting...');
+		app.quit();
 	}, 500); // 500ms delay should be enough
 });
 
@@ -199,17 +296,9 @@ app.on('browser-window-created', (event, window) => {
 	logger.debug('New browser window created', { windowId: window.id });
 });
 
-app.on('gpu-process-crashed', (event, killed) => {
-	logger.error('GPU process crashed', { wasKilled: killed });
-});
-
-app.on('render-process-gone', (event, webContents, details) => {
-	logger.error('Render process gone', { reason: details.reason, exitCode: details.exitCode });
-});
-
-// Make sure recording is stopped before the app quits
 app.on('before-quit', () => {
 	logger.info('Application quit requested...');
+	forceQuit = true;
 	
 	logger.debug('Stopping continuous recording before quit...');
 	stopContinuousRecording();
@@ -218,6 +307,15 @@ app.on('before-quit', () => {
 	logger.debug('Cleaning up IPC handlers before quit...');
 	cleanupIpcHandlers();
 	logger.debug('IPC handlers cleaned up before quit');
+	
+	// Clean up tray if it exists
+	if (tray) {
+		tray.destroy();
+		tray = null;
+		logger.debug('Tray icon destroyed before quit');
+	}
+	
+	safelyDeleteRecordings();
 	
 	logger.info('Application ready to quit');
 });

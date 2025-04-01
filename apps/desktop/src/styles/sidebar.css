@@ -1,0 +1,47 @@
+/* Sidebar styles */
+.sidebar {
+    width: 200px;
+    height: 100vh;
+    background-color: #f8f8f8;
+    padding: 20px 15px;
+    border-right: 1px solid #e0e0e0;
+    box-shadow: -5px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+/* Space out each list item */
+.sidebar li {
+    margin-bottom: 1rem;
+}
+
+/* Style both buttons and NavLinks to be consistent */
+.sidebar button,
+.sidebar a {
+    display: block;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    text-align: left;
+    width: 100%;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.sidebar button:hover,
+.sidebar a:hover {
+    background-color: #e0e0e0;
+}
+
+.sidebar button.active,
+.sidebar a.active {
+    font-weight: bold;
+    background-color: #d0d0d0;
+}

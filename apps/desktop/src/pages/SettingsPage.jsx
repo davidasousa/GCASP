@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import '../app.css';
+import '../styles/index.css';
 
 const SettingsPage = () => {
 	// State for settings
@@ -16,6 +16,9 @@ const SettingsPage = () => {
 	const [selectedFPS, setSelectedFPS] = useState(30);
 	const [monitors, setMonitors] = useState([]);
 	const [selectedMonitor, setSelectedMonitor] = useState("0");
+	
+	// State for minimize to tray setting
+	const [minimizeToTray, setMinimizeToTray] = useState(true);
 	
 	const hotkeyInputRef = useRef(null);
 
@@ -61,6 +64,9 @@ const SettingsPage = () => {
 					
 					setSelectedFPS(settings.fps || 30);
 					setSelectedMonitor(settings.selectedMonitor || "0");
+					
+					// Set minimize to tray setting
+					setMinimizeToTray(settings.minimizeToTray !== undefined ? settings.minimizeToTray : true);
 					
 					window.electron.log.debug('Settings state updated in SettingsPage component');
 				}
@@ -282,6 +288,11 @@ const SettingsPage = () => {
 	const handleMonitorChange = (e) => {
 		setSelectedMonitor(e.target.value);
 	};
+	
+	// Handle minimize to tray toggle
+	const handleMinimizeToTrayChange = (e) => {
+		setMinimizeToTray(e.target.checked);
+	};
 
 	// Save settings
 	const saveSettings = async () => {
@@ -298,12 +309,21 @@ const SettingsPage = () => {
 				recordingLength,
 				resolution: selectedResolution,
 				fps: selectedFPS,
-				selectedMonitor
+				selectedMonitor,
+				minimizeToTray
 			};
 			
 			window.electron.log.debug('Saving new settings', settings);
 			
 			const result = await window.electron.saveSettings(settings);
+			
+			// Toggle tray functionality if setting changed
+			try {
+				await window.electron.toggleTrayEnabled(minimizeToTray);
+			} catch (error) {
+				window.electron.log.error('Error toggling tray functionality', { error: error.toString() });
+			}
+			
 			if (result.success) {
 				setSavedMessage('Settings saved successfully!');
 				window.electron.log.info('Settings saved successfully from SettingsPage');
@@ -454,6 +474,26 @@ const SettingsPage = () => {
 					</p>
 					<p className="setting-warning">
 						Changing monitor selection will restart the recording buffer.
+					</p>
+				</div>
+				
+				{/* System Tray Setting */}
+				<div className="settings-group">
+					<h3>System Tray Behavior</h3>
+					<div className="tray-setting">
+						<label htmlFor="minimize-to-tray" className="checkbox-label">
+							<input
+								id="minimize-to-tray"
+								type="checkbox"
+								checked={minimizeToTray}
+								onChange={handleMinimizeToTrayChange}
+							/>
+							Minimize to system tray instead of closing
+						</label>
+					</div>
+					<p className="setting-help">
+						When enabled, closing the application window will minimize it to the system tray instead of quitting. 
+						The application will continue to run in the background, allowing you to use hotkeys for clipping.
 					</p>
 				</div>
 				
