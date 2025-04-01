@@ -1,4 +1,4 @@
-import { app, protocol, ipcMain, BrowserWindow, Menu, Tray, nativeImage } from 'electron';
+import { app, protocol, ipcMain, BrowserWindow, Menu, Tray, nativeImage, dialog } from 'electron';
 import path from 'path';
 import { net } from 'electron';
 import fs from 'fs';
@@ -8,6 +8,7 @@ import { ensureAppDirectories, deleteRecordings } from './utilities';
 import { stopContinuousRecording } from './recorder';
 import { setupRendererLogging, getModuleLogger } from './logger';
 import { getCurrentSettings } from './settings';
+import { spawn } from 'child_process';
 
 const logger = getModuleLogger('main.js');
 
@@ -104,7 +105,36 @@ function createTray() {
 	}
 }
 
-app.whenReady().then(() => {
+// Check if FFmpeg is installed and available in PATH
+function checkFFmpegInstalled() {
+	return new Promise((resolve) => {
+		const ffmpeg = spawn('ffmpeg', ['-version']);
+		ffmpeg.on('error', () => {
+		// FFmpeg not found
+		resolve(false);
+		});
+		ffmpeg.on('close', (code) => {
+			// FFmpeg found if exit code is 0
+			resolve(code === 0);
+		});
+	});
+}
+
+app.whenReady().then(async() => {
+
+	const ffmpegInstalled = await checkFFmpegInstalled();
+
+	if (!ffmpegInstalled) {
+		// Show a dialog informing the user that FFmpeg is required
+		dialog.showMessageBox({
+			type: 'warning',
+			title: 'FFmpeg Not Found',
+			message: 'FFmpeg is required for video recording and editing.',
+			detail: 'Please install FFmpeg and make sure it is available in your system PATH. You can download FFmpeg from https://ffmpeg.org/download.html',
+			buttons: ['OK']
+		});
+	}
+
 	logger.info('Electron app ready, initializing...');
 	
 	// Ensure directories exist
