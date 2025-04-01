@@ -43,10 +43,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: GCASP-Installer
-          path: apps/desktop/out/make/squirrel.windows/x64/GCASP-${{ github.event.inputs.version }} Setup.exe
+          path: apps/desktop/out/make/squirrel.windows/x64/GCASP-1.0.0 Setup.exe
+          #path: apps/desktop/out/make/squirrel.windows/x64/GCASP-${{ github.event.inputs.version }} Setup.exe
       
       - name: Upload ZIP Package
         uses: actions/upload-artifact@v4
         with:
           name: GCASP-ZIP
-          path: apps/desktop/out/make/zip/win32/x64/GCASP-win32-x64-${{ github.event.inputs.version }}.zip
+          path: apps/desktop/out/make/zip/win32/x64/GCASP-win32-x64-1.0.0.zip
+          #path: apps/desktop/out/make/zip/win32/x64/GCASP-win32-x64-${{ github.event.inputs.version }}.zip
