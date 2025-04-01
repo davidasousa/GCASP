@@ -46,29 +46,5 @@
     "node-loader": "^2.0.0",
     "style-loader": "^3.3.3",
     "webpack": "^5.89.0"
-  },
-  "config": {
-    "forge": {
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "setupIcon": "resources/gcasp-icon.ico",
-            "shortcutName": "GCASP"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip"
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {}
-        }
-      ]
-    }
   }
 }
