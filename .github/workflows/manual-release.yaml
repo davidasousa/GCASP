@@ -1,18 +1,12 @@
 name: Manual Release Build
 
-#on:
-# workflow_dispatch:
-#   inputs:
-#     version:
-#       description: 'Version number (e.g., 1.0.0)'
-#      required: true
-#      default: '1.0.0-dev'
-
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
 
 jobs:
   build-windows:
@@ -27,8 +21,25 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      - name: Update Root Version
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          Write-Host "Updating root package.json to version $version"
+          $packageJson = Get-Content -Path package.json -Raw | ConvertFrom-Json
+          $packageJson.version = $version
+          $packageJson | ConvertTo-Json -Depth 100 | Set-Content -Path package.json
       
-      - name: Install Dependencies
+      - name: Update Desktop Version
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          Write-Host "Updating apps/desktop/package.json to version $version"
+          $desktopPackageJson = Get-Content -Path apps/desktop/package.json -Raw | ConvertFrom-Json
+          $desktopPackageJson.version = $version
+          $desktopPackageJson | ConvertTo-Json -Depth 100 | Set-Content -Path apps/desktop/package.json
+      
+      - name: Install Dependencies (Desktop)
+        working-directory: apps/desktop
         run: npm ci
       
       - name: Build Installer (Desktop)
@@ -43,12 +54,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: GCASP-Installer
-          path: apps/desktop/out/make/squirrel.windows/x64/GCASP-1.0.0 Setup.exe
-          #path: apps/desktop/out/make/squirrel.windows/x64/GCASP-${{ github.event.inputs.version }} Setup.exe
+          path: apps/desktop/out/make/squirrel.windows/x64/GCASP-${{ github.event.inputs.version }} Setup.exe
       
       - name: Upload ZIP Package
         uses: actions/upload-artifact@v4
         with:
           name: GCASP-ZIP
-          path: apps/desktop/out/make/zip/win32/x64/GCASP-win32-x64-1.0.0.zip
-          #path: apps/desktop/out/make/zip/win32/x64/GCASP-win32-x64-${{ github.event.inputs.version }}.zip
+          path: apps/desktop/out/make/zip/win32/x64/GCASP-win32-x64-${{ github.event.inputs.version }}.zip
