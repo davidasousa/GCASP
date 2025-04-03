@@ -293,7 +293,9 @@ async function recordSegment() {
 			'-offset_y', selectedDisplay.bounds.y.toString(),
 			'-video_size', `${captureWidth}x${captureHeight}`,
 			'-draw_mouse', '1',
-			'-i', 'desktop'
+			'-i', 'desktop',
+			'-f', 'dshow',
+			'-i', 'audio=virtual-audio-capturer'
 		];
 
 		// Build FFmpeg command for this segment
