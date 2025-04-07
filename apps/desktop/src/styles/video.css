@@ -32,10 +32,14 @@
 
 /* Video title styling */
 .video-title {
-    text-align: center;
-    margin-top: 0.5rem;
-    font-size: 1rem;
-    color: #333;
+	text-align: left;
+	margin-top: 0.5rem;
+	margin-right: 180px;
+	font-size: 1rem;
+	color: #333;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 /* Make both the thumbnail image and Video.js player fill the container */
@@ -63,29 +67,27 @@
 }
 
 .video-header .delete-button {
-    position: absolute;
-    right: 0;
-    top: 0;
-    background: red;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
+	position: static;
+	background: red;
+	color: white;
+	border: none;
+	padding: 5px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
 }
 
 /* Edit button in header */
 .video-header .edit-button {
-    position: absolute;
-    right: 60px;
-    top: 0;
-    background: #007bff;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
+	position: static;
+	background: #007bff;
+	color: white;
+	border: none;
+	padding: 5px 10px;
+	margin-right: 5px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
 }
 
 .video-header .edit-button:hover {
@@ -94,4 +96,30 @@
 
 .video-header .edit-button:active {
     transform: scale(0.98);
+}
+
+.video-actions {
+	display: flex;
+	position: absolute;
+	right: 0;
+	top: 0;
+}
+
+.upload-button {
+	background: #28a745;
+	color: white;
+	border: none;
+	padding: 5px 10px;
+	margin-right: 5px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
+}
+
+.upload-button:hover {
+	background: #218838;
+}
+
+.upload-button:active {
+	transform: scale(0.98);
 }

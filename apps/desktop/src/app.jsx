@@ -1,65 +1,95 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
 import SharedPage from './pages/SharedPage';
 import SettingsPage from './pages/SettingsPage';
 import EditPage from './pages/EditPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import Notification from './components/Notification';
 import successSound from './resources/clip-success.mp3';
 import errorSound from './resources/clip-error.mp3';
 import hotkeySound from './resources/hotkey-press.mp3';
 import './styles/index.css';
 
+// Main App component
 const App = () => {
+	return (
+		<AuthProvider>
+			<Router>
+				<Routes>
+					{/* Public routes */}
+					<Route path="/login" element={<LoginPage />} />
+					<Route path="/register" element={<RegisterPage />} />
+					
+					{/* Protected app routes */}
+					<Route 
+						path="/*" 
+						element={
+							<ProtectedRoute requiresAuth={true} allowOffline={true}>
+								<AppLayout />
+							</ProtectedRoute>
+						} 
+					/>
+				</Routes>
+			</Router>
+		</AuthProvider>
+	);
+};
+
+// Authenticated app layout with sidebar
+const AppLayout = () => {
 	// State for clip creation
 	const [isClipping, setIsClipping] = useState(false);
 	
 	// State for settings
 	const [settings, setSettings] = useState(null);
     
-    // State for notification
-    const [notification, setNotification] = useState({
-        visible: false,
-        message: '',
-        type: 'success' // 'success' or 'error'
-    });
+	// State for notification
+	const [notification, setNotification] = useState({
+		visible: false,
+		message: '',
+		type: 'success' // 'success' or 'error'
+	});
     
-    // Audio references
-    const successAudioRef = useRef(null);
-    const errorAudioRef = useRef(null);
+	// Audio references
+	const successAudioRef = useRef(null);
+	const errorAudioRef = useRef(null);
 	const hotkeyAudioRef = useRef(null);
     
-    // Initialize audio elements
-    useEffect(() => {
-        // Create success sound
-        successAudioRef.current = new Audio(successSound);
-        successAudioRef.current.volume = 0.5; // Set volume to 50%
-        
-        // Create error sound
-        errorAudioRef.current = new Audio(errorSound);
-        errorAudioRef.current.volume = 0.5; // Set volume to 50%
+	// Initialize audio elements
+	useEffect(() => {
+		// Create success sound
+		successAudioRef.current = new Audio(successSound);
+		successAudioRef.current.volume = 0.5; // Set volume to 50%
+		
+		// Create error sound
+		errorAudioRef.current = new Audio(errorSound);
+		errorAudioRef.current.volume = 0.5; // Set volume to 50%
 
 		// Create hotkey sound
 		hotkeyAudioRef.current = new Audio(hotkeySound);
 		hotkeyAudioRef.current.volume = 0.25; // Set volume to 25%
-        
-        return () => {
-            // Cleanup audio elements
-            if (successAudioRef.current) {
-                successAudioRef.current.pause();
-                successAudioRef.current.src = '';
-            }
-            if (errorAudioRef.current) {
-                errorAudioRef.current.pause();
-                errorAudioRef.current.src = '';
-            }
+		
+		return () => {
+			// Cleanup audio elements
+			if (successAudioRef.current) {
+				successAudioRef.current.pause();
+				successAudioRef.current.src = '';
+			}
+			if (errorAudioRef.current) {
+				errorAudioRef.current.pause();
+				errorAudioRef.current.src = '';
+			}
 			if (hotkeyAudioRef.current) {
 				hotkeyAudioRef.current.pause();
 				hotkeyAudioRef.current.src = '';
 			}
-        };
-    }, []);
+		};
+	}, []);
 	
 	// Load settings on component mount
 	useEffect(() => {
@@ -169,7 +199,7 @@ const App = () => {
 		});
 		
 		return () => {
-			// Cleanup would go here if needed
+
 		};
 	}, []);
 
@@ -208,73 +238,95 @@ const App = () => {
 				});
 				setIsClipping(false);
                 
-                // Play error sound
-                if (errorAudioRef.current) {
-                    errorAudioRef.current.currentTime = 0;
-                    errorAudioRef.current.play().catch(err => {
-                        console.error('Error playing error sound:', err);
-                    });
-                }
+				// Play error sound
+				if (errorAudioRef.current) {
+					errorAudioRef.current.currentTime = 0;
+					errorAudioRef.current.play().catch(err => {
+						console.error('Error playing error sound:', err);
+					});
+				}
                 
-                // Show error notification
-                setNotification({
-                    visible: true,
-                    message: `Clipping failed: ${result ? result.error : "Unknown error"}`,
-                    type: 'error'
-                });
+				// Show error notification
+				setNotification({
+					visible: true,
+					message: `Clipping failed: ${result ? result.error : "Unknown error"}`,
+					type: 'error'
+				});
 			}
 		} catch (error) {
 			console.error("Error during clipping:", error);
 			window.electron.log.error("Error during clipping", { error: error.toString() });
 			setIsClipping(false);
             
-            // Play error sound
-            if (errorAudioRef.current) {
-                errorAudioRef.current.currentTime = 0;
-                errorAudioRef.current.play().catch(err => {
-                    window.electron.log.error('Error playing error sound:', err);
-                });
-            }
+			// Play error sound
+			if (errorAudioRef.current) {
+				errorAudioRef.current.currentTime = 0;
+				errorAudioRef.current.play().catch(err => {
+					window.electron.log.error('Error playing error sound:', err);
+				});
+			}
             
-            // Show error notification
-            setNotification({
-                visible: true,
-                message: `Error during clipping: ${error.message}`,
-                type: 'error'
-            });
+			// Show error notification
+			setNotification({
+				visible: true,
+				message: `Error during clipping: ${error.message}`,
+				type: 'error'
+			});
 		}
 	};
     
-    // Close notification
-    const handleCloseNotification = () => {
-        setNotification(prev => ({ ...prev, visible: false }));
-    };
+	// Close notification
+	const handleCloseNotification = () => {
+		setNotification(prev => ({ ...prev, visible: false }));
+	};
 
 	return (
-		<Router>
-			<div className="app-container">
-				<Sidebar />
-				<main className="main-content">
-					<Routes>
-						<Route path="/" element={<HomePage />} />
-						<Route path="/shared" element={<SharedPage />} />
-						<Route path="/settings" element={<SettingsPage />} />
-						<Route path="/edit/:videoId" element={<EditPage />} />
-					</Routes>
-				</main>
-				<div className="record-button">
-					<button onClick={handleRecordClip} disabled={isClipping}>
-						{isClipping ? "Creating Clip..." : "Record Clip"}
-					</button>
-				</div>
-                <Notification
-                    visible={notification.visible}
-                    message={notification.message}
-                    type={notification.type}
-                    onClose={handleCloseNotification}
-                />
+		<div className="app-container">
+			<Sidebar />
+			<main className="main-content">
+				<Routes>
+					{/* Home is available to all authenticated users, including offline */}
+					<Route path="/" element={<HomePage />} />
+					
+					{/* Shared page requires authentication and is not available in offline mode */}
+					<Route 
+						path="/shared" 
+						element={
+							<ProtectedRoute requiresAuth={true} allowOffline={false}>
+								<SharedPage />
+							</ProtectedRoute>
+						} 
+					/>
+					
+					{/* Settings is available to all users */}
+					<Route path="/settings" element={<SettingsPage />} />
+					
+					{/* Edit page requires authentication but works in offline mode */}
+					<Route 
+						path="/edit/:videoId" 
+						element={
+							<ProtectedRoute requiresAuth={true} allowOffline={true}>
+								<EditPage />
+							</ProtectedRoute>
+						} 
+					/>
+					
+					{/* Default redirect to home */}
+					<Route path="*" element={<Navigate to="/" replace />} />
+				</Routes>
+			</main>
+			<div className="record-button">
+				<button onClick={handleRecordClip} disabled={isClipping}>
+					{isClipping ? "Creating Clip..." : "Record Clip"}
+				</button>
 			</div>
-		</Router>
+			<Notification
+				visible={notification.visible}
+				message={notification.message}
+				type={notification.type}
+				onClose={handleCloseNotification}
+			/>
+		</div>
 	);
 };
 
