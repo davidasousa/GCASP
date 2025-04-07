@@ -32,6 +32,9 @@ contextBridge.exposeInMainWorld('electron', {
 	
 	// Remove specific video
 	removeSpecificVideo: (filename) => ipcRenderer.invoke('remove-specific-video', filename),
+
+	// Upload specific video
+	uploadSpecificVideo: (filename) => ipcRenderer.invoke('upload-specific-video', filename),
 	
 	// Trigger video clipping with splicing
 	triggerClipVideo: (clipTimestamp, clipSettings) => ipcRenderer.invoke(

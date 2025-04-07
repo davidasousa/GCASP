@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
 
-const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete }) => {
+const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, onUpload }) => {
 	const [hasError, setHasError] = useState(false);
 	const [showDeletePrompt, setShowDeletePrompt] = useState(false);
+	const [showUploadPrompt, setShowUploadPrompt] = useState(false);
 	const navigate = useNavigate();
 
 	const handlePlayerReady = (player) => {
@@ -23,6 +24,10 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 		setShowDeletePrompt(true);
 	};
 
+	const handleUploadClick = () => {
+		setShowUploadPrompt(true);
+	};
+
 	const confirmDelete = async () => {
 		try {
 			const response = await window.electron.removeSpecificVideo(title);
@@ -35,9 +40,24 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 		setShowDeletePrompt(false);
 	};
 
+	const confirmUpload = async () => {
+		try {
+			const response = await window.electron.uploadSpecificVideo(title);
+			if (response.success && onUpload) {
+				onUpload(id);
+		}
+		} catch (error) {
+			console.error('Error Upload video:', error);
+		}
+		setShowUploadPrompt(false);
+	};
 
 	const cancelDelete = () => {
 		setShowDeletePrompt(false);
+	};
+
+	const cancelUpload = () => {
+		setShowUploadPrompt(false);
 	};
 
 	return (
@@ -66,6 +86,13 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 				>
 					Delete
 				</button>
+				<button
+					onClick={handleUploadClick}
+					className="upload-button"
+					aria-label={`Upload ${title}`}
+				>
+					Upload
+				</button>
 			</div>
 			{showDeletePrompt && (
 				<div className="delete-modal">
@@ -77,6 +104,21 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 							</button>
 							<button onClick={confirmDelete} className="delete-button">
 								Delete
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+			{showUploadPrompt && (
+				<div className="delete-modal">
+					<div className="modal-content">
+						<p>Upload "{title}"?</p>
+						<div className="modal-buttons">
+							<button onClick={cancelUpload} className="cancel-upload">
+								Cancel
+							</button>
+							<button onClick={confirmUpload} className="upload-button">
+								Upload
 							</button>
 						</div>
 					</div>

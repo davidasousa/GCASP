@@ -5,6 +5,7 @@ const HomePage = () => {
     const [videos, setVideos] = useState([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [showUploadConfirm, setShowUploadConfirm] = useState(false);
     const videosPerPage = 10;
 
     // Function to load videos from the folder.
@@ -16,7 +17,8 @@ const HomePage = () => {
             const processedVideos = localVideos.map(video => ({
                 id: video.id,
                 title: video.filename,
-                videoUrl: `gcasp://${video.id.replace('clip_', '')}/`
+                videoUrl: `gcasp://${video.id.replace('clip_', '')}/`,
+                isUploaded: false // Attribute For Uploading
             }));
             setVideos(processedVideos);
             setCurrentPage(1); // Reset to first page after refresh
@@ -47,6 +49,10 @@ const HomePage = () => {
         setShowDeleteConfirm(false);
     };
 
+    const cancelUpload = () => {
+        setShowUploadConfirm(false);
+    };
+
     // Load videos when the component mounts
     useEffect(() => {
         loadVideos();
@@ -54,6 +60,15 @@ const HomePage = () => {
 
     const handleDeleteVideo = (id) => {
         setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
+    };
+
+    // Function For Marking Upload
+    const handleUploadVideo = (id) => {
+        setVideos(prevVideos => 
+            prevVideos.map(video => 
+                video.id === id ? { ...video, isUploaded: true } : video
+            )
+        );
     };
 
     // Calculate slice of videos to show on current page.
@@ -104,7 +119,11 @@ const HomePage = () => {
             
             {videos.length > 0 ? (
                 <div>
-                    <VideoGrid videos={currentVideos} onDelete={handleDeleteVideo} />
+                    <VideoGrid 
+                        videos={currentVideos} 
+                        onDelete={handleDeleteVideo} 
+                        onUpload={handleUploadVideo} // Button For Uploading
+                    />
                     <div className="pagination">
                         <button onClick={handlePrevPage} disabled={currentPage === 1}>
                             Previous

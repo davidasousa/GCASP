@@ -573,6 +573,19 @@ export function setupIpcHandlers() {
 		return { success: false, error: 'File not found' };
 	});
 
+	// Delete a specific video 
+	logger.debug('Registering upload-specific-video handler');
+	ipcMain.handle('upload-specific-video', (event, filename) => {
+		logger.info(`upload-specific-video handler called for file: ${filename}`);
+		
+		const result = {
+			success: true,
+		};
+		
+		logger.debug('Upload Succeeded', result);
+		return result;
+	});
+
 	// Get video metadata (for clips)
 	logger.debug('Registering get-video-metadata handler');
 	ipcMain.handle('get-video-metadata', async (event, filename) => {
