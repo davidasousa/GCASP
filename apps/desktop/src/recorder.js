@@ -289,19 +289,13 @@ async function recordSegment() {
 		const cropFilter = `crop=${captureWidth}:${captureHeight}:${selectedDisplay.bounds.x}:${selectedDisplay.bounds.y}`;
 
 		const captureArgs = [
-		// Video input (screen)
-		'-f', 'gdigrab',
-		'-framerate', config.fps.toString(),
-		'-i', 'desktop',
-		
-		// Audio input
-		'-f', 'dshow',
-		'-i', 'audio=virtual-audio-capturer',
-
-		// Filters
-		'-filter:v', cropFilter,
-		'-draw_mouse', '1',
+  			'-f', 'gdigrab',
+  			'-framerate', config.fps.toString(),
+  			'-i', 'desktop',
+  			'-draw_mouse', '1',
+  			'-vf', cropFilter,
 		];
+
 
 		// Build FFmpeg command for this segment
 		const args = [
@@ -309,14 +303,11 @@ async function recordSegment() {
 			'-loglevel', 'error',
 			'-y',
 			...captureArgs,
-			'-t', SEGMENT_LENGTH.toString(),
+			'-t', SEGMENT_LENGTH.toString(), // Segment length in seconds
 			'-c:v', 'libx264',
-			'-preset', 'ultrafast',
-			'-pix_fmt', 'yuv420p',
-			'-c:a', 'aac',                 // Encode audio with AAC
-			'-b:a', '128k',                // Audio bitrate
-			'-shortest',                  // Ensures the output stops with the shortest stream (audio/video)
-		  ];		  
+			'-preset', 'ultrafast', 
+			'-pix_fmt', 'yuv420p'
+		];
 		
 		// Only add scaling if the selected resolution is different from the capture dimensions
 		if (config.width !== captureWidth || config.height !== captureHeight) {
