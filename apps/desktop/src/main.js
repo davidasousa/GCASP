@@ -4,6 +4,7 @@ import { net } from 'electron';
 import fs from 'fs';
 import { setupVideoProtocol } from './videoProtocol';
 import { setupIpcHandlers, cleanupIpcHandlers } from './ipcHandlers';
+import { setupAuthIpcHandlers } from './ipcAuthHandlers';
 import { ensureAppDirectories, deleteRecordings } from './utilities';
 import { stopContinuousRecording } from './recorder';
 import { setupRendererLogging, getModuleLogger } from './logger';
@@ -155,6 +156,9 @@ app.whenReady().then(async() => {
 	setupIpcHandlers();
 	logger.info('IPC handlers configured and continuous recording started');
 
+	// Setup authentication handlers
+	setupAuthIpcHandlers();
+	
 	// Create the main window
 	logger.debug('Creating main application window...');
 	mainWindow = new BrowserWindow({

@@ -64,6 +64,13 @@ contextBridge.exposeInMainWorld('electron', {
 	onHotkeyPressed: (callback) => 
 		ipcRenderer.on('hotkey-pressed', () => callback()),
 
+	// Authentication methods
+	auth: {
+		login: (credentials) => ipcRenderer.invoke('auth-login', credentials),
+		register: (userData) => ipcRenderer.invoke('auth-register', userData),
+		validateToken: (token) => ipcRenderer.invoke('auth-validate-token', token)
+	},
+	
 	// Logging functions for renderer process
 	log: {
 		error: (message, meta = {}) => ipcRenderer.invoke('log', { level: 'error', message, meta }),
