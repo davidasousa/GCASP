@@ -8,6 +8,8 @@ export const AuthProvider = ({ children }) => {
 	const [loading, setLoading] = useState(true);
 	const [isOfflineMode, setIsOfflineMode] = useState(false);
 	const [error, setError] = useState(null);
+	// Add state for login modal
+	const [showLoginModal, setShowLoginModal] = useState(false);
 
 	// Load user from storage on startup
 	useEffect(() => {
@@ -147,15 +149,27 @@ export const AuthProvider = ({ children }) => {
 	// Toggle offline mode
 	const toggleOfflineMode = useCallback((enabled) => {
 		setIsOfflineMode(enabled);
-		storage.setOfflineMode(enabled);
 		
+		// Only save to storage if we're specifically turning it on
 		if (enabled) {
+			storage.setOfflineMode(true);
 			// When enabling offline mode, clear current user
 			setCurrentUser(null);
 			window.electron.log.info('Offline mode enabled');
 		} else {
+			storage.setOfflineMode(false);
 			window.electron.log.info('Offline mode disabled');
 		}
+	}, []);
+
+	// Function to show the login modal
+	const openLoginModal = useCallback(() => {
+		setShowLoginModal(true);
+	}, []);
+
+	// Function to hide the login modal
+	const closeLoginModal = useCallback(() => {
+		setShowLoginModal(false);
 	}, []);
 	
 	// Provide auth context values
@@ -168,7 +182,10 @@ export const AuthProvider = ({ children }) => {
 		login,
 		register,
 		logout,
-		toggleOfflineMode
+		toggleOfflineMode,
+		openLoginModal,
+		closeLoginModal,
+		showLoginModal
 	};
 	
 	return (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import HomePage from './pages/HomePage';
@@ -9,6 +9,7 @@ import SettingsPage from './pages/SettingsPage';
 import EditPage from './pages/EditPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import LoginModal from './components/LoginModal';
 import Notification from './components/Notification';
 import successSound from './resources/clip-success.mp3';
 import errorSound from './resources/clip-error.mp3';
@@ -59,6 +60,9 @@ const AppLayout = () => {
 	const successAudioRef = useRef(null);
 	const errorAudioRef = useRef(null);
 	const hotkeyAudioRef = useRef(null);
+	
+	// Get auth context and login modal state
+	const { showLoginModal, closeLoginModal } = useAuth();
     
 	// Initialize audio elements
 	useEffect(() => {
@@ -127,7 +131,7 @@ const AppLayout = () => {
 		window.electron.onSettingsChanged(handleSettingsChanged);
 		
 		return () => {
-
+			// Cleanup would go here
 		};
 	}, []);
 	
@@ -199,7 +203,7 @@ const AppLayout = () => {
 		});
 		
 		return () => {
-
+			// Cleanup would go here
 		};
 	}, []);
 
@@ -326,6 +330,9 @@ const AppLayout = () => {
 				type={notification.type}
 				onClose={handleCloseNotification}
 			/>
+			{showLoginModal && (
+				<LoginModal onClose={closeLoginModal} />
+			)}
 		</div>
 	);
 };

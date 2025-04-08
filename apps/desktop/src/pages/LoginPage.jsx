@@ -18,15 +18,15 @@ const LoginPage = () => {
 	const [generalError, setGeneralError] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
 	
-	const { login, toggleOfflineMode, isAuthenticated, isOfflineMode, error: authError } = useAuth();
+	const { login, toggleOfflineMode, isAuthenticated, error: authError } = useAuth();
 	const navigate = useNavigate();
 	
-	// If already authenticated or in offline mode, redirect to home
+	// MODIFIED: Only redirect if authenticated, not if in offline mode
 	useEffect(() => {
-		if (isAuthenticated || isOfflineMode) {
+		if (isAuthenticated) {
 			navigate('/');
 		}
-	}, [isAuthenticated, isOfflineMode, navigate]);
+	}, [isAuthenticated, navigate]);
 	
 	// Update general error from auth context
 	useEffect(() => {
@@ -87,6 +87,7 @@ const LoginPage = () => {
 	
 	const handleOfflineMode = () => {
 		toggleOfflineMode(true);
+		navigate('/');
 	};
 	
 	const navigateToRegister = () => {

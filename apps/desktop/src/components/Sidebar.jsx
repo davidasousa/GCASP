@@ -1,9 +1,21 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import logo from '../resources/gcasp-text-logo.png';
 import '../styles/index.css';
 
 const Sidebar = () => {
+    // Use openLoginModal instead of showLoginPrompt
+    const { isAuthenticated, isOfflineMode, openLoginModal } = useAuth();
+
+    const handleProtectedLink = (e, requiresAuth, allowOffline) => {
+        if (requiresAuth && (!isAuthenticated || (!allowOffline && isOfflineMode))) {
+            e.preventDefault();
+            // Open the modal instead of navigating to login page
+            openLoginModal();
+        }
+    };
+
     return (
         <nav className="sidebar">
             <div className="logo">
@@ -24,6 +36,7 @@ const Sidebar = () => {
                         to="/shared"
                         className={({ isActive }) => isActive ? 'active' : ''}
                         aria-label="Shared Clips"
+                        onClick={(e) => handleProtectedLink(e, true, false)}
                     >
                         Shared
                     </NavLink>
