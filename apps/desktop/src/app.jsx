@@ -131,7 +131,7 @@ const AppLayout = () => {
 		window.electron.onSettingsChanged(handleSettingsChanged);
 		
 		return () => {
-			// Cleanup would go here
+
 		};
 	}, []);
 	
@@ -142,11 +142,8 @@ const AppLayout = () => {
 			window.electron.log.info('New recording received', { videoInfo });
 		};
 
-		// Set up the event listener
-		window.electron.onNewRecording(handleNewRecording);
-		
-		// Listen for clip completion
-		window.electron.onClipDone((filename) => {
+		// Clip completion handler
+		const handleClipDone = (filename) => {
 			console.log('Clip created:', filename);
 			window.electron.log.info('Clip created', { filename });
 			setIsClipping(false);
@@ -165,10 +162,10 @@ const AppLayout = () => {
 				message: 'Clip created successfully!',
 				type: 'success'
 			});
-		});
+		};
 		
-		// Add this new event listener for clip errors
-		window.electron.onClipError((errorData) => {
+		// Clip error handler
+		const handleClipError = (errorData) => {
 			console.error('Clip error:', errorData);
 			window.electron.log.error('Clip error', { error: errorData });
 			setIsClipping(false);
@@ -187,9 +184,10 @@ const AppLayout = () => {
 				message: `Clipping failed: ${errorData.error || 'Unknown error'}`,
 				type: 'error'
 			});
-		});
+		};
 
-		window.electron.onHotkeyPressed(() => {
+		// Hotkey press handler
+		const handleHotkeyPressed = () => {
 			console.log('Hotkey pressed, playing sound');
 			window.electron.log.info('Hotkey pressed, playing sound');
 			
@@ -200,10 +198,20 @@ const AppLayout = () => {
 					console.error('Error playing hotkey sound:', err);
 				});
 			}
-		});
+		};
+
+		// Register all event listeners
+		window.electron.onNewRecording(handleNewRecording);
+		window.electron.onClipDone(handleClipDone);
+		window.electron.onClipError(handleClipError);
+		window.electron.onHotkeyPressed(handleHotkeyPressed);
 		
 		return () => {
-			// Cleanup would go here
+			// Remove all event listeners when component unmounts
+			window.electron.onNewRecording(null);
+			window.electron.onClipDone(null);
+			window.electron.onClipError(null);
+			window.electron.onHotkeyPressed(null);
 		};
 	}, []);
 

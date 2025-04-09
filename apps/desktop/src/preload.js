@@ -45,24 +45,57 @@ contextBridge.exposeInMainWorld('electron', {
 	saveEditedVideo: (params) => ipcRenderer.invoke('save-edited-video', params),
 	
 	// Listen for new recordings
-	onNewRecording: (callback) => 
-		ipcRenderer.on('new-recording', (event, data) => callback(data)),
+	onNewRecording: (callback) => {
+		if (callback === null) {
+			// Remove listener when null is passed
+			ipcRenderer.removeAllListeners('new-recording');
+			return;
+		}
+		// Remove any existing listeners to prevent duplicates
+		ipcRenderer.removeAllListeners('new-recording');
+		// Add the new listener
+		ipcRenderer.on('new-recording', (event, data) => callback(data));
+	},
 	
 	// Listen for recording completion
-	onRecordingDone: (callback) => 
-		ipcRenderer.on('recording-done', (event, data) => callback(data)),
-		
+	onRecordingDone: (callback) => {
+		if (callback === null) {
+			ipcRenderer.removeAllListeners('recording-done');
+			return;
+		}
+		ipcRenderer.removeAllListeners('recording-done');
+		ipcRenderer.on('recording-done', (event, data) => callback(data));
+	},
+	
 	// Listen for clip completion
-	onClipDone: (callback) => 
-		ipcRenderer.on('clip-done', (event, data) => callback(data)),
-
-	// Add this new listener for clip errors
-	onClipError: (callback) =>
-		ipcRenderer.on('clip-error', (event, data) => callback(data)),
+	onClipDone: (callback) => {
+		if (callback === null) {
+			ipcRenderer.removeAllListeners('clip-done');
+			return;
+		}
+		ipcRenderer.removeAllListeners('clip-done');
+		ipcRenderer.on('clip-done', (event, data) => callback(data));
+	},
+	
+	// Listen for clip errors
+	onClipError: (callback) => {
+		if (callback === null) {
+			ipcRenderer.removeAllListeners('clip-error');
+			return;
+		}
+		ipcRenderer.removeAllListeners('clip-error');
+		ipcRenderer.on('clip-error', (event, data) => callback(data));
+	},
 
 	// Listen for hotkey press events
-	onHotkeyPressed: (callback) => 
-		ipcRenderer.on('hotkey-pressed', () => callback()),
+	onHotkeyPressed: (callback) => {
+		if (callback === null) {
+			ipcRenderer.removeAllListeners('hotkey-pressed');
+			return;
+		}
+		ipcRenderer.removeAllListeners('hotkey-pressed');
+		ipcRenderer.on('hotkey-pressed', () => callback());
+	},
 
 	// Authentication methods
 	auth: {
