@@ -88,6 +88,18 @@
     transition: background 0.2s, transform 0.1s;
 }
 
+.video-header .upload-button {
+    position: absolute;
+    left: 0;
+    top: 0;
+    background: blue;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
 .video-header .edit-button:hover {
     background: #0069d9;
 }

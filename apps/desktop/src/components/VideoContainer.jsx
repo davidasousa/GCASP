@@ -24,10 +24,6 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, o
 		setShowDeletePrompt(true);
 	};
 
-	const handleUploadClick = () => {
-		setShowUploadPrompt(true);
-	};
-
 	const confirmDelete = async () => {
 		try {
 			const response = await window.electron.removeSpecificVideo(title);
@@ -40,6 +36,16 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, o
 		setShowDeletePrompt(false);
 	};
 
+	const cancelDelete = () => {
+		setShowDeletePrompt(false);
+	};
+
+	// Upload 
+
+	const handleUploadClick = () => {
+		setShowUploadPrompt(true);
+	};
+
 	const confirmUpload = async () => {
 		try {
 			const response = await window.electron.uploadSpecificVideo(title);
@@ -50,10 +56,6 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, o
 			console.error('Error Upload video:', error);
 		}
 		setShowUploadPrompt(false);
-	};
-
-	const cancelDelete = () => {
-		setShowDeletePrompt(false);
 	};
 
 	const cancelUpload = () => {
