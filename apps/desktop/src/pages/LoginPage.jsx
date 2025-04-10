@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { validateEmail } from '../utils/validation';
 import '../styles/login-page.css';
-
-// Input validation and sanitization helpers
-const validateEmail = (email) => {
-	const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-	return re.test(String(email).toLowerCase());
-};
 
 const LoginPage = () => {
 	const [email, setEmail] = useState('');
@@ -21,7 +16,7 @@ const LoginPage = () => {
 	const { login, toggleOfflineMode, isAuthenticated, error: authError } = useAuth();
 	const navigate = useNavigate();
 	
-	// MODIFIED: Only redirect if authenticated, not if in offline mode
+	// Only redirect if authenticated, not if in offline mode
 	useEffect(() => {
 		if (isAuthenticated) {
 			navigate('/');
@@ -42,20 +37,15 @@ const LoginPage = () => {
 		setGeneralError('');
 		
 		// Validate email
-		if (!email.trim()) {
-			setEmailError('Email is required');
-			isValid = false;
-		} else if (!validateEmail(email)) {
-			setEmailError('Please enter a valid email address');
+		const emailValidation = validateEmail(email);
+		if (!emailValidation.valid) {
+			setEmailError(emailValidation.message);
 			isValid = false;
 		}
 		
-		// Validate password
+		// Validate password (just check if it's provided)
 		if (!password) {
 			setPasswordError('Password is required');
-			isValid = false;
-		} else if (password.length < 6) {
-			setPasswordError('Password must be at least 6 characters');
 			isValid = false;
 		}
 		
@@ -79,7 +69,7 @@ const LoginPage = () => {
 			await login(email, password, rememberMe);
 		} catch (error) {
 			console.error('Login error:', error);
-			setGeneralError('Invalid email or password');
+			setGeneralError(error.message || 'Invalid email or password');
 		} finally {
 			setIsLoading(false);
 		}
@@ -100,8 +90,11 @@ const LoginPage = () => {
 		setEmail(value);
 		
 		// Real-time validation if there was an error
-		if (emailError && validateEmail(value)) {
-			setEmailError('');
+		if (emailError) {
+			const validation = validateEmail(value);
+			if (validation.valid) {
+				setEmailError('');
+			}
 		}
 	};
 	
@@ -109,8 +102,8 @@ const LoginPage = () => {
 		const value = e.target.value.slice(0, 128); // Limit to 128 chars
 		setPassword(value);
 		
-		// Real-time validation if there was an error
-		if (passwordError && value.length >= 6) {
+		// Clear error when user types
+		if (passwordError && value) {
 			setPasswordError('');
 		}
 	};

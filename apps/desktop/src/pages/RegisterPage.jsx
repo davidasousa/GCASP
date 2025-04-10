@@ -1,19 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { validateEmail, validateUsername, validatePassword } from '../utils/validation';
 import '../styles/login-page.css';
-
-// Input validation helpers
-const validateEmail = (email) => {
-	const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-	return re.test(String(email).toLowerCase());
-};
-
-const validateUsername = (username) => {
-	// Alphanumeric, underscores, hyphens, 3-20 characters
-	const re = /^[a-zA-Z0-9_-]{3,20}$/;
-	return re.test(username);
-};
 
 const RegisterPage = () => {
 	const [username, setUsername] = useState('');
@@ -26,11 +15,12 @@ const RegisterPage = () => {
 	const [confirmPasswordError, setConfirmPasswordError] = useState('');
 	const [generalError, setGeneralError] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
+	const [passwordStrength, setPasswordStrength] = useState(0); // 0-3
 	
 	const { register, isAuthenticated, error: authError } = useAuth();
 	const navigate = useNavigate();
 	
-	// MODIFIED: Only redirect if authenticated, not if in offline mode
+	// Only redirect if authenticated, not if in offline mode
 	useEffect(() => {
 		if (isAuthenticated) {
 			navigate('/');
@@ -44,6 +34,34 @@ const RegisterPage = () => {
 		}
 	}, [authError]);
 	
+	// Calculate password strength for visual indicator
+	useEffect(() => {
+		if (!password) {
+			setPasswordStrength(0);
+			return;
+		}
+		
+		let score = 0;
+		
+		// Length check
+		if (password.length >= 8) score++;
+		
+		// Complexity check (count character types)
+		let types = 0;
+		if (/[a-z]/.test(password)) types++;
+		if (/[A-Z]/.test(password)) types++;
+		if (/[0-9]/.test(password)) types++;
+		if (/[^A-Za-z0-9]/.test(password)) types++;
+		
+		if (types >= 3) score++;
+		
+		// Unique character check
+		const uniqueChars = new Set(password.split('')).size;
+		if (uniqueChars >= 6) score++;
+		
+		setPasswordStrength(score);
+	}, [password]);
+	
 	const validateForm = () => {
 		let isValid = true;
 		setUsernameError('');
@@ -53,29 +71,23 @@ const RegisterPage = () => {
 		setGeneralError('');
 		
 		// Validate username
-		if (!username.trim()) {
-			setUsernameError('Username is required');
-			isValid = false;
-		} else if (!validateUsername(username)) {
-			setUsernameError('Username must be 3-20 characters using only letters, numbers, underscores, or hyphens');
+		const usernameValidation = validateUsername(username);
+		if (!usernameValidation.valid) {
+			setUsernameError(usernameValidation.message);
 			isValid = false;
 		}
 		
 		// Validate email
-		if (!email.trim()) {
-			setEmailError('Email is required');
-			isValid = false;
-		} else if (!validateEmail(email)) {
-			setEmailError('Please enter a valid email address');
+		const emailValidation = validateEmail(email);
+		if (!emailValidation.valid) {
+			setEmailError(emailValidation.message);
 			isValid = false;
 		}
 		
 		// Validate password
-		if (!password) {
-			setPasswordError('Password is required');
-			isValid = false;
-		} else if (password.length < 6) {
-			setPasswordError('Password must be at least 6 characters');
+		const passwordValidation = validatePassword(password);
+		if (!passwordValidation.valid) {
+			setPasswordError(passwordValidation.message);
 			isValid = false;
 		}
 		
@@ -105,7 +117,7 @@ const RegisterPage = () => {
 		setIsLoading(true);
 		
 		try {
-			await register(username, email, password);
+			await register(username, email, password, confirmPassword);
 			// Registration successful, redirect to login
 			navigate('/login', { state: { registrationSuccess: true } });
 		} catch (error) {
@@ -126,8 +138,11 @@ const RegisterPage = () => {
 		const value = e.target.value.slice(0, 20); // Limit to 20 chars
 		setUsername(value);
 		
-		if (usernameError && validateUsername(value)) {
-			setUsernameError('');
+		if (usernameError) {
+			const validation = validateUsername(value);
+			if (validation.valid) {
+				setUsernameError('');
+			}
 		}
 	};
 	
@@ -135,8 +150,11 @@ const RegisterPage = () => {
 		const value = e.target.value.slice(0, 100); // Limit to 100 chars
 		setEmail(value);
 		
-		if (emailError && validateEmail(value)) {
-			setEmailError('');
+		if (emailError) {
+			const validation = validateEmail(value);
+			if (validation.valid) {
+				setEmailError('');
+			}
 		}
 	};
 	
@@ -144,8 +162,11 @@ const RegisterPage = () => {
 		const value = e.target.value.slice(0, 128); // Limit to 128 chars
 		setPassword(value);
 		
-		if (passwordError && value.length >= 6) {
-			setPasswordError('');
+		if (passwordError) {
+			const validation = validatePassword(value);
+			if (validation.valid) {
+				setPasswordError('');
+			}
 		}
 		
 		// Check password confirmation match if already entered
@@ -162,6 +183,30 @@ const RegisterPage = () => {
 		
 		if (confirmPasswordError && value === password) {
 			setConfirmPasswordError('');
+		}
+	};
+	
+	// Get strength indicator class
+	const getStrengthClass = () => {
+		if (password.length === 0) return '';
+		switch (passwordStrength) {
+			case 0: return 'strength-weak';
+			case 1: return 'strength-fair';
+			case 2: return 'strength-good';
+			case 3: return 'strength-strong';
+			default: return '';
+		}
+	};
+	
+	// Get strength indicator text
+	const getStrengthText = () => {
+		if (password.length === 0) return '';
+		switch (passwordStrength) {
+			case 0: return 'Weak';
+			case 1: return 'Fair';
+			case 2: return 'Good';
+			case 3: return 'Strong';
+			default: return '';
 		}
 	};
 	
@@ -233,9 +278,17 @@ const RegisterPage = () => {
 							aria-describedby={passwordError ? 'password-error' : undefined}
 							required
 							autoComplete="new-password"
-							placeholder="Minimum 6 characters"
+							placeholder="Minimum 8 characters"
 							maxLength={128}
 						/>
+						{password && (
+							<div className={`password-strength ${getStrengthClass()}`}>
+								<div className="strength-bar">
+									<div className="strength-indicator" style={{ width: `${(passwordStrength / 3) * 100}%` }}></div>
+								</div>
+								<span className="strength-text">{getStrengthText()}</span>
+							</div>
+						)}
 						{passwordError && (
 							<div id="password-error" className="field-error">
 								{passwordError}
