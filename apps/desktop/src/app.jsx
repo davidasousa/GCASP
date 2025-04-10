@@ -1,67 +1,281 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
-import VideoGrid from './components/VideoGrid';
-import './app.css';
-
-// Importing IPC Handler
-import { triggerIPC, triggerFetchVideo } from './triggerIPC';
-
+import HomePage from './pages/HomePage';
+import SharedPage from './pages/SharedPage';
+import SettingsPage from './pages/SettingsPage';
+import EditPage from './pages/EditPage';
+import Notification from './components/Notification';
+import successSound from './resources/clip-success.mp3';
+import errorSound from './resources/clip-error.mp3';
+import hotkeySound from './resources/hotkey-press.mp3';
+import './styles/index.css';
 
 const App = () => {
-	const [currentView, setCurrentView] = useState('home');
-	const [videos, setVideos] = useState([]);
+	// State for clip creation
+	const [isClipping, setIsClipping] = useState(false);
+	
+	// State for settings
+	const [settings, setSettings] = useState(null);
+    
+    // State for notification
+    const [notification, setNotification] = useState({
+        visible: false,
+        message: '',
+        type: 'success' // 'success' or 'error'
+    });
+    
+    // Audio references
+    const successAudioRef = useRef(null);
+    const errorAudioRef = useRef(null);
+	const hotkeyAudioRef = useRef(null);
+    
+    // Initialize audio elements
+    useEffect(() => {
+        // Create success sound
+        successAudioRef.current = new Audio(successSound);
+        successAudioRef.current.volume = 0.5; // Set volume to 50%
+        
+        // Create error sound
+        errorAudioRef.current = new Audio(errorSound);
+        errorAudioRef.current.volume = 0.5; // Set volume to 50%
 
-
-	const getVideo = async (path) => {
-		try {
-			// Trigger the video fetch (if necessary)
-			triggerFetchVideo(path);
-			// Fetch the video from the server
-			const response = await fetch('http://localhost:3001/video');
-			const contentType = response.headers.get('Content-Type');
-			if (!contentType || !contentType.includes('video/mp4')) {
-				throw new Error('Invalid video format. Expected video/mp4 but received ' + contentType);
-			} else {
-				console.log('Valid video');
+		// Create hotkey sound
+		hotkeyAudioRef.current = new Audio(hotkeySound);
+		hotkeyAudioRef.current.volume = 0.25; // Set volume to 25%
+        
+        return () => {
+            // Cleanup audio elements
+            if (successAudioRef.current) {
+                successAudioRef.current.pause();
+                successAudioRef.current.src = '';
+            }
+            if (errorAudioRef.current) {
+                errorAudioRef.current.pause();
+                errorAudioRef.current.src = '';
+            }
+			if (hotkeyAudioRef.current) {
+				hotkeyAudioRef.current.pause();
+				hotkeyAudioRef.current.src = '';
 			}
-			// Convert the response into a Blob and create an object URL
-			const videoBlob = await response.blob();
-			const videoURL = URL.createObjectURL(videoBlob); 
-			return videoURL; // Return the video URL
+        };
+    }, []);
+	
+	// Load settings on component mount
+	useEffect(() => {
+		const loadSettings = async () => {
+			try {
+				// Get settings once when component loads, using cached settings
+				const settings = await window.electron.getSettings();
+				
+				if (settings) {
+					console.log('Initial settings loaded');
+					window.electron.log.info('Initial settings loaded');
+					
+					// Update state with initial settings
+					setSettings(settings);
+					console.log('Updating settings in App component', settings);
+					window.electron.log.debug('Updating settings in App component', settings);
+				}
+			} catch (error) {
+				console.error('Error loading settings:', error);
+				window.electron.log.error('Error loading settings in App component', { error: error.toString() });
+			}
+		};
+		
+		loadSettings();
+		
+		// Add a listener for settings changes
+		const handleSettingsChanged = (newSettings) => {
+			console.log('Settings changed event received in App component', newSettings);
+			window.electron.log.debug('Settings changed event received in App component', newSettings);
+			if (newSettings) {
+				setSettings(newSettings);
+			}
+		};
+		
+		window.electron.onSettingsChanged(handleSettingsChanged);
+		
+		return () => {
+
+		};
+	}, []);
+	
+	// Listen for new recordings from the main process
+	useEffect(() => {
+		const handleNewRecording = (videoInfo) => {
+			console.log('New recording received:', videoInfo);
+			window.electron.log.info('New recording received', { videoInfo });
+		};
+
+		// Set up the event listener
+		window.electron.onNewRecording(handleNewRecording);
+		
+		// Listen for clip completion
+		window.electron.onClipDone((filename) => {
+			console.log('Clip created:', filename);
+			window.electron.log.info('Clip created', { filename });
+			setIsClipping(false);
+			
+			// Play success sound
+			if (successAudioRef.current) {
+				successAudioRef.current.currentTime = 0;
+				successAudioRef.current.play().catch(err => {
+					console.error('Error playing success sound:', err);
+				});
+			}
+			
+			// Show success notification
+			setNotification({
+				visible: true,
+				message: 'Clip created successfully!',
+				type: 'success'
+			});
+		});
+		
+		// Add this new event listener for clip errors
+		window.electron.onClipError((errorData) => {
+			console.error('Clip error:', errorData);
+			window.electron.log.error('Clip error', { error: errorData });
+			setIsClipping(false);
+			
+			// Play error sound
+			if (errorAudioRef.current) {
+				errorAudioRef.current.currentTime = 0;
+				errorAudioRef.current.play().catch(err => {
+					console.error('Error playing error sound:', err);
+				});
+			}
+			
+			// Show error notification
+			setNotification({
+				visible: true,
+				message: `Clipping failed: ${errorData.error || 'Unknown error'}`,
+				type: 'error'
+			});
+		});
+
+		window.electron.onHotkeyPressed(() => {
+			console.log('Hotkey pressed, playing sound');
+			window.electron.log.info('Hotkey pressed, playing sound');
+			
+			// Play hotkey sound
+			if (hotkeyAudioRef.current) {
+				hotkeyAudioRef.current.currentTime = 0;
+				hotkeyAudioRef.current.play().catch(err => {
+					console.error('Error playing hotkey sound:', err);
+				});
+			}
+		});
+		
+		return () => {
+			// Cleanup would go here if needed
+		};
+	}, []);
+
+	// Handler for recording button - uses splicing approach
+	const handleRecordClip = async () => {
+		if (isClipping) {
+			console.log("Already creating a clip");
+			window.electron.log.warn("Record button clicked while already creating a clip");
+			return;
+		}
+		
+		setIsClipping(true);
+		window.electron.log.info("Record clip button clicked");
+		
+		try {
+			// Generate a timestamp for the clip
+			const timestamp = new Date().toISOString()
+				.replace(/[:.]/g, '-')
+				.replace('T', '_')
+				.replace('Z', '');
+			
+			// Use settings from state rather than loading from disk
+			const clipSettings = {
+				clipLength: settings?.recordingLength || 20
+			};
+			
+			window.electron.log.debug("Creating clip with settings", clipSettings);
+			
+			// Trigger the clip creation
+			const result = await window.electron.triggerClipVideo(timestamp, clipSettings);
+			
+			if (!result || !result.success) {
+				console.error("Clipping failed:", result ? result.error : "Unknown error");
+				window.electron.log.error("Clipping failed", { 
+					error: result ? result.error : "Unknown error" 
+				});
+				setIsClipping(false);
+                
+                // Play error sound
+                if (errorAudioRef.current) {
+                    errorAudioRef.current.currentTime = 0;
+                    errorAudioRef.current.play().catch(err => {
+                        console.error('Error playing error sound:', err);
+                    });
+                }
+                
+                // Show error notification
+                setNotification({
+                    visible: true,
+                    message: `Clipping failed: ${result ? result.error : "Unknown error"}`,
+                    type: 'error'
+                });
+			}
 		} catch (error) {
-			console.error('Error fetching video:', error);
+			console.error("Error during clipping:", error);
+			window.electron.log.error("Error during clipping", { error: error.toString() });
+			setIsClipping(false);
+            
+            // Play error sound
+            if (errorAudioRef.current) {
+                errorAudioRef.current.currentTime = 0;
+                errorAudioRef.current.play().catch(err => {
+                    window.electron.log.error('Error playing error sound:', err);
+                });
+            }
+            
+            // Show error notification
+            setNotification({
+                visible: true,
+                message: `Error during clipping: ${error.message}`,
+                type: 'error'
+            });
 		}
 	};
-	useEffect(() => {
-		const loadVideos = async () => {
-		const videoURL = await getVideo('videos/output.mp4'); // Pass the appropriate path here
-		const loadVideos = [
-				{ id: 1, title: 'Video 1', videoUrl: videoURL },
-			];
-			setVideos(loadVideos);
-		};
-		loadVideos();
-	}, []); // This runs only once on mount
+    
+    // Close notification
+    const handleCloseNotification = () => {
+        setNotification(prev => ({ ...prev, visible: false }));
+    };
 
-
-
-	const frontPageUI = (
+	return (
+		<Router>
 			<div className="app-container">
-			<Sidebar currentView={currentView} onChangeView={setCurrentView} />
-			<div className="main-content">
-			{currentView === 'home' && <VideoGrid videos={videos}/>}
-			{currentView === 'shared' && <div>Shared Clips(Coming Soon)</div>}
-			{currentView === 'settings' && <div>Settings (Coming Soon)</div>}
+				<Sidebar />
+				<main className="main-content">
+					<Routes>
+						<Route path="/" element={<HomePage />} />
+						<Route path="/shared" element={<SharedPage />} />
+						<Route path="/settings" element={<SettingsPage />} />
+						<Route path="/edit/:videoId" element={<EditPage />} />
+					</Routes>
+				</main>
+				<div className="record-button">
+					<button onClick={handleRecordClip} disabled={isClipping}>
+						{isClipping ? "Creating Clip..." : "Record Clip"}
+					</button>
+				</div>
+                <Notification
+                    visible={notification.visible}
+                    message={notification.message}
+                    type={notification.type}
+                    onClose={handleCloseNotification}
+                />
 			</div>
-			<div className="record-button">
-			<button onClick={() => triggerIPC('trigger-record')}>
-			Trigger IPC
-			</button>
-			</div>
-			</div>
-			);
-
-	return frontPageUI;
+		</Router>
+	);
 };
 
 export default App;

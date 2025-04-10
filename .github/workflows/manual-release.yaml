@@ -1,0 +1,63 @@
+name: Manual Release Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Update Root Version
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          Write-Host "Updating root package.json to version $version"
+          $packageJson = Get-Content -Path package.json -Raw | ConvertFrom-Json
+          $packageJson.version = $version
+          $packageJson | ConvertTo-Json -Depth 100 | Set-Content -Path package.json
+      
+      - name: Update Desktop Version
+        run: |
+          $version = "${{ github.event.inputs.version }}"
+          Write-Host "Updating apps/desktop/package.json to version $version"
+          $desktopPackageJson = Get-Content -Path apps/desktop/package.json -Raw | ConvertFrom-Json
+          $desktopPackageJson.version = $version
+          $desktopPackageJson | ConvertTo-Json -Depth 100 | Set-Content -Path apps/desktop/package.json
+      
+      - name: Install Dependencies (Desktop)
+        working-directory: apps/desktop
+        run: npm ci
+      
+      - name: Build Installer (Desktop)
+        working-directory: apps/desktop
+        run: npm run make:installer
+      
+      - name: Build ZIP Package (Desktop)
+        working-directory: apps/desktop
+        run: npm run make:zip
+      
+      - name: Upload Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: GCASP-Installer
+          path: apps/desktop/out/make/squirrel.windows/x64/GCASP-${{ github.event.inputs.version }} Setup.exe
+      
+      - name: Upload ZIP Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: GCASP-ZIP
+          path: apps/desktop/out/make/zip/win32/x64/GCASP-win32-x64-${{ github.event.inputs.version }}.zip

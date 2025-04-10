@@ -53,5 +53,10 @@ module.exports = [
     {
       test: /\.(mp4|webm|ogg)$/i,
       type: 'asset/resource'
-    }
+    },
+    // Loader for audio files
+    {
+      test: /\.(mp3|wav|ogg)$/i,
+      type: 'asset/resource'
+    },
 ];
