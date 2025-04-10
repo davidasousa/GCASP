@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
@@ -16,26 +16,57 @@ import errorSound from './resources/clip-error.mp3';
 import hotkeySound from './resources/hotkey-press.mp3';
 import './styles/index.css';
 
+// Recording Manager component to control recording based on route
+const RecordingManager = ({ children }) => {
+	const location = useLocation();
+	
+	useEffect(() => {
+		const isAuthRoute = location.pathname === '/login' || location.pathname === '/register';
+		
+		if (isAuthRoute) {
+			// Stop recording for auth screens
+			window.electron.stopRecording().catch(error => {
+				console.error('Error stopping recording:', error);
+				window.electron.log.error('Error stopping recording for auth screens', {
+					error: error.toString()
+				});
+			});
+		} else {
+			// Start recording for main app
+			window.electron.startRecording().catch(error => {
+				console.error('Error starting recording:', error);
+				window.electron.log.error('Error starting recording for main app', {
+					error: error.toString()
+				});
+			});
+		}
+	}, [location.pathname]);
+	
+	return children;
+};
+
 // Main App component
 const App = () => {
 	return (
 		<AuthProvider>
 			<Router>
-				<Routes>
-					{/* Public routes */}
-					<Route path="/login" element={<LoginPage />} />
-					<Route path="/register" element={<RegisterPage />} />
-					
-					{/* Protected app routes */}
-					<Route 
-						path="/*" 
-						element={
-							<ProtectedRoute requiresAuth={true} allowOffline={true}>
-								<AppLayout />
-							</ProtectedRoute>
-						} 
-					/>
-				</Routes>
+				<RecordingManager>
+					<Routes>
+						{/* Public routes */}
+						<Route path="/login" element={<LoginPage />} />
+						<Route path="/register" element={<RegisterPage />} />
+						
+						{/* Protected app routes */}
+						<Route 
+							path="/*" 
+							element={
+								<ProtectedRoute requiresAuth={true} allowOffline={true}>
+									<AppLayout />
+								</ProtectedRoute>
+							} 
+						/>
+					</Routes>
+				</RecordingManager>
 			</Router>
 		</AuthProvider>
 	);
@@ -48,14 +79,14 @@ const AppLayout = () => {
 	
 	// State for settings
 	const [settings, setSettings] = useState(null);
-    
+	
 	// State for notification
 	const [notification, setNotification] = useState({
 		visible: false,
 		message: '',
 		type: 'success' // 'success' or 'error'
 	});
-    
+	
 	// Audio references
 	const successAudioRef = useRef(null);
 	const errorAudioRef = useRef(null);
@@ -63,7 +94,7 @@ const AppLayout = () => {
 	
 	// Get auth context and login modal state
 	const { showLoginModal, closeLoginModal } = useAuth();
-    
+	
 	// Initialize audio elements
 	useEffect(() => {
 		// Create success sound
@@ -131,7 +162,7 @@ const AppLayout = () => {
 		window.electron.onSettingsChanged(handleSettingsChanged);
 		
 		return () => {
-
+			// Cleanup if needed
 		};
 	}, []);
 	
@@ -249,7 +280,7 @@ const AppLayout = () => {
 					error: result ? result.error : "Unknown error" 
 				});
 				setIsClipping(false);
-                
+				
 				// Play error sound
 				if (errorAudioRef.current) {
 					errorAudioRef.current.currentTime = 0;
@@ -257,7 +288,7 @@ const AppLayout = () => {
 						console.error('Error playing error sound:', err);
 					});
 				}
-                
+				
 				// Show error notification
 				setNotification({
 					visible: true,
@@ -269,7 +300,7 @@ const AppLayout = () => {
 			console.error("Error during clipping:", error);
 			window.electron.log.error("Error during clipping", { error: error.toString() });
 			setIsClipping(false);
-            
+			
 			// Play error sound
 			if (errorAudioRef.current) {
 				errorAudioRef.current.currentTime = 0;
@@ -277,7 +308,7 @@ const AppLayout = () => {
 					window.electron.log.error('Error playing error sound:', err);
 				});
 			}
-            
+			
 			// Show error notification
 			setNotification({
 				visible: true,
@@ -286,7 +317,7 @@ const AppLayout = () => {
 			});
 		}
 	};
-    
+	
 	// Close notification
 	const handleCloseNotification = () => {
 		setNotification(prev => ({ ...prev, visible: false }));

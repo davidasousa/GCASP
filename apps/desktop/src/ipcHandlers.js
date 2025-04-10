@@ -97,52 +97,52 @@ function registerHotkey(hotkey) {
 						path: result.path,
 						timestamp: timestamp
 					});
-                    
-                    // Notify all browser windows about the new clip
-                    const windows = BrowserWindow.getAllWindows();
-                    windows.forEach(window => {
-                        if (!window.isDestroyed()) {
-                            // Send new-recording event
-                            window.webContents.send('new-recording', {
-                                id: path.parse(result.filename).name,
-                                filename: result.filename,
-                                timestamp: new Date()
-                            });
-                            
-                            // Send clip-done event
-                            window.webContents.send('clip-done', result.filename);
-                        }
-                    });
+					
+					// Notify all browser windows about the new clip
+					const windows = BrowserWindow.getAllWindows();
+					windows.forEach(window => {
+						if (!window.isDestroyed()) {
+							// Send new-recording event
+							window.webContents.send('new-recording', {
+								id: path.parse(result.filename).name,
+								filename: result.filename,
+								timestamp: new Date()
+							});
+							
+							// Send clip-done event
+							window.webContents.send('clip-done', result.filename);
+						}
+					});
 				} else {
 					logger.error(`Failed to create clip: ${result.error}`, {
 						timestamp: timestamp,
 						settings: clipSettings
 					});
-                    
-                    const windows = BrowserWindow.getAllWindows();
-                    windows.forEach(window => {
-                        if (!window.isDestroyed()) {
-                            // Send clip-error event
-                            window.webContents.send('clip-error', {
-                                error: result.error || 'Unknown error',
-                                timestamp: new Date()
-                            });
-                        }
-                    });
+					
+					const windows = BrowserWindow.getAllWindows();
+					windows.forEach(window => {
+						if (!window.isDestroyed()) {
+							// Send clip-error event
+							window.webContents.send('clip-error', {
+								error: result.error || 'Unknown error',
+								timestamp: new Date()
+							});
+						}
+					});
 				}
 			} catch (error) {
 				logger.error('Exception during hotkey clip creation:', error);
-                
-                const windows = BrowserWindow.getAllWindows();
-                windows.forEach(window => {
-                    if (!window.isDestroyed()) {
-                        // Send clip-error event for exceptions too
-                        window.webContents.send('clip-error', {
-                            error: error.message || 'Exception during clip creation',
-                            timestamp: new Date()
-                        });
-                    }
-                });
+				
+				const windows = BrowserWindow.getAllWindows();
+				windows.forEach(window => {
+					if (!window.isDestroyed()) {
+						// Send clip-error event for exceptions too
+						window.webContents.send('clip-error', {
+							error: error.message || 'Exception during clip creation',
+							timestamp: new Date()
+						});
+					}
+				});
 			}
 		});
 		
@@ -231,14 +231,14 @@ export function setupIpcHandlers() {
 	const hotkeyResult = registerHotkey(cachedSettings.hotkey);
 	logger.debug(`Hotkey registration result: ${hotkeyResult ? 'success' : 'failed'}`);
 
-	// Start the continuous recording when IPC handlers are set up
-	logger.info('Starting continuous recording...');
-	try {
-		startContinuousRecording();
-		logger.info('Continuous recording started');
-	} catch (error) {
-		logger.error('Failed to start continuous recording:', error);
-	}
+	// REMOVED: Automatic recording start code
+	// logger.info('Starting continuous recording...');
+	// try {
+	//     startContinuousRecording();
+	//     logger.info('Continuous recording started');
+	// } catch (error) {
+	//     logger.error('Failed to start continuous recording:', error);
+	// }
 
 	// Get screen dimensions
 	logger.debug('Registering get-screen-dimensions handler');
@@ -866,12 +866,38 @@ export function setupIpcHandlers() {
 		}
 	});
 
+	// Add explicit recording start handler
+	ipcMain.handle('start-recording', () => {
+		logger.info('start-recording handler called');
+		try {
+			startContinuousRecording();
+			logger.info('Continuous recording started via IPC');
+			return { success: true };
+		} catch (error) {
+			logger.error('Error starting recording:', error);
+			return { success: false, error: error.message };
+		}
+	});
+
+	// Add explicit recording stop handler
+	ipcMain.handle('stop-recording', () => {
+		logger.info('stop-recording handler called');
+		try {
+			stopContinuousRecording();
+			logger.info('Continuous recording stopped via IPC');
+			return { success: true };
+		} catch (error) {
+			logger.error('Error stopping recording:', error);
+			return { success: false, error: error.message };
+		}
+	});
+
 	logger.info('IPC handlers setup complete');
 }
 
 // Make sure to unregister shortcuts when the app is about to quit
 export function cleanupIpcHandlers() {
-    logger.info('Cleaning up IPC handlers...');
-    unregisterHotkeys();
-    logger.debug('IPC handlers cleanup complete');
+	logger.info('Cleaning up IPC handlers...');
+	unregisterHotkeys();
+	logger.debug('IPC handlers cleanup complete');
 }

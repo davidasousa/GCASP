@@ -44,6 +44,10 @@ contextBridge.exposeInMainWorld('electron', {
 	// Save edited video
 	saveEditedVideo: (params) => ipcRenderer.invoke('save-edited-video', params),
 	
+	// Start and stop recording functions
+	startRecording: () => ipcRenderer.invoke('start-recording'),
+	stopRecording: () => ipcRenderer.invoke('stop-recording'),
+	
 	// Listen for new recordings
 	onNewRecording: (callback) => {
 		if (callback === null) {
