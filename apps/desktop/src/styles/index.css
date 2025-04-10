@@ -11,7 +11,7 @@
 @import './modal.css';
 @import './video.css';
 @import './notification.css';
-@import './login-modal.css'; /* Added login modal styles */
+@import './login-modal.css';
 
 /* Pages */
 @import './edit-page.css';

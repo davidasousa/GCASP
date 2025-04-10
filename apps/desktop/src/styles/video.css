@@ -68,13 +68,21 @@
 
 .video-header .delete-button {
 	position: static;
-	background: red;
+	background: rgb(255, 0, 0);
 	color: white;
 	border: none;
 	padding: 5px 10px;
 	border-radius: 4px;
 	cursor: pointer;
 	transition: background 0.2s, transform 0.1s;
+}
+
+.video-header .delete-button:hover {
+    background: #ec0505;
+}
+
+.video-header .delete-button:active {
+    transform: scale(0.98);
 }
 
 /* Edit button in header */
@@ -103,23 +111,4 @@
 	position: absolute;
 	right: 0;
 	top: 0;
-}
-
-.upload-button {
-	background: #28a745;
-	color: white;
-	border: none;
-	padding: 5px 10px;
-	margin-right: 5px;
-	border-radius: 4px;
-	cursor: pointer;
-	transition: background 0.2s, transform 0.1s;
-}
-
-.upload-button:hover {
-	background: #218838;
-}
-
-.upload-button:active {
-	transform: scale(0.98);
 }
