@@ -9,6 +9,7 @@ const RegisterPage = () => {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
 	const [confirmPassword, setConfirmPassword] = useState('');
+	const [showPassword, setShowPassword] = useState(false);
 	const [usernameError, setUsernameError] = useState('');
 	const [emailError, setEmailError] = useState('');
 	const [passwordError, setPasswordError] = useState('');
@@ -131,6 +132,11 @@ const RegisterPage = () => {
 	
 	const navigateToLogin = () => {
 		navigate('/login');
+	};
+	
+	// Toggle password visibility
+	const togglePasswordVisibility = () => {
+		setShowPassword(!showPassword);
 	};
 	
 	// Input change handlers with length limits for security
@@ -270,7 +276,7 @@ const RegisterPage = () => {
 						<label htmlFor="password">Password</label>
 						<input
 							id="password"
-							type="password"
+							type={showPassword ? "text" : "password"}
 							value={password}
 							onChange={handlePasswordChange}
 							className={passwordError ? 'input-error' : ''}
@@ -300,7 +306,7 @@ const RegisterPage = () => {
 						<label htmlFor="confirm-password">Confirm Password</label>
 						<input
 							id="confirm-password"
-							type="password"
+							type={showPassword ? "text" : "password"}
 							value={confirmPassword}
 							onChange={handleConfirmPasswordChange}
 							className={confirmPasswordError ? 'input-error' : ''}
@@ -315,6 +321,16 @@ const RegisterPage = () => {
 								{confirmPasswordError}
 							</div>
 						)}
+					</div>
+					
+					<div className="form-group checkbox">
+						<input
+							id="show-password"
+							type="checkbox"
+							checked={showPassword}
+							onChange={togglePasswordVisibility}
+						/>
+						<label htmlFor="show-password">Show password</label>
 					</div>
 					
 					<button 

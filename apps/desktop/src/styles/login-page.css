@@ -157,3 +157,84 @@
 	border: 0;
 	border-top: 1px solid #eee;
 }
+
+/* Password visibility toggle styling */
+.form-group.checkbox {
+	display: flex;
+	align-items: center;
+	margin-bottom: 15px;
+}
+
+.form-group.checkbox input[type="checkbox"] {
+	width: auto;
+	margin-right: 10px;
+	cursor: pointer;
+}
+
+.form-group.checkbox label {
+	cursor: pointer;
+	user-select: none;
+	font-size: 0.9rem;
+	color: #555;
+}
+
+/* Password strength indicator */
+.password-strength {
+	margin-top: 5px;
+	margin-bottom: 10px;
+}
+
+.strength-bar {
+	height: 5px;
+	background-color: #e0e0e0;
+	border-radius: 2px;
+	margin-bottom: 5px;
+}
+
+.strength-indicator {
+	height: 100%;
+	border-radius: 2px;
+	transition: width 0.3s;
+}
+
+.strength-text {
+	font-size: 0.8rem;
+	font-weight: 500;
+}
+
+/* Strength classes */
+.strength-weak .strength-indicator {
+	background-color: #ff4d4d;
+	width: 25%;
+}
+
+.strength-fair .strength-indicator {
+	background-color: #ffb84d;
+	width: 50%;
+}
+
+.strength-good .strength-indicator {
+	background-color: #4da6ff;
+	width: 75%;
+}
+
+.strength-strong .strength-indicator {
+	background-color: #4dff4d;
+	width: 100%;
+}
+
+.strength-weak .strength-text {
+	color: #ff4d4d;
+}
+
+.strength-fair .strength-text {
+	color: #ffb84d;
+}
+
+.strength-good .strength-text {
+	color: #4da6ff;
+}
+
+.strength-strong .strength-text {
+	color: #4dff4d;
+}
