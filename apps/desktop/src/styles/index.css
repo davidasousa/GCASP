@@ -11,10 +11,13 @@
 @import './modal.css';
 @import './video.css';
 @import './notification.css';
+@import './login-modal.css';
 
 /* Pages */
 @import './edit-page.css';
 @import './settings-page.css';
+@import './login-page.css';
+@import './home-page.css';
 
 /* Utilities */
 @import './utilities.css';

@@ -1,0 +1,92 @@
+/* Add to src/styles/home-page.css */
+.home-page {
+	padding: 20px;
+}
+
+.page-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+}
+
+.page-header h1 {
+	margin: 0;
+	font-size: 24px;
+	color: #333;
+}
+
+.offline-banner {
+	display: flex;
+	align-items: center;
+	background-color: #fff3cd;
+	color: #856404;
+	padding: 8px 12px;
+	border-radius: 4px;
+	font-size: 14px;
+}
+
+.offline-icon {
+	margin-right: 8px;
+	font-size: 16px;
+}
+
+.upload-all-button {
+	padding: 8px 12px;
+	background-color: #28a745;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
+}
+
+.upload-all-button:hover {
+	background-color: #218838;
+}
+
+.upload-all-button:active {
+	transform: scale(0.98);
+}
+
+.no-videos-message {
+	text-align: center;
+	padding: 40px 0;
+	color: #6c757d;
+}
+
+.help-text {
+	font-size: 14px;
+	margin-top: 10px;
+	color: #999;
+}
+
+.notification {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	padding: 10px 15px;
+	border-radius: 4px;
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+	z-index: 1000;
+	animation: fadeIn 0.3s ease;
+	max-width: 300px;
+	font-weight: 500;
+}
+
+.notification.success {
+	background-color: #d4edda;
+	color: #155724;
+	border: 1px solid #c3e6cb;
+}
+
+.notification.error {
+	background-color: #f8d7da;
+	color: #721c24;
+	border: 1px solid #f5c6cb;
+}
+
+@keyframes fadeIn {
+	0% { opacity: 0; transform: translateY(10px); }
+	100% { opacity: 1; transform: translateY(0); }
+}

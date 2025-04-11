@@ -28,13 +28,12 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 			const response = await window.electron.removeSpecificVideo(title);
 			if (response.success && onDelete) {
 				onDelete(id);
-		}
+			}
 		} catch (error) {
 			console.error('Error deleting video:', error);
 		}
 		setShowDeletePrompt(false);
 	};
-
 
 	const cancelDelete = () => {
 		setShowDeletePrompt(false);
@@ -52,20 +51,22 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 			</div>
 			<div className="video-header">
 				<h3 className="video-title">{title}</h3>
-				<button
-					onClick={handleEditClick}
-					className="edit-button"
-					aria-label={`Edit ${title}`}
-				>
-					Edit
-				</button>
-				<button
-					onClick={handleDeleteClick}
-					className="delete-button"
-					aria-label={`Delete ${title}`}
-				>
-					Delete
-				</button>
+				<div className="video-actions">
+					<button
+						onClick={handleEditClick}
+						className="edit-button"
+						aria-label={`Edit ${title}`}
+					>
+						Edit
+					</button>
+					<button
+						onClick={handleDeleteClick}
+						className="delete-button"
+						aria-label={`Delete ${title}`}
+					>
+						Delete
+					</button>
+				</div>
 			</div>
 			{showDeletePrompt && (
 				<div className="delete-modal">
