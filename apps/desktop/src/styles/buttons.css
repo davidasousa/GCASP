@@ -120,3 +120,22 @@
 .pagination span {
     margin: 0 10px;
 }
+
+/* upload button (in header & modal) */
+.upload-button {
+    background: red;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.upload-button:hover {
+    background: darkred;
+}
+
+.upload-button:active {
+    transform: scale(0.98);
+}

@@ -1,7 +1,7 @@
 import React from 'react';
 import VideoContainer from './VideoContainer';
 
-const VideoGrid = ({ videos, onDelete}) => {
+const VideoGrid = ({ videos, onDelete, onUpload}) => {
     // Track video ID that is currently active
     const [activeVideoID, setActiveVideoID] = React.useState(null);
     
@@ -17,6 +17,7 @@ const VideoGrid = ({ videos, onDelete}) => {
                     isActive={activeVideoID === video.id} // Check if video is active
                     onActivate={() => setActiveVideoID(video.id)} // Function to activate video
                     onDelete={onDelete} // Function to delete video
+                    onUpload={onUpload} // Function to upload video
                 />
             ))}
         </div>

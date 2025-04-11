@@ -1,6 +1,7 @@
 import { ipcMain, app, globalShortcut, screen, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import http from 'http';
 import { promisify } from 'util';
 import { spawn } from 'child_process';
 import { createClip, startContinuousRecording, stopContinuousRecording, restartRecordingWithNewSettings } from './recorder';
@@ -572,6 +573,12 @@ export function setupIpcHandlers() {
 		logger.warn(`File not found in any location: ${filename}`);
 		return { success: false, error: 'File not found' };
 	});
+
+	ipcMain.handle('upload-specific-video', (event, filename) => {
+		logger.info(`upload-specific-video handler called for file: ${filename}`);
+	  
+		return { success: true };
+	  });
 
 	// Get video metadata (for clips)
 	logger.debug('Registering get-video-metadata handler');
