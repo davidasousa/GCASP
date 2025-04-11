@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
 
@@ -6,7 +6,7 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, o
 	const [hasError, setHasError] = useState(false);
 	const [showDeletePrompt, setShowDeletePrompt] = useState(false);
 	const [showUploadPrompt, setShowUploadPrompt] = useState(false);
-	const [showAlreadyUploadedPrompt, setShowAlreadyUploadedPrompt] = useState(false);
+	const uploadedTitles = useRef(new Set());
 	const navigate = useNavigate();
 
 	const handlePlayerReady = (player) => {
@@ -48,14 +48,23 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, o
 	};
 
 	const confirmUpload = async () => {
+		// If this title was already uploaded before, block it
+		if (uploadedTitles.current.has(title)) {
+			console.warn(`"${title}" has already been uploaded.`);
+			setShowUploadPrompt(false);
+			return;
+		}
+	
 		try {
 			const response = await window.electron.uploadSpecificVideo(title);
 			if (response.success && onUpload) {
 				onUpload(id);
-		}
+				uploadedTitles.current.add(title); // Track that this title was uploaded
+			}
 		} catch (error) {
 			console.error('Error Upload video:', error);
 		}
+	
 		setShowUploadPrompt(false);
 	};
 
@@ -112,7 +121,7 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, o
 					</div>
 				</div>
 			)}
-			
+
 			{showUploadPrompt && (
 				<div className="upload-modal">
 					<div className="modal-content">
