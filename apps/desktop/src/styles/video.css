@@ -32,14 +32,15 @@
 
 /* Video title styling */
 .video-title {
-	text-align: left;
+	text-align: center;
 	margin-top: 0.5rem;
-	margin-right: 180px;
+	margin-bottom: 0.5rem;
 	font-size: 1rem;
 	color: #333;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
+	padding: 0 5px;
 }
 
 /* Make both the thumbnail image and Video.js player fill the container */
@@ -63,11 +64,12 @@
 .video-header {
     position: relative;
     margin-top: 0.5rem;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .video-header .delete-button {
-	position: static;
 	background: rgb(255, 0, 0);
 	color: white;
 	border: none;
@@ -87,7 +89,6 @@
 
 /* Edit button in header */
 .video-header .edit-button {
-	position: static;
 	background: #007bff;
 	color: white;
 	border: none;
@@ -108,7 +109,7 @@
 
 .video-actions {
 	display: flex;
-	position: absolute;
-	right: 0;
-	top: 0;
+	justify-content: center;
+	width: 100%;
+	margin-top: 8px;
 }
