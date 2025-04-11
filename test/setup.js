@@ -1,6 +1,10 @@
 // test/setup.js
 import '@testing-library/jest-dom';
 
+// Add TextEncoder and TextDecoder to global scope for tests
+global.TextEncoder = require('util').TextEncoder;
+global.TextDecoder = require('util').TextDecoder;
+
 // Mock Electron APIs that will be needed by components
 window.electron = {
     // Settings functions
