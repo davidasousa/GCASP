@@ -289,13 +289,17 @@ async function recordSegment() {
 		const cropFilter = `crop=${captureWidth}:${captureHeight}:${selectedDisplay.bounds.x}:${selectedDisplay.bounds.y}`;
 
 		const captureArgs = [
-  			'-f', 'gdigrab',
-  			'-framerate', config.fps.toString(),
-  			'-i', 'desktop',
-  			'-draw_mouse', '1',
-  			'-vf', cropFilter,
+			'-f', 'dshow', // for Windows DirectShow (not gdigrab for combining audio/video)
+			'-i', 'audio=virtual-audio-capturer', // audio input
+			'-f', 'dshow',
+			'-i', 'video=screen-capture-recorder', // video input
+			'-filter_complex', `[1:v]${cropFilter}[v]`, // if you're cropping only the video stream
+			'-map', '[v]',
+			'-map', '0:a', // map audio from first input
+			'-r', config.fps.toString(),
+			'-draw_mouse', '1',
 		];
-
+		  
 
 		// Build FFmpeg command for this segment
 		const args = [
