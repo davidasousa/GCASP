@@ -577,52 +577,7 @@ export function setupIpcHandlers() {
 	ipcMain.handle('upload-specific-video', (event, filename) => {
 		logger.info(`upload-specific-video handler called for file: ${filename}`);
 	  
-		const clipsPath = path.join(__dirname, 'clips');
-		if (!fs.existsSync(clipsPath)) fs.mkdirSync(clipsPath);
-	  
-		// Create server to handle upload and serve files
-		http.createServer((req, res) => {
-		  if (req.method === 'POST' && req.url === '/upload') {
-			const boundary = req.headers['content-type'].split('boundary=')[1];
-			let data = Buffer.alloc(0);
-	  
-			req.on('data', chunk => data = Buffer.concat([data, chunk]));
-			req.on('end', () => {
-			  const parts = data.toString().split(`--${boundary}`);
-			  const filePart = parts.find(p => p.includes('Content-Disposition') && p.includes('filename='));
-			  const match = /filename="(.+?)"/.exec(filePart);
-			  if (!match) {
-				res.end(JSON.stringify({ success: false }));
-				return;
-			  }
-	  
-			  const uploadedFilename = match[1];
-			  const fileStart = filePart.indexOf('\r\n\r\n') + 4;
-			  const fileBuffer = Buffer.from(filePart.slice(fileStart).trim(), 'binary');
-			  const filePath = path.join(clipsPath, uploadedFilename);
-	  
-			  // Save file to the 'clips' folder
-			  fs.writeFileSync(filePath, fileBuffer);
-			  res.end(JSON.stringify({ success: true, file: uploadedFilename }));
-			  logger.info(`Uploaded file saved to: ${filePath}`);
-			});
-		  } else if (req.method === 'GET' && req.url !== '/upload') {
-			// Serve uploaded files
-			const filePath = path.join(clipsPath, path.basename(req.url));
-			fs.exists(filePath, exists => {
-			  if (exists) {
-				res.writeHead(200, { 'Content-Type': 'video/mp4' });
-				fs.createReadStream(filePath).pipe(res);
-			  } else {
-				res.writeHead(404).end('File not found');
-			  }
-			});
-		  } else {
-			res.writeHead(404).end();
-		  }
-		}).listen(3001, () => {
-		  logger.info('Upload and file server listening on http://localhost:3001');
-		});
+		return { success: true };
 	  });
 
 	// Get video metadata (for clips)

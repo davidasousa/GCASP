@@ -6,6 +6,7 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, o
 	const [hasError, setHasError] = useState(false);
 	const [showDeletePrompt, setShowDeletePrompt] = useState(false);
 	const [showUploadPrompt, setShowUploadPrompt] = useState(false);
+	const [showAlreadyUploadedPrompt, setShowAlreadyUploadedPrompt] = useState(false);
 	const navigate = useNavigate();
 
 	const handlePlayerReady = (player) => {
@@ -111,8 +112,9 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, o
 					</div>
 				</div>
 			)}
+			
 			{showUploadPrompt && (
-				<div className="delete-modal">
+				<div className="upload-modal">
 					<div className="modal-content">
 						<p>Upload "{title}"?</p>
 						<div className="modal-buttons">
@@ -126,6 +128,7 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete, o
 					</div>
 				</div>
 			)}
+
 		</div>
 	);
 };

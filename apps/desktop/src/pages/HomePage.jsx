@@ -6,6 +6,7 @@ const HomePage = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [showUploadConfirm, setShowUploadConfirm] = useState(false);
+    const [showAlreadyUploadedPrompt, setShowAlreadyUploadedPrompt] = useState(false);
     const videosPerPage = 10;
 
     // Function to load videos from the folder.
@@ -49,10 +50,6 @@ const HomePage = () => {
         setShowDeleteConfirm(false);
     };
 
-    const cancelUpload = () => {
-        setShowUploadConfirm(false);
-    };
-
     // Load videos when the component mounts
     useEffect(() => {
         loadVideos();
@@ -62,14 +59,27 @@ const HomePage = () => {
         setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
     };
 
+    // Upload Functions
+    const cancelUpload = () => {
+        setShowUploadConfirm(false);
+    };
+
     // Function For Marking Upload
     const handleUploadVideo = (id) => {
-        setVideos(prevVideos => 
-            prevVideos.map(video => 
-                video.id === id ? { ...video, isUploaded: true } : video
-            )
-        );
-    };
+        setVideos(prevVideos => {
+            const video = prevVideos.find(video => video.id === id);
+            if (video?.isUploaded) {
+                setShowAlreadyUploadedPrompt(true);
+                return prevVideos; // No change
+            }
+    
+            return prevVideos.map(video =>
+                video.id === id
+                    ? { ...video, isUploaded: true }
+                    : video
+            );
+        });
+    };    
 
     // Calculate slice of videos to show on current page.
     const indexOfLastVideo = currentPage * videosPerPage;
@@ -116,7 +126,20 @@ const HomePage = () => {
                     </div>
                 </div>
             )}
-            
+
+            {showAlreadyUploadedPrompt && (
+                <div className="upload-modal">
+                    <div className="modal-content">
+                        <p>The video has already been uploaded.</p>
+                        <div className="modal-buttons">
+                            <button onClick={() => setShowAlreadyUploadedPrompt(false)} className="upload-button">
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {videos.length > 0 ? (
                 <div>
                     <VideoGrid 
