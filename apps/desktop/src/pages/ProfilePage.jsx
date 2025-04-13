@@ -37,7 +37,7 @@ const FriendUsernameInput = ({ friendUsername, setFriendUsername }) => {
 };
 
 const ProfilePage = () => {
-  const [friendsList, setFriendsList] = useState(["david", "robert"]);
+  const [friendsList, setFriendsList] = useState([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
   const [friendUsername, setFriendUsername] = useState("");
 
@@ -52,9 +52,11 @@ const ProfilePage = () => {
 
   const submitAddFriends = () => {
     if (friendUsername.trim() !== "") {
-      setFriendsList([...friendsList, friendUsername]);
-      setFriendUsername("");
-      setShowAddFriends(false);
+        // Trigger Adding Friend On Backend:
+        
+        setFriendsList([...friendsList, friendUsername]);
+        setFriendUsername("");
+        setShowAddFriends(false);
     }
   };
 
@@ -68,13 +70,13 @@ const ProfilePage = () => {
               friendUsername={friendUsername}
               setFriendUsername={setFriendUsername}
             />
+            <button className="refresh-button" onClick={cancelAddFriends}>
+                Exit
+            </button>
+            <button className="refresh-button" onClick={submitAddFriends}>
+                Add Friend
+            </button>
           </div>
-          <button className="refresh-button" onClick={cancelAddFriends}>
-            Exit
-          </button>
-          <button className="refresh-button" onClick={submitAddFriends}>
-            Add Friend
-          </button>
         </div>
       )}
 
