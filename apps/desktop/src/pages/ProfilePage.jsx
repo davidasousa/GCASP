@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import '../styles/profile-page.css';
 
 const DisplayFriendsList = ({ friendsList }) => {
@@ -30,19 +30,33 @@ const FriendUsernameInput = ({ friendUsername, setFriendUsername }) => {
         id="textInput"
         value={friendUsername}
         onChange={handleChangeFriendUsername}
-        placeholder="Enter Your Friends GCASP Username"
+        placeholder="Enter Your Friend's GCASP Username"
       />
     </div>
   );
 };
 
 const ProfilePage = () => {
-  const [friendsList, setFreindsList] = useState(["david", "robert"]);
+  const [friendsList, setFriendsList] = useState(["david", "robert"]);
   const [showAddFriends, setShowAddFriends] = useState(false);
   const [friendUsername, setFriendUsername] = useState("");
 
-  const triggerAddFriends = () => { setShowAddFriends(true); };
-  const cancelAddFriends = () => { setShowAddFriends(false); };
+  const triggerAddFriends = () => {
+    setShowAddFriends(true);
+  };
+
+  const cancelAddFriends = () => {
+    setShowAddFriends(false);
+    setFriendUsername("");
+  };
+
+  const submitAddFriends = () => {
+    if (friendUsername.trim() !== "") {
+      setFriendsList([...friendsList, friendUsername]);
+      setFriendUsername("");
+      setShowAddFriends(false);
+    }
+  };
 
   return (
     <div className="profile-page">
@@ -56,8 +70,11 @@ const ProfilePage = () => {
             />
           </div>
           <button className="refresh-button" onClick={cancelAddFriends}>
-				Exit
-			</button>
+            Exit
+          </button>
+          <button className="refresh-button" onClick={submitAddFriends}>
+            Add Friend
+          </button>
         </div>
       )}
 
