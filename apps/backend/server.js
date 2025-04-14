@@ -14,6 +14,16 @@ app.use("/auth", authRoutes);
 app.use("/videos", videoRoutes);
 app.use("/friends", friendRoutes);
 
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+      return res.status(400).json({ error: err.message });
+    } else if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
+  
+
 setupSwagger(app);
 
 const PORT = process.env.PORT || 5001;

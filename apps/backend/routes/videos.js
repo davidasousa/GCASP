@@ -29,7 +29,22 @@ const storage = multer.diskStorage({
   destination: uploadDir,
   filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname)),
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: { fileSize: 100 * 1024 * 1024 }, // limit to 100MB
+  fileFilter: (req, file, cb) => {
+    const filetypes = /mp4|mov|avi|mkv|webm/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = file.mimetype.startsWith("video/");
+
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error("Only video files are allowed!"));
+    }
+  },
+});
+
 
 /**
  * @swagger
@@ -42,25 +57,31 @@ const upload = multer({ storage });
  * @swagger
  * /videos/upload:
  *   post:
- *     summary: Upload a video
+ *     summary: Upload a video file
  *     tags: [Video]
- *     security: [ { bearerAuth: [] } ]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
  *             type: object
+ *             required: [title, video]
  *             properties:
  *               title:
  *                 type: string
  *               video:
  *                 type: string
  *                 format: binary
+ *                 description: "Only .mp4, .mov, .avi, .mkv, .webm formats allowed. Max size: 100MB"
  *     responses:
  *       200:
  *         description: Video uploaded successfully
+ *       400:
+ *         description: Invalid file type or size exceeded
  */
+
 router.post("/upload", authenticateToken, upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
