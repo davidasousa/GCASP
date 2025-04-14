@@ -4,7 +4,18 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
 const { User } = require("../models");
+const rateLimit = require("express-rate-limit");
 const router = express.Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Max 10 attempts per IP
+  message: {
+    status: 429,
+    error: "Too many login/register attempts. Please try again later.",
+  },
+});
+
 
 /**
  * @swagger
@@ -27,10 +38,10 @@ const router = express.Router();
  *         email:
  *           type: string
  *           format: email
- *           description: Email address
+ *           example: user@example.com
  *         password:
  *           type: string
- *           description: Hashed password (bcrypt)
+ *           minLength: 6
  *       example:
  *         id: 123e4567-e89b-12d3-a456-426614174000
  *         username: alice
@@ -72,10 +83,10 @@ const router = express.Router();
  *       400:
  *         description: Validation error
  */
-router.post("/register", [
-  body("username").notEmpty(),
-  body("email").isEmail(),
-  body("password").isLength({ min: 6 }),
+router.post("/register", authLimiter, [
+  body("username").trim().escape(),
+  body("email").isEmail().normalizeEmail(),
+  body("password").isLength({ min: 6 }).escape(),
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
@@ -116,17 +127,36 @@ router.post("/register", [
  *       400:
  *         description: Invalid credentials
  */
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-  const user = await User.findOne({ where: { email } });
-  if (!user) return res.status(400).json({ message: "Invalid credentials" });
+router.post(
+  "/login",
+  authLimiter,
+  [
+    body("email").isEmail().withMessage("Invalid email").normalizeEmail(),
+    body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters").escape(),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
 
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    const { email, password } = req.body;
 
-  const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
-  res.json({ token, username: user.username });
-});
+    try {
+      const user = await User.findOne({ where: { email } });
+      if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+      const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+      res.json({ token, username: user.username });
+    } catch (err) {
+      res.status(500).json({ message: "Server error", error: err.message });
+    }
+  }
+);
 
 /**
  * @swagger

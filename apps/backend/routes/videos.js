@@ -5,6 +5,7 @@ const fs = require("fs");
 const jwt = require("jsonwebtoken");
 const { Video } = require("../models");
 const router = express.Router();
+const ffmpeg = require("fluent-ffmpeg");
 
 // Middleware to authenticate token
 function authenticateToken(req, res, next) {
@@ -59,8 +60,7 @@ const upload = multer({
  *   post:
  *     summary: Upload a video file
  *     tags: [Video]
- *     security:
- *       - bearerAuth: []
+ *     security: [ { bearerAuth: [] } ]
  *     requestBody:
  *       required: true
  *       content:
@@ -74,25 +74,61 @@ const upload = multer({
  *               video:
  *                 type: string
  *                 format: binary
- *                 description: "Only .mp4, .mov, .avi, .mkv, .webm formats allowed. Max size: 100MB"
+ *                 description: |
+ *                   Only .mp4, .mov, .avi, .mkv, .webm formats allowed.
+ *                   Max size: 100MB.
  *     responses:
  *       200:
  *         description: Video uploaded successfully
- *       400:
- *         description: Invalid file type or size exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 video:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     title:
+ *                       type: string
+ *                     filename:
+ *                       type: string
+ *                     size:
+ *                       type: integer
+ *                       description: File size in bytes
+ *                     duration:
+ *                       type: number
+ *                       description: Duration in seconds
+ *                     resolution:
+ *                       type: string
+ *                       description: e.g. "1920x1080"
  */
+
 
 router.post("/upload", authenticateToken, upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-  const newVideo = await Video.create({
-    userId: req.user.id,
-    title: req.body.title,
-    filename: req.file.filename,
-  });
+  const filepath = path.join(uploadDir, req.file.filename);
 
-  res.json({ message: "Video uploaded", video: newVideo });
+  ffmpeg.ffprobe(filepath, async (err, metadata) => {
+    if (err) return res.status(500).json({ message: "Metadata extraction failed", error: err.message });
+
+    const videoStream = metadata.streams.find(s => s.codec_type === "video");
+
+    const newVideo = await Video.create({
+      userId: req.user.id,
+      title: req.body.title,
+      filename: req.file.filename,
+      size: req.file.size,
+      duration: metadata.format.duration,
+      resolution: `${videoStream.width}x${videoStream.height}`,
+    });
+
+    res.json({ message: "Video uploaded", video: newVideo });
+  });
 });
+
 
 /**
  * @swagger
