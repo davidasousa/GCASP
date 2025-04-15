@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const multer = require("multer");
 const { sequelize } = require("./models");
 const friendRoutes = require("./routes/friends");
 const setupSwagger = require("./swagger");
@@ -11,10 +12,10 @@ const xssClean = require("xss-clean");
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(xssClean());
 app.use("/auth", authRoutes);
 app.use("/videos", videoRoutes);
 app.use("/friends", friendRoutes);
-app.use(xssClean()); // Protect all inputs from malicious HTML/JS
 
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
