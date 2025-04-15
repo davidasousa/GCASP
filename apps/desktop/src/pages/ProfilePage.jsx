@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import '../styles/profile-page.css';
 
+const DisplayUserInfoList = ({ userInfo }) => {
+  return (
+    <div className="profile-friends-list">
+        <ul id="profile-userinfo-list">
+          <li>GCASP Username: {userInfo.userName}</li>
+          <li>GCASP Friends: {userInfo.userFriendCount}</li>
+          <li>GCASP Total Clips Uploaded: {userInfo.userClipsUploaded}</li>
+          <li>GCASP Total Clip Views: {userInfo.userViewCountTotal}</li>
+        </ul>
+    </div>
+  );
+};
+
 const DisplayFriendsList = ({ friendsList }) => {
   return (
     <div className="profile-friends-list">
@@ -40,6 +53,13 @@ const ProfilePage = () => {
   const [friendsList, setFriendsList] = useState([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
   const [friendUsername, setFriendUsername] = useState("");
+  // User Info Object
+  const [userInfo, setUserInfo] = useState ({
+    userName: "David",
+    userFriendCount: 0,
+    userClipsUploaded: 0,
+    userViewCountTotal: 0
+  });
 
   const triggerAddFriends = () => {
     setShowAddFriends(true);
@@ -70,20 +90,23 @@ const ProfilePage = () => {
               friendUsername={friendUsername}
               setFriendUsername={setFriendUsername}
             />
-            <button className="refresh-button" onClick={cancelAddFriends}>
-                Exit
+            <button className="cancel-button" onClick={cancelAddFriends}>
+              Cancel
             </button>
-            <button className="refresh-button" onClick={submitAddFriends}>
-                Add Friend
+            <button className="add-friend-confirm-button" onClick={submitAddFriends}>
+              Add Friend
             </button>
           </div>
         </div>
       )}
 
-      <div className="profile-page-header">Profile Page</div>
+      <div className="profile-page-header">GCASP Profile</div>
 
       <div className="profile-info">
         <label htmlFor="profile-info">User Info</label>
+        <div id="userInfo">
+          <DisplayUserInfoList userInfo={userInfo} />
+        </div>
       </div>
 
       <div className="profile-friends-list">
@@ -93,7 +116,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="profile-actions">
+      <div className="friend-actions">
         <button className="add-friend-button" onClick={triggerAddFriends}>
           Add Friend
         </button>
