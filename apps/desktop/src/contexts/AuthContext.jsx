@@ -275,6 +275,11 @@ export const AuthProvider = ({ children }) => {
 		setShowLoginModal(false);
 	}, []);
 	
+	// Function to clear login / register errors
+	const clearError = useCallback(() => {
+		setError(null);
+	}, []);
+
 	// Provide auth context values
 	const value = {
 		currentUser,
@@ -288,7 +293,8 @@ export const AuthProvider = ({ children }) => {
 		toggleOfflineMode,
 		openLoginModal,
 		closeLoginModal,
-		showLoginModal
+		showLoginModal,
+		clearError
 	};
 	
 	return (
