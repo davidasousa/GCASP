@@ -1,5 +1,5 @@
 
-# G-CASP 🎮📹  
+# G-CASP
 **Gaming Capture Application & Social Platform**
 
 ## Overview
