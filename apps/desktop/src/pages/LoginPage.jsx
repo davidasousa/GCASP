@@ -13,7 +13,7 @@ const LoginPage = () => {
 	const [generalError, setGeneralError] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
 	
-	const { login, toggleOfflineMode, isAuthenticated, error: authError } = useAuth();
+	const { login, toggleOfflineMode, isAuthenticated, error: authError, clearError } = useAuth();
 	const navigate = useNavigate();
 	
 	// Only redirect if authenticated, not if in offline mode
@@ -29,6 +29,12 @@ const LoginPage = () => {
 			setGeneralError(authError);
 		}
 	}, [authError]);
+
+	// Clear errors when the component mounts
+	useEffect(() => {
+		clearError();
+		setGeneralError('');
+	}, [clearError]);
 	
 	const validateForm = () => {
 		let isValid = true;
@@ -81,6 +87,7 @@ const LoginPage = () => {
 	};
 	
 	const navigateToRegister = () => {
+		setGeneralError(''); // Clear local error state
 		navigate('/register');
 	};
 	
