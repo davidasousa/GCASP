@@ -18,7 +18,7 @@ const RegisterPage = () => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [passwordStrength, setPasswordStrength] = useState(0); // 0-3
 	
-	const { register, isAuthenticated, error: authError } = useAuth();
+	const { register, isAuthenticated, error: authError, clearError } = useAuth();
 	const navigate = useNavigate();
 	
 	// Only redirect if authenticated, not if in offline mode
@@ -35,6 +35,12 @@ const RegisterPage = () => {
 		}
 	}, [authError]);
 	
+	// Clear errors when the component mounts
+	useEffect(() => {
+		clearError();
+		setGeneralError('');
+	}, [clearError]);
+
 	// Calculate password strength for visual indicator
 	useEffect(() => {
 		if (!password) {
@@ -131,6 +137,7 @@ const RegisterPage = () => {
 	};
 	
 	const navigateToLogin = () => {
+		setGeneralError(''); // Clear local error state
 		navigate('/login');
 	};
 	
