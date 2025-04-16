@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron';
 import axios from 'axios';
 import { getModuleLogger } from './logger';
+import store from './store';
 
 const logger = getModuleLogger('ipcAuthHandlers.js');
 
@@ -84,6 +85,11 @@ export function setupAuthIpcHandlers() {
 			// Validate the response
 			if (response.data && response.data.token && response.data.username) {
 				logger.info('User logged in successfully');
+				
+				// Storing The JWT Authentication Token
+				store.set('authToken', 'Hello');
+				console.log(store.get('authToken'));
+
 				return {
 					success: true,
 					token: response.data.token,
