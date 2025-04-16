@@ -1,5 +1,4 @@
-
-# G-CASP
+# G-CASP  
 **Gaming Capture Application & Social Platform**
 
 ## Overview
@@ -30,17 +29,6 @@ G-CASP has two major components:
    - Features a user feed and clip discovery system
    - Handles authentication and video playback
 
-## Technologies Used
-| Component       | Technology         |
-|----------------|--------------------|
-| Desktop UI     | Electron, React    |
-| Video Capture  | FFmpeg, fluent-ffmpeg |
-| Backend Server | Node.js, Express   |
-| Auth           | Passport.js        |
-| Storage        | AWS S3, EC2, PostgreSQL |
-| Testing/CI     | Jest, GitHub Actions |
-| Video Player   | Video.js           |
-
 ## Use Cases
 - **Reactive Clipping**: Capture gameplay moments without pausing.
 - **Editing & Compression**: Trim clips and reduce file size for easy sharing.
@@ -48,36 +36,25 @@ G-CASP has two major components:
 - **Social Browsing**: View trending clips and support your friends.
 
 ## Getting Started
-> Requirements: Node.js, FFmpeg, PostgreSQL, AWS credentials
 
-### Clone the Repository
-```bash
-git clone https://github.com/davidasousa/GCASP.git
-cd GCASP
-```
+### Step 1: Download
+Head to the [Releases](https://github.com/davidasousa/GCASP/releases) section of the repository and download the latest version of G-CASP for Windows.
 
-### Install Dependencies
-```bash
-npm install
-```
+### Step 2: Install
+Run the installer and follow the on-screen instructions to complete the setup.
 
-### Set Up Environment Variables
-Create a `.env` file with the following fields:
-```env
-PORT=5000
-DATABASE_URL=your_postgresql_db
-AWS_ACCESS_KEY_ID=your_key
-AWS_SECRET_ACCESS_KEY=your_secret
-JWT_SECRET=your_jwt_secret
-```
+### Step 3: Launch & Configure
+Once installed, open G-CASP from your desktop or Start Menu. Set up your preferences like:
+- Clip length (e.g., last 30 seconds)
+- Video resolution (default: 1080p, 30fps)
+- Hotkey for clipping
+- Target game window or screen
 
-### Run the Application
-```bash
-npm start
-```
+### Step 4: Record & Share
+Start gaming! Use your configured hotkey to capture highlights. Trim or compress your clips and upload them to the G-CASP platform or share them anywhere.
 
-## Contributing
-Feel free to fork this repository and submit pull requests! For larger changes, please open an issue first to discuss your ideas.
+## Support
+If you experience issues or have feedback, feel free to open an issue in the GitHub repository or contact us directly.
 
 ## License
 This project is licensed under the MIT License.
