@@ -87,8 +87,7 @@ export function setupAuthIpcHandlers() {
 				logger.info('User logged in successfully');
 				
 				// Storing The JWT Authentication Token
-				store.set('authToken', 'Hello');
-				console.log(store.get('authToken'));
+				store.set('authToken', response.data.token);
 
 				return {
 					success: true,
