@@ -165,9 +165,14 @@ export const secureStorage = {
 				throw new Error('Failed to encrypt auth data');
 			}
 
+			// Clear offline mode when setting auth
+			localStorage.removeItem(STORAGE_KEYS.OFFLINE_MODE);
+
 			if (rememberMe) {
 				// Store in localStorage for remembered sessions
 				localStorage.setItem(STORAGE_KEYS.AUTH, encryptedData);
+				// Clear sessionStorage to avoid conflicts
+				sessionStorage.removeItem(STORAGE_KEYS.AUTH);
 			} else {
 				// Use sessionStorage for non-remembered sessions
 				sessionStorage.setItem(STORAGE_KEYS.AUTH, encryptedData);
@@ -265,10 +270,14 @@ export const secureStorage = {
 		}
 	},
 	
-	// Offline mode functions (not encrypted since not sensitive)
+	// Offline mode functions
 	setOfflineMode: (enabled) => {
 		try {
-			localStorage.setItem(STORAGE_KEYS.OFFLINE_MODE, JSON.stringify(enabled));
+			if (enabled) {
+				localStorage.setItem(STORAGE_KEYS.OFFLINE_MODE, JSON.stringify(true));
+			} else {
+				localStorage.removeItem(STORAGE_KEYS.OFFLINE_MODE);
+			}
 			return true;
 		} catch (error) {
 			console.error('Error setting offline mode:', error);
@@ -278,6 +287,18 @@ export const secureStorage = {
 	
 	isOfflineMode: () => {
 		try {
+			// First check if we have authentication data
+			const authData = localStorage.getItem(STORAGE_KEYS.AUTH) || 
+						 sessionStorage.getItem(STORAGE_KEYS.AUTH);
+			
+			// If we have auth data, we're not in offline mode regardless of the flag
+			if (authData) {
+				// Ensure the offline mode flag is cleared
+				localStorage.removeItem(STORAGE_KEYS.OFFLINE_MODE);
+				return false;
+			}
+			
+			// If no auth data, then check the offline mode flag
 			const offlineMode = localStorage.getItem(STORAGE_KEYS.OFFLINE_MODE);
 			return offlineMode ? JSON.parse(offlineMode) : false;
 		} catch (error) {

@@ -203,3 +203,37 @@ router.post("/reset-password", [
 });
 
 module.exports = router;
+
+/**
+ * @swagger
+ * /auth/profile:
+ *   get:
+ *     summary: Get user profile
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *       401:
+ *         description: Invalid or missing token
+ */
+router.get("/profile", async (req, res) => {
+	try {
+		const token = req.header("Authorization")?.split(" ")[1];
+		if (!token) return res.status(401).json({ message: "Access Denied" });
+		
+		const JWT_SECRET = process.env.JWT_SECRET;
+		const decoded = jwt.verify(token, JWT_SECRET);
+		
+		const user = await User.findByPk(decoded.id, {
+			attributes: ['id', 'username', 'email']
+		});
+		
+		if (!user) return res.status(404).json({ message: "User not found" });
+		
+		res.json(user);
+	} catch (error) {
+		res.status(401).json({ message: "Invalid Token" });
+	}
+});
