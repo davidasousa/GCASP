@@ -56,9 +56,6 @@ Start gaming! Use your configured hotkey to capture highlights. Trim or compress
 ## Support
 If you experience issues or have feedback, feel free to open an issue in the GitHub repository or contact us directly.
 
-## License
-This project is licensed under the MIT License.
-
 ## Authors
 - David Sousa (dsousa@purdue.edu)  
 - Robert Rozhanskyy (rrozhans@purdue.edu)  
