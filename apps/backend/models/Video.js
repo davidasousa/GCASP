@@ -25,6 +25,10 @@ const Video = sequelize.define("Video", {
     type: DataTypes.ENUM("published", "hidden"),
     defaultValue: "hidden",
   },
+  processingStatus: {
+    type: DataTypes.ENUM("processing", "ready", "failed"),
+    defaultValue: "processing",
+  },
   size: {
     type: DataTypes.INTEGER, // bytes
   },
