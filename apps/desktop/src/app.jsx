@@ -9,6 +9,7 @@ import SettingsPage from './pages/SettingsPage';
 import EditPage from './pages/EditPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ProfilePage from './pages/ProfilePage';
 import LoginModal from './components/LoginModal';
 import Notification from './components/Notification';
 import successSound from './resources/clip-success.mp3';
@@ -353,6 +354,9 @@ const AppLayout = () => {
 							</ProtectedRoute>
 						} 
 					/>
+
+					{/* Profile page requires authentication - Added Profile UI Branch */}
+					<Route path="/profile" element={<ProfilePage />} />
 					
 					{/* Default redirect to home */}
 					<Route path="*" element={<Navigate to="/" replace />} />

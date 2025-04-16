@@ -73,17 +73,6 @@ const HomePage = () => {
 	const handleCloseNotification = () => {
 		setNotification({ ...notification, visible: false });
 	};
-	
-	// Function to upload all selected clips (placeholder)
-	const handleUploadClips = () => {
-		// This will be implemented later with backend integration
-		console.log('Upload clips button clicked');
-		setNotification({
-			visible: true,
-			message: 'Upload functionality coming soon',
-			type: 'success'
-		});
-	};
 
 	// Load videos when the component mounts
 	useEffect(() => {
@@ -142,13 +131,6 @@ const HomePage = () => {
 				{videos.length > 0 && (
 					<button className="refresh-button" onClick={promptDeleteAllClips}>
 						Delete All Recordings
-					</button>
-				)}
-				
-				{/* Only show upload button when authenticated and not offline */}
-				{isAuthenticated && !isOfflineMode && videos.length > 0 && (
-					<button className="upload-all-button" onClick={handleUploadClips}>
-						Upload Selected Clips
 					</button>
 				)}
 			</div>
