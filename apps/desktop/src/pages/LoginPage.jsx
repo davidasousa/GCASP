@@ -73,6 +73,7 @@ const LoginPage = () => {
 		
 		try {
 			await login(email, password, rememberMe);
+			await secureStorage.saveAuth();
 		} catch (error) {
 			console.error('Login error:', error);
 			setGeneralError(error.message || 'Invalid email or password');

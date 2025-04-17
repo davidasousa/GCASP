@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
+import { secureStorage } from '../utils/secureStorage';
 
 const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete }) => {
 	const [hasError, setHasError] = useState(false);
@@ -39,6 +40,13 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 		setShowDeletePrompt(false);
 	};
 
+	// Upload Functions
+	const handleUploadClick = async () => {
+		const token = await secureStorage.getToken();
+		console.log(token);
+		const response = await window.electron.triggerUploadClip(title, token);
+	}
+
 	return (
 		<div className="video-container">
 			<div className="video-display" onClick={onActivate}>
@@ -65,6 +73,13 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 						aria-label={`Delete ${title}`}
 					>
 						Delete
+					</button>
+					<button
+						onClick={handleUploadClick}
+						className="upload-button"
+						aria-label={`Upload ${title}`}
+					>
+						Upload
 					</button>
 				</div>
 			</div>
