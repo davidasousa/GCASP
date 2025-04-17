@@ -43,7 +43,6 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 	// Upload Functions
 	const handleUploadClick = async () => {
 		const token = await secureStorage.getToken();
-		console.log(token);
 		const response = await window.electron.triggerUploadClip(title, token);
 	}
 
