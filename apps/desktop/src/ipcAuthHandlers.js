@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
-import axios from 'axios';
 import { getModuleLogger } from './logger';
+import axios from 'axios';
 
 const logger = getModuleLogger('ipcAuthHandlers.js');
 
@@ -84,6 +84,7 @@ export function setupAuthIpcHandlers() {
 			// Validate the response
 			if (response.data && response.data.token && response.data.username) {
 				logger.info('User logged in successfully');
+		
 				return {
 					success: true,
 					token: response.data.token,
