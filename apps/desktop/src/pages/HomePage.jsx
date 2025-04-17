@@ -7,6 +7,7 @@ const HomePage = () => {
 	const [videos, setVideos] = useState([]);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [showUploadConfirm, setShowUploadConfirm] = useState(false);
 	const [notification, setNotification] = useState({
 		visible: false,
 		message: '',
@@ -146,6 +147,23 @@ const HomePage = () => {
 							</button>
 							<button onClick={handleClearClips} className="delete-button">
 								Delete All
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Delete confirmation modal */}
+			{showUploadConfirm && (
+				<div className="upload-modal">
+					<div className="modal-content">
+						<p>Are you sure you want to upload?</p>
+						<div className="modal-buttons">
+							<button onClick={cancelUpload} className="cancel-upload-button">
+								Cancel
+							</button>
+							<button onClick={handleUpload} className="upload-button">
+								Upload
 							</button>
 						</div>
 					</div>

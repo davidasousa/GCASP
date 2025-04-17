@@ -55,7 +55,6 @@ async function uploadClipFile(file, title, token) {
         console.error("Upload failed:", error.response?.data || error.message);
     }
 }
-  
 
 // Initialize settings and register handlers
 export function setupUploadHandlers() {
