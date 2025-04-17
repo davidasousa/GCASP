@@ -72,47 +72,75 @@ export const AuthProvider = ({ children }) => {
 			try {
 				setLoading(true);
 				
-				// Check if offline mode is enabled
+				window.electron.log.info('Starting authentication state check...');
+
+				// Check storage state for debugging
+				const STORAGE_KEYS = {
+					AUTH: 'gcasp_auth',
+					OFFLINE_MODE: 'gcasp_offline_mode'
+				};
+				
+				const hasLocalAuth = !!localStorage.getItem(STORAGE_KEYS.AUTH);
+				const hasSessionAuth = !!sessionStorage.getItem(STORAGE_KEYS.AUTH);
+				const hasOfflineMode = !!localStorage.getItem(STORAGE_KEYS.OFFLINE_MODE);
+
+				window.electron.log.info('Storage state:', { 
+					hasLocalAuth,
+					hasSessionAuth, 
+					hasOfflineMode 
+				});
+				
+				// First try to load auth data regardless of offline mode
+				const authData = await secureStorage.getAuth();
+				
+				if (authData && authData.token) {
+					// We have valid auth data, so try to validate the token
+					try {
+						const validationResult = await window.electron.auth.validateToken(authData.token);
+						
+						if (validationResult.success) {
+							// Token is valid, set user state and ensure offline mode is OFF
+							setCurrentUser({
+								...authData.user,
+								...validationResult.user // Merge any updated user info
+							});
+							// Make sure offline mode is disabled when we have valid auth
+							setIsOfflineMode(false);
+							secureStorage.setOfflineMode(false);
+							window.electron.log.info('User authenticated from stored credentials');
+							setLoading(false);
+							return; // Exit early since we're authenticated
+						} else {
+							// Token is invalid, clear storage
+							await secureStorage.clearAuth();
+							window.electron.log.warn('Stored token is invalid, clearing auth state');
+						}
+					} catch (validationError) {
+						// Error validating token - network might be down
+						window.electron.log.error('Error validating token', { 
+							error: validationError.toString() 
+						});
+
+					}
+				}
+				
+				// If we get here, either there's no token or the token validation failed
+				// Now check if offline mode is enabled
 				const offlineMode = secureStorage.isOfflineMode();
 				if (offlineMode) {
 					setIsOfflineMode(true);
-					setLoading(false);
-					return;
-				}
-				
-				// Try to load auth data
-				const authData = await secureStorage.getAuth();
-				
-				if (authData) {
-					const token = authData.token;
-					const user = authData.user;
-					
-					if (user && token) {
-						// Validate token with backend
-						try {
-							const validationResult = await window.electron.auth.validateToken(token);
-							
-							if (validationResult.success) {
-								// Token is valid, set user state
-								setCurrentUser({
-									...user,
-									...validationResult.user // Merge any updated user info
-								});
-								window.electron.log.info('User authenticated from stored credentials');
-							} else {
-								// Token is invalid, clear storage
-								await secureStorage.clearAuth();
-								window.electron.log.warn('Stored token is invalid, clearing auth state');
-							}
-						} catch (validationError) {
-							// Error validating token, but don't clear storage yet
-							// This could be a network issue, and we can try again later
-							window.electron.log.error('Error validating token', validationError);
-						}
-					}
+					setCurrentUser(null); // Ensure user is null in offline mode
+					window.electron.log.info('Offline mode enabled');
+				} else {
+					// Not authenticated and not in offline mode
+					setIsOfflineMode(false);
+					setCurrentUser(null);
+					window.electron.log.info('Not authenticated and not in offline mode');
 				}
 			} catch (error) {
-				window.electron.log.error('Error loading auth state', { error: error.toString() });
+				window.electron.log.error('Error loading auth state', { 
+					error: error.toString() 
+				});
 				setError('Authentication system error. Please restart the application.');
 			} finally {
 				setLoading(false);
@@ -173,7 +201,10 @@ export const AuthProvider = ({ children }) => {
 			
 			// Update state
 			setCurrentUser(user);
+			
+			// Explicitly disable offline mode when logging in
 			setIsOfflineMode(false);
+			secureStorage.setOfflineMode(false);
 			
 			window.electron.log.info('User logged in successfully');
 			return true;
@@ -275,6 +306,11 @@ export const AuthProvider = ({ children }) => {
 		setShowLoginModal(false);
 	}, []);
 	
+	// Function to clear login / register errors
+	const clearError = useCallback(() => {
+		setError(null);
+	}, []);
+
 	// Provide auth context values
 	const value = {
 		currentUser,
@@ -288,7 +324,8 @@ export const AuthProvider = ({ children }) => {
 		toggleOfflineMode,
 		openLoginModal,
 		closeLoginModal,
-		showLoginModal
+		showLoginModal,
+		clearError
 	};
 	
 	return (

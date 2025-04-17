@@ -1,8 +1,7 @@
 const sequelize = require("../config/database");
 const User = require("./User");
 const Friendship = require("./Friendship");
-const Video = require("./Video");
-
+const Video = require('./Video');
 
 User.belongsToMany(User, {
   as: "Friends",
@@ -15,11 +14,4 @@ sequelize.sync({ alter: true }).then(() => {
   console.log("Database Synced");
 });
 
-// module.exports = { User, Friendship, sequelize };
-
-module.exports = {
-  sequelize,
-  User,
-  Video,
-  Friendship,
-};
+module.exports = { User, Friendship, sequelize, Video };

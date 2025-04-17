@@ -1,15 +1,45 @@
 import { ipcMain } from 'electron';
-import axios from 'axios';
 import { getModuleLogger } from './logger';
+import axios from 'axios';
 
 const logger = getModuleLogger('ipcAuthHandlers.js');
 
 // Default API URL - should be defined in environment variables or settings
-const DEFAULT_API_URL = 'http://localhost:5001/api';
+const DEFAULT_API_URL = 'http://localhost:5001';
 
 // Helper to get API URL
 const getApiUrl = () => {
 	return process.env.API_URL || DEFAULT_API_URL;
+};
+
+// Helper function to safely extract error information without circular references
+const safelyExtractErrorInfo = (error) => {
+	if (!error) return 'Unknown error';
+	
+	// If it's an Axios error with a response
+	if (error.response) {
+		return {
+			status: error.response.status,
+			statusText: error.response.statusText,
+			data: error.response.data,
+			headers: error.response.headers
+		};
+	}
+	
+	// If it's an Axios error without a response (network error)
+	if (error.request) {
+		return {
+			message: 'Network error - no response received',
+			code: error.code || 'NETWORK_ERROR'
+		};
+	}
+	
+	// For other errors, just extract basic properties
+	return {
+		message: error.message || 'Unknown error',
+		code: error.code,
+		name: error.name
+	};
 };
 
 // Set up authentication IPC handlers
@@ -54,27 +84,28 @@ export function setupAuthIpcHandlers() {
 			// Validate the response
 			if (response.data && response.data.token && response.data.username) {
 				logger.info('User logged in successfully');
+		
 				return {
 					success: true,
 					token: response.data.token,
 					username: response.data.username
 				};
 			} else {
-				logger.warn('Login failed: Invalid response format', response.data);
+				logger.warn('Login failed: Invalid response format');
 				return { 
 					success: false, 
 					error: 'Invalid response from server' 
 				};
 			}
 		} catch (error) {
-			// Handle specific HTTP errors
+			// Handle specific HTTP errors - safely extract error information
+			const errorInfo = safelyExtractErrorInfo(error);
+			
+			// Log the safe error info object
+			logger.error('Login error:', errorInfo);
+			
+			// Handle specific error cases
 			if (error.response) {
-				// The request was made and the server responded with a status code that falls out of the range of 2xx
-				logger.error('Login error response:', {
-					status: error.response.status,
-					data: error.response.data
-				});
-				
 				if (error.response.status === 401) {
 					return { 
 						success: false, 
@@ -92,18 +123,14 @@ export function setupAuthIpcHandlers() {
 					error: error.response.data?.message || 'Login failed' 
 				};
 			} else if (error.request) {
-				// The request was made but no response was received
-				logger.error('Login error - no response:', error.request);
 				return { 
 					success: false, 
 					error: 'Unable to connect to the server. Please check your network connection.' 
 				};
 			} else {
-				// Something happened in setting up the request that triggered an Error
-				logger.error('Login error:', error);
 				return { 
 					success: false, 
-					error: 'An unexpected error occurred' 
+					error: error.message || 'An unexpected error occurred' 
 				};
 			}
 		}
@@ -151,13 +178,14 @@ export function setupAuthIpcHandlers() {
 			logger.info('User registered successfully');
 			return { success: true };
 		} catch (error) {
-			// Handle specific HTTP errors
+			// Handle specific HTTP errors - safely extract error information
+			const errorInfo = safelyExtractErrorInfo(error);
+			
+			// Log the safe error info object
+			logger.error('Registration error:', errorInfo);
+			
+			// Handle specific error cases
 			if (error.response) {
-				logger.error('Registration error response:', {
-					status: error.response.status,
-					data: error.response.data
-				});
-				
 				if (error.response.status === 400) {
 					return { 
 						success: false, 
@@ -170,16 +198,14 @@ export function setupAuthIpcHandlers() {
 					error: error.response.data?.message || 'Registration failed' 
 				};
 			} else if (error.request) {
-				logger.error('Registration error - no response:', error.request);
 				return { 
 					success: false, 
 					error: 'Unable to connect to the server. Please check your network connection.' 
 				};
 			} else {
-				logger.error('Registration error:', error);
 				return { 
 					success: false, 
-					error: 'An unexpected error occurred' 
+					error: error.message || 'An unexpected error occurred' 
 				};
 			}
 		}
@@ -219,12 +245,16 @@ export function setupAuthIpcHandlers() {
 				return { success: false };
 			}
 		} catch (error) {
+			// Handle errors - safely extract error information
+			const errorInfo = safelyExtractErrorInfo(error);
+			
+			// Log the safe error info object
+			logger.error('Token validation error:', errorInfo);
+			
 			if (error.response && error.response.status === 401) {
-				logger.warn('Token validation failed: Unauthorized');
 				return { success: false };
 			}
 			
-			logger.error('Token validation error:', error);
 			return { success: false };
 		}
 	});

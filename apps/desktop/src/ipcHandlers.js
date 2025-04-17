@@ -5,6 +5,7 @@ import { setupHotkeyHandler, unregisterHotkeys } from './ipcHotkeyHandlers';
 import { setupRecordingHandlers } from './ipcRecordingHandlers';
 import { setupVideoHandlers } from './ipcVideoHandlers';
 import { setupSystemHandlers } from './ipcSystemHandlers';
+import { setupUploadHandlers } from './ipcUploadHandler';
 
 const logger = getModuleLogger('ipcHandlers.js');
 
@@ -35,6 +36,9 @@ export function setupIpcHandlers() {
 
     // Set up video-related handlers (metadata, editing, listing, deletion)
     setupVideoHandlers();
+
+    // Setup Uploading Handlers
+    setupUploadHandlers();
 
     logger.info('IPC handlers setup complete');
 }

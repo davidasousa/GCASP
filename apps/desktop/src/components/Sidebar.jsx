@@ -61,6 +61,15 @@ const Sidebar = () => {
                             Settings
                         </NavLink>
                     </li>
+                    <li>
+                        <NavLink 
+                            to="/profile"
+                            className={({ isActive }) => isActive ? 'active' : ''}
+                            aria-label="Profile"
+                        >
+                            Profile
+                        </NavLink>
+                    </li>
                 </ul>
                 
                 <div className="sidebar-footer">

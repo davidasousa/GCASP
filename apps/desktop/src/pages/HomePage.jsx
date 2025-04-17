@@ -7,6 +7,7 @@ const HomePage = () => {
 	const [videos, setVideos] = useState([]);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+	const [showUploadConfirm, setShowUploadConfirm] = useState(false);
 	const [notification, setNotification] = useState({
 		visible: false,
 		message: '',
@@ -73,17 +74,6 @@ const HomePage = () => {
 	const handleCloseNotification = () => {
 		setNotification({ ...notification, visible: false });
 	};
-	
-	// Function to upload all selected clips (placeholder)
-	const handleUploadClips = () => {
-		// This will be implemented later with backend integration
-		console.log('Upload clips button clicked');
-		setNotification({
-			visible: true,
-			message: 'Upload functionality coming soon',
-			type: 'success'
-		});
-	};
 
 	// Load videos when the component mounts
 	useEffect(() => {
@@ -144,13 +134,6 @@ const HomePage = () => {
 						Delete All Recordings
 					</button>
 				)}
-				
-				{/* Only show upload button when authenticated and not offline */}
-				{isAuthenticated && !isOfflineMode && videos.length > 0 && (
-					<button className="upload-all-button" onClick={handleUploadClips}>
-						Upload Selected Clips
-					</button>
-				)}
 			</div>
 			
 			{/* Delete confirmation modal */}
@@ -164,6 +147,23 @@ const HomePage = () => {
 							</button>
 							<button onClick={handleClearClips} className="delete-button">
 								Delete All
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Delete confirmation modal */}
+			{showUploadConfirm && (
+				<div className="upload-modal">
+					<div className="modal-content">
+						<p>Are you sure you want to upload?</p>
+						<div className="modal-buttons">
+							<button onClick={cancelUpload} className="cancel-upload-button">
+								Cancel
+							</button>
+							<button onClick={handleUpload} className="upload-button">
+								Upload
 							</button>
 						</div>
 					</div>

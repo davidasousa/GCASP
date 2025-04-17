@@ -106,6 +106,10 @@ contextBridge.exposeInMainWorld('electron', {
 		register: (userData) => ipcRenderer.invoke('auth-register', userData),
 		validateToken: (token) => ipcRenderer.invoke('auth-validate-token', token)
 	},
+
+	// Upload Methods
+	triggerUploadClip: (title, token) =>
+		ipcRenderer.invoke('trigger-upload-clip', title, token),
 	
 	// Logging functions for renderer process
 	log: {
