@@ -107,6 +107,26 @@
     transform: scale(0.98);
 }
 
+/* Upload button in header */
+.video-header .upload-button {
+	background: #28a745;
+	color: white;
+	border: none;
+	padding: 5px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background 0.2s, transform 0.1s;
+	margin-right: 5px;
+}
+
+.video-header .upload-button:hover {
+	background: #218838;
+}
+
+.video-header .upload-button:active {
+	transform: scale(0.98);
+}
+
 .video-actions {
 	display: flex;
 	justify-content: center;
