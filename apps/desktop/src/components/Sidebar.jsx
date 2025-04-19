@@ -53,14 +53,6 @@ const Sidebar = () => {
                         </NavLink>
                     </li>
                     <li>
-                        <NavLink 
-                            to="/settings"
-                            className={({ isActive }) => isActive ? 'active' : ''}
-                            aria-label="Settings"
-                        >
-                            Settings
-                        </NavLink>
-                    </li>
                     <li>
                         <NavLink 
                             to="/profile"
@@ -68,6 +60,14 @@ const Sidebar = () => {
                             aria-label="Profile"
                         >
                             Profile
+                        </NavLink>
+                    </li>
+                        <NavLink 
+                            to="/settings"
+                            className={({ isActive }) => isActive ? 'active' : ''}
+                            aria-label="Settings"
+                        >
+                            Settings
                         </NavLink>
                     </li>
                 </ul>
