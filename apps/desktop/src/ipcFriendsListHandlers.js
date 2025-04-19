@@ -29,7 +29,7 @@ export function setupFriendsListHandlers() {
             headers: {
               Authorization: `Bearer ${token}`,
             },
-            timeout: 5000, // Optional timeout
+            timeout: 5000, 
           }
         );
     
