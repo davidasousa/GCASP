@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import zxcvbn from 'zxcvbn';
 import { useAuth } from '../contexts/AuthContext';
 import { validateEmail, validateUsername, validatePassword } from '../utils/validation';
 import '../styles/login-page.css';
@@ -48,25 +49,8 @@ const RegisterPage = () => {
 			return;
 		}
 		
-		let score = 0;
-		
-		// Length check
-		if (password.length >= 8) score++;
-		
-		// Complexity check (count character types)
-		let types = 0;
-		if (/[a-z]/.test(password)) types++;
-		if (/[A-Z]/.test(password)) types++;
-		if (/[0-9]/.test(password)) types++;
-		if (/[^A-Za-z0-9]/.test(password)) types++;
-		
-		if (types >= 3) score++;
-		
-		// Unique character check
-		const uniqueChars = new Set(password.split('')).size;
-		if (uniqueChars >= 6) score++;
-		
-		setPasswordStrength(score);
+		const result = zxcvbn(password);
+		setPasswordStrength(Math.min(3, result.score));
 	}, [password]);
 	
 	const validateForm = () => {

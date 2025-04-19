@@ -54,6 +54,7 @@
     "electron-store": "^10.0.1",
     "jwt-decode": "^4.0.0",
     "react-router-dom": "^7.5.0",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "zxcvbn": "^4.4.2"
   }
 }
