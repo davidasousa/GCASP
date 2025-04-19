@@ -108,9 +108,15 @@ contextBridge.exposeInMainWorld('electron', {
 	},
 
 	// Upload Methods
-	triggerUploadClip: (title, token) =>
-		ipcRenderer.invoke('trigger-upload-clip', title, token),
+	triggerUploadClip: (title, token) => ipcRenderer.invoke(
+		'trigger-upload-clip', title, token
+	),
 	
+	// Friends List Methods
+	addFriend: (friendUsername, token) => ipcRenderer.invoke(
+		'trigger-add-friend', friendUsername, token
+	),
+
 	// Logging functions for renderer process
 	log: {
 		error: (message, meta = {}) => ipcRenderer.invoke('log', { level: 'error', message, meta }),
