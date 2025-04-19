@@ -6,6 +6,7 @@ import { secureStorage } from '../utils/secureStorage';
 const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete }) => {
 	const [hasError, setHasError] = useState(false);
 	const [showDeletePrompt, setShowDeletePrompt] = useState(false);
+	const [showUploadConfirm, setShowUploadConfirm] = useState(false);
 	const navigate = useNavigate();
 
 	const handlePlayerReady = (player) => {
@@ -40,8 +41,12 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 		setShowDeletePrompt(false);
 	};
 
+	// Upload
+	const handleUpload = () => { setShowUploadConfirm(true); }
+	const cancelUpload = () => { setShowUploadConfirm(false); }
+
 	// Upload Functions
-	const handleUploadClick = async () => {
+	const handleUploadSubmit = async () => {
 		const token = await secureStorage.getToken();
 		const response = await window.electron.triggerUploadClip(title, token);
 	}
@@ -74,7 +79,7 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 						Delete
 					</button>
 					<button
-						onClick={handleUploadClick}
+						onClick={handleUpload}
 						className="upload-button"
 						aria-label={`Upload ${title}`}
 					>
@@ -92,6 +97,22 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 							</button>
 							<button onClick={confirmDelete} className="delete-button">
 								Delete
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+			{/* Upload Confirmation Modal */}
+			{showUploadConfirm && (
+				<div className="upload-modal">
+					<div className="modal-content">
+						<p>Are you sure you want to upload?</p>
+						<div className="modal-buttons">
+							<button onClick={cancelUpload} className="cancel-upload-button">
+								Cancel
+							</button>
+							<button onClick={handleUploadSubmit} className="upload-button">
+								Upload
 							</button>
 						</div>
 					</div>

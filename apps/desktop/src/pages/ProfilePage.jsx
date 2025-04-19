@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { secureStorage } from '../utils/secureStorage';
 import '../styles/profile-page.css';
 
 const DisplayUserInfoList = ({ userInfo }) => {
@@ -55,7 +56,7 @@ const ProfilePage = () => {
   const [friendUsername, setFriendUsername] = useState("");
   // User Info Object
   const [userInfo, setUserInfo] = useState ({
-    userName: "David",
+    userName: "",
     userFriendCount: 0,
     userClipsUploaded: 0,
     userViewCountTotal: 0
@@ -70,14 +71,20 @@ const ProfilePage = () => {
     setFriendUsername("");
   };
 
-  const submitAddFriends = () => {
-    if (friendUsername.trim() !== "") {
-        // Trigger Adding Friend On Backend:
-        
-        setFriendsList([...friendsList, friendUsername]);
-        setFriendUsername("");
-        setShowAddFriends(false);
+  const submitAddFriends = async () => {
+    if (friendUsername.trim() === "") { return; }
+    // Trigger Adding Friend On Backend:
+    const token = await secureStorage.getToken();
+    const response = await window.electron.addFriend(friendUsername, token);
+
+    if(response) {
+      setFriendsList([...friendsList, friendUsername]);
     }
+
+    setFriendUsername("");
+    setShowAddFriends(false);
+    return response;
+ 
   };
 
   return (
@@ -93,7 +100,7 @@ const ProfilePage = () => {
             <button className="cancel-button" onClick={cancelAddFriends}>
               Cancel
             </button>
-            <button className="add-friend-confirm-button" onClick={submitAddFriends}>
+            <button className="add-friend-button" onClick={submitAddFriends}>
               Add Friend
             </button>
           </div>

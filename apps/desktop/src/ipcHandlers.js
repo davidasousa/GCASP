@@ -6,6 +6,7 @@ import { setupRecordingHandlers } from './ipcRecordingHandlers';
 import { setupVideoHandlers } from './ipcVideoHandlers';
 import { setupSystemHandlers } from './ipcSystemHandlers';
 import { setupUploadHandlers } from './ipcUploadHandler';
+import { setupFriendsListHandlers } from './ipcFriendsListHandlers';
 
 const logger = getModuleLogger('ipcHandlers.js');
 
@@ -39,6 +40,9 @@ export function setupIpcHandlers() {
 
     // Setup Uploading Handlers
     setupUploadHandlers();
+
+    // Setup Friends List Handlers
+    setupFriendsListHandlers();
 
     logger.info('IPC handlers setup complete');
 }
