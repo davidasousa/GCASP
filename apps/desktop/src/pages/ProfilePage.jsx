@@ -54,6 +54,7 @@ const FriendUsernameInput = ({ friendUsername, setFriendUsername }) => {
 const ProfilePage = () => {
   const [friendsList, setFriendsList] = useState([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
+  const [showAddError, setShowAddError] = useState(false);
   const [friendUsername, setFriendUsername] = useState("");
   // User Info Object
   const [userInfo, setUserInfo] = useState ({
@@ -91,13 +92,21 @@ const ProfilePage = () => {
     setShowAddFriends(true);
   };
 
+  const cancelAddError = () => {
+    setShowAddError(false);
+  };
+
   const cancelAddFriends = () => {
     setShowAddFriends(false);
     setFriendUsername("");
   };
 
   const submitAddFriends = async () => {
-    if (friendUsername.trim() === "") { return; }
+    if (friendUsername.trim() === userInfo.username || 
+        friendUsername.trim() === "") { 
+      setShowAddError(true);
+      return; 
+    }
     // Trigger Adding Friend On Backend:
     const token = await secureStorage.getToken();
     const response = await window.electron.addFriend(friendUsername, token);
@@ -128,6 +137,15 @@ const ProfilePage = () => {
             <button className="add-friend-button" onClick={submitAddFriends}>
               Add Friend
             </button>
+            {/* Adding Friend Error */}
+            <div>
+              {showAddError && (
+                <div> 
+                  <div> Error Cannot Add Self </div>
+                  <button onClick = {cancelAddError}> Ok </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
