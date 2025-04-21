@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { secureStorage } from '../utils/secureStorage';
 import '../styles/profile-page.css';
 
@@ -62,6 +62,19 @@ const ProfilePage = () => {
     userViewCountTotal: 0
   });
 
+  // Assigning User Infomation
+  useEffect(() => {
+    const assignUserInfo = async () => {
+        const user = await secureStorage.getUser(); 
+        setUserInfo(prev => ({
+          ...prev,
+          userName: user.username
+        }));
+    };
+
+    assignUserInfo(); // Call the function
+  }, []); // Only run on component mount
+  
   const triggerAddFriends = () => {
     setShowAddFriends(true);
   };
