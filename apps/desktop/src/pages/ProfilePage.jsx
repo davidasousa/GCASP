@@ -7,6 +7,7 @@ const DisplayUserInfoList = ({ userInfo }) => {
     <div className="profile-friends-list">
         <ul id="profile-userinfo-list">
           <li>GCASP Username: {userInfo.userName}</li>
+          <li>GCASP Email: {userInfo.userEmail}</li>
           <li>GCASP Friends: {userInfo.userFriendCount}</li>
           <li>GCASP Total Clips Uploaded: {userInfo.userClipsUploaded}</li>
           <li>GCASP Total Clip Views: {userInfo.userViewCountTotal}</li>
@@ -57,6 +58,7 @@ const ProfilePage = () => {
   // User Info Object
   const [userInfo, setUserInfo] = useState ({
     userName: "",
+    userEmail: "",
     userFriendCount: 0,
     userClipsUploaded: 0,
     userViewCountTotal: 0
@@ -65,12 +67,22 @@ const ProfilePage = () => {
   // Assigning User Infomation
   useEffect(() => {
     const assignUserInfo = async () => {
+        // Get Token
+        const token = await secureStorage.getToken();
+
+        // Name & Email
         const user = await secureStorage.getUser(); 
         setUserInfo(prev => ({
           ...prev,
-          userName: user.username
+          userName: user.username,
+          userEmail: user.email
         }));
-    };
+
+        // Friends List
+        const responseData = await window.electron.getFriendsList(token);
+        const usernamesList = responseData.friends.map(friend => friend.username);
+        setFriendsList(usernamesList);
+      };
 
     assignUserInfo(); // Call the function
   }, []); // Only run on component mount

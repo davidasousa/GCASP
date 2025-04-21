@@ -42,6 +42,33 @@ export function setupFriendsListHandlers() {
         }
       }
     });
+
+    // Trigger Add Friend
+    logger.debug("Getting Friends List");
+
+    ipcMain.handle('trigger-get-friendslist', async (event, token) => {
+      logger.debug('Fetching Friends List');
+        try {
+          const response = await axios.get(
+            `${getApiUrl()}/friends`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              timeout: 5000, 
+            }
+          );
+      
+          console.log("Friends List Retrieved:", response.data);
+          return response.data;
+        } catch (error) {
+          if (error.response) {
+            console.error("Request failed:", error.response.data);
+          } else {
+            console.error("Error:", error.message);
+          }
+        }
+      });
 }
 
 export default setupFriendsListHandlers;
