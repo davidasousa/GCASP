@@ -14,4 +14,6 @@ sequelize.sync({ alter: true }).then(() => {
   console.log("Database Synced");
 });
 
+User.hasMany(Video, { foreignKey: "userId" });
+
 module.exports = { User, Friendship, sequelize, Video };

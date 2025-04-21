@@ -10,6 +10,7 @@ const videoRoutes = require("./routes/videos");
 const xssClean = require("xss-clean");
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 app.use(xssClean());
