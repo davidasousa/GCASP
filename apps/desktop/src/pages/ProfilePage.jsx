@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { secureStorage } from '../utils/secureStorage';
 import '../styles/profile-page.css';
 
+// 1) Friends Number
+// 2) Add/Remove Self Error Handleing
+
 const DisplayUserInfoList = ({ userInfo }) => {
   return (
     <div className="profile-friends-list">
@@ -73,6 +76,7 @@ const ProfilePage = () => {
     const token = await secureStorage.getToken();
     const responseData = await window.electron.getFriendsList(token);
     const usernamesList = responseData.friends.map(friend => friend.username);
+    setUserInfo(prev => ({...prev, userFriendCount: usernamesList.length}));
     setFriendsList(usernamesList);
   }
 
