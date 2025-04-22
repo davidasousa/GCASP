@@ -146,13 +146,13 @@ const ProfilePage = () => {
               Add Friend
             </button>
             {/* Adding Friend Error */}
-            <div>
-              {showAddError && (
-                <div> 
-                  <div>{addErrorMessage}</div>
-                  <button onClick = {cancelAddError}> Ok </button>
-                </div>
-              )}
+            <div className = "Add Error Message">
+            {showAddError && (
+              <div className="add-error-message">
+                <div className="error-text">{addErrorMessage}</div>
+                <button className="error-button" onClick={cancelAddError}>Ok</button>
+              </div>
+            )}
             </div>
           </div>
         </div>
