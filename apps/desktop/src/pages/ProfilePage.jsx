@@ -162,20 +162,13 @@ const ProfilePage = () => {
               friendUsername={friendUsername}
               setFriendUsername={setFriendUsername}
             />
-            <button className="cancel-button" onClick={cancelAddFriends}>
-              Cancel
-            </button>
-            <button className="add-friend-button" onClick={submitAddFriends}>
-              Add Friend
-            </button>
-            {/* Adding Friend Error */}
-            <div className = "Add Error Message">
-            {showAddError && (
-              <div className="add-error-message">
-                <div className="error-text">{addErrorMessage}</div>
-                <button className="error-button" onClick={cancelAddError}>Ok</button>
-              </div>
-            )}
+            <div className="modal-buttons-container">
+              <button className="cancel-button" onClick={cancelAddFriends}>
+                Cancel
+              </button>
+              <button className="add-friend-button" onClick={submitAddFriends}>
+                Add Friend
+              </button>
             </div>
           </div>
         </div>
@@ -189,12 +182,14 @@ const ProfilePage = () => {
               friendUsername={friendUsername}
               setFriendUsername={setFriendUsername}
             />
-            <button className="cancel-button" onClick={cancelRemoveFriends}>
-              Cancel
-            </button>
-            <button className="remove-friend-button" onClick={submitRemoveFriends}>
-              Remove Friend
-            </button>
+            <div className="modal-buttons-container">
+              <button className="cancel-button" onClick={cancelRemoveFriends}>
+                Cancel
+              </button>
+              <button className="remove-friend-button" onClick={submitRemoveFriends}>
+                Remove Friend
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -223,6 +218,7 @@ const ProfilePage = () => {
           Remove Friend
         </button>
       </div>
+
     </div>
   );
 };

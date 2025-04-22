@@ -1,4 +1,4 @@
-/* General page styling */
+/* General Page Styling */
 .profile-page {
   font-family: Arial, sans-serif;
   padding: 40px;
@@ -29,15 +29,15 @@
 .profile-info label {
   font-size: 1.2rem;
   font-weight: bold;
+  color: #0066cc;
   margin-bottom: 10px;
   display: block;
-  color: #0066cc;
 }
 
 #userInfo {
   font-size: 1rem;
-  padding: 10px 0;
   color: #333;
+  padding: 10px 0;
 }
 
 #profile-userinfo-list {
@@ -60,8 +60,8 @@
 
 .profile-friends-list label {
   font-weight: bold;
-  display: block;
   margin-bottom: 10px;
+  display: block;
 }
 
 .profile-friends-list ul {
@@ -78,8 +78,8 @@
   font-size: 1rem;
 }
 
-/* Add Friend Modal */
-.add-friends-modal {
+/* Modal Styling */
+.add-friends-modal, .remove-friends-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -102,85 +102,107 @@
   text-align: center;
 }
 
-/* Input in Modal */
-.modal-content label {
+.modal-content label,
+.modal-content input[type="text"] {
   display: block;
-  margin-bottom: 8px;
+  text-align: center;
+  margin: 0 auto 20px auto;
   font-weight: bold;
-  text-align: left;
 }
 
 .modal-content input[type="text"] {
   width: 80%;
   padding: 10px 12px;
-  margin: 0 auto 20px auto;
-  display: block;
   border-radius: 5px;
   border: 1px solid #ccc;
   font-size: 1rem;
 }
 
-/* Cancel (Red) and Add Friend (Green) Buttons */
+/* Modal Buttons */
+.modal-buttons-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
+  width: 100%;
+}
+
 .cancel-button,
-.add-friend-confirm-button {
+.add-friend-confirm-button,
+.remove-friend-confirm-button {
   width: 48%;
-  padding: 10px 0;
-  margin: 0 1%;
+  padding: 12px 0;
   border: none;
   border-radius: 4px;
   font-size: 1rem;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  box-sizing: border-box;
 }
 
-/* Red cancel button */
+.cancel-button {
+  background-color: #cc0000;
+  color: white;
+}
+
+.add-friend-confirm-button,
+.remove-friend-confirm-button {
+  background-color: #28a745;
+  color: white;
+}
+
+/* Equal Size for Cancel and Remove Friend Buttons */
+.cancel-button,
+.remove-friend-button {
+  width: 48%;
+  height: 50px; /* Ensure same height */
+  padding: 12px 0;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  box-sizing: border-box;
+}
+
 .cancel-button {
   background-color: #cc0000;
   color: white;
 }
 
 .cancel-button:hover {
-  background-color: #990000;
+  background-color: #c82333;
 }
 
-/* Green add friend button */
-.add-friend-confirm-button {
-  background-color: #28a745;
+.remove-friend-button {
+  background-color: #cc0000;
   color: white;
 }
 
-.add-friend-confirm-button:hover {
-  background-color: #218838;
+.remove-friend-button:hover {
+  background-color: #c82333;
 }
 
-/* Modal Buttons Clearfix */
-.modal-content::after {
-  content: "";
-  display: table;
-  clear: both;
-}
-
-/* Add Friend Button (Main Page) */
-.friend-actions {
-  text-align: center;
-  margin-top: 30px;
-}
-
+/* Add Friend Button Styling in Modal */
 .add-friend-button {
-  padding: 10px 20px;
-  background-color: #0066cc;
-  color: white;
+  width: 100%;
+  height: 50px; /* Matching height */
+  padding: 12px 0;
   font-size: 1rem;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.3s ease;
+  margin-top: 10px;
+  background-color: #28a745; /* Green color like Remove button */
+  color: white;
 }
 
 .add-friend-button:hover {
-  background-color: #004999;
+  background-color: #218838; /* Darker green on hover */
 }
 
+/* Error Message Box */
 .add-error-message {
   margin-top: 1rem;
   padding: 1rem;
@@ -210,6 +232,40 @@
   transition: background-color 0.2s ease;
 }
 
-.error-button:hover {
-  background-color: #cc0000;
+/* Main Action Buttons */
+.friend-actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 30px;
+  width: 100%;
 }
+
+.friend-actions .add-friend-button,
+.friend-actions .remove-friend-button {
+  width: 48%;
+  padding: 10px 0;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.friend-actions .add-friend-button {
+  background-color: #0066cc;
+  color: white;
+}
+
+.friend-actions .remove-friend-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.friend-actions .add-friend-button:hover {
+  background-color: #004999;
+}
+
+.friend-actions .remove-friend-button:hover {
+  background-color: #218838;
+}
+
