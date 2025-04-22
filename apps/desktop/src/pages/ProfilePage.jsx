@@ -55,6 +55,7 @@ const ProfilePage = () => {
   const [friendsList, setFriendsList] = useState([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
   const [showAddError, setShowAddError] = useState(false);
+  const [addErrorMessage, setAddErrorMessage] = useState("");
   const [friendUsername, setFriendUsername] = useState("");
   // User Info Object
   const [userInfo, setUserInfo] = useState ({
@@ -93,6 +94,7 @@ const ProfilePage = () => {
   };
 
   const cancelAddError = () => {
+    setAddErrorMessage("");
     setShowAddError(false);
   };
 
@@ -102,8 +104,14 @@ const ProfilePage = () => {
   };
 
   const submitAddFriends = async () => {
-    if (friendUsername.trim() === userInfo.username || 
-        friendUsername.trim() === "") { 
+    // Error Handeling
+    if (friendUsername === userInfo.userName) { 
+      setAddErrorMessage("Error: Cannot Add Oneself")
+      setShowAddError(true);
+      return; 
+    }
+    if (friendUsername === "") { 
+      setAddErrorMessage("Error: Username Cannot Be Empty")
       setShowAddError(true);
       return; 
     }
@@ -141,7 +149,7 @@ const ProfilePage = () => {
             <div>
               {showAddError && (
                 <div> 
-                  <div> Error Cannot Add Self </div>
+                  <div>{addErrorMessage}</div>
                   <button onClick = {cancelAddError}> Ok </button>
                 </div>
               )}
