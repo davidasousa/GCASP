@@ -55,8 +55,10 @@ const ProfilePage = () => {
   const [friendsList, setFriendsList] = useState([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
   const [showAddError, setShowAddError] = useState(false);
+  const [showRemoveFriends, setShowRemoveFriends] = useState(false);
   const [addErrorMessage, setAddErrorMessage] = useState("");
   const [friendUsername, setFriendUsername] = useState("");
+  
   // User Info Object
   const [userInfo, setUserInfo] = useState ({
     userName: "",
@@ -66,12 +68,17 @@ const ProfilePage = () => {
     userViewCountTotal: 0
   });
 
+  const updateFriendsList = async () => {
+    // Friends List
+    const token = await secureStorage.getToken();
+    const responseData = await window.electron.getFriendsList(token);
+    const usernamesList = responseData.friends.map(friend => friend.username);
+    setFriendsList(usernamesList);
+  }
+
   // Assigning User Infomation
   useEffect(() => {
     const assignUserInfo = async () => {
-        // Get Token
-        const token = await secureStorage.getToken();
-
         // Name & Email
         const user = await secureStorage.getUser(); 
         setUserInfo(prev => ({
@@ -81,9 +88,7 @@ const ProfilePage = () => {
         }));
 
         // Friends List
-        const responseData = await window.electron.getFriendsList(token);
-        const usernamesList = responseData.friends.map(friend => friend.username);
-        setFriendsList(usernamesList);
+        updateFriendsList();
       };
 
     assignUserInfo(); // Call the function
@@ -104,9 +109,8 @@ const ProfilePage = () => {
   };
 
   const submitAddFriends = async () => {
-    // Error Handeling
     if (friendUsername === userInfo.userName) { 
-      setAddErrorMessage("Error: Cannot Add Oneself")
+      setAddErrorMessage("Error: Cannot Remove Oneself")
       setShowAddError(true);
       return; 
     }
@@ -119,14 +123,33 @@ const ProfilePage = () => {
     const token = await secureStorage.getToken();
     const response = await window.electron.addFriend(friendUsername, token);
 
-    if(response) {
-      setFriendsList([...friendsList, friendUsername]);
-    }
-
+    updateFriendsList();
+    
     setFriendUsername("");
     setShowAddFriends(false);
     return response;
- 
+  };
+
+  // Removing Friends
+  const submitRemoveFriends = async () => {
+    // Error Handeling
+    
+    // Trigger Adding Friend On Backend:
+    const token = await secureStorage.getToken();
+    await window.electron.removeFriend(friendUsername, token);
+
+    updateFriendsList();
+    setFriendUsername("");
+    setShowRemoveFriends(false);
+  };
+
+  const triggerRemoveFriends = () => {
+    setShowRemoveFriends(true);
+  };
+
+  const cancelRemoveFriends = () => {
+    setShowRemoveFriends(false);
+    setFriendUsername("");
   };
 
   return (
@@ -158,6 +181,24 @@ const ProfilePage = () => {
         </div>
       )}
 
+      {/* Remove Friends */}
+      {showRemoveFriends && (
+        <div className="remove-friends-modal">
+          <div className="modal-content">
+            <FriendUsernameInput
+              friendUsername={friendUsername}
+              setFriendUsername={setFriendUsername}
+            />
+            <button className="cancel-button" onClick={cancelRemoveFriends}>
+              Cancel
+            </button>
+            <button className="remove-friend-button" onClick={submitRemoveFriends}>
+              Remove Friend
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="profile-page-header">GCASP Profile</div>
 
       <div className="profile-info">
@@ -177,6 +218,9 @@ const ProfilePage = () => {
       <div className="friend-actions">
         <button className="add-friend-button" onClick={triggerAddFriends}>
           Add Friend
+        </button>
+        <button className="remove-friend-button" onClick={triggerRemoveFriends}>
+          Remove Friend
         </button>
       </div>
     </div>

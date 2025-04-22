@@ -43,6 +43,33 @@ export function setupFriendsListHandlers() {
       }
     });
 
+  // Trigger Remove Friend
+  logger.debug("Registering Remove Friend");
+
+  ipcMain.handle('trigger-remove-friend', async (event, friendUsername, token) => {
+    logger.debug('Removing Friend');
+    try {
+      const response = await axios.delete(
+        `${getApiUrl()}/friends/remove/${friendUsername}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          timeout: 5000,
+        }
+      );
+  
+      console.log("Friend removed successfully:", response.data);
+    } catch (error) {
+      if (error.response) {
+        console.error("Request failed:", error.response.data);
+      } else {
+        console.error("Error:", error.message);
+      }
+    }
+  });
+  
+
     // Trigger Add Friend
     logger.debug("Getting Friends List");
 
