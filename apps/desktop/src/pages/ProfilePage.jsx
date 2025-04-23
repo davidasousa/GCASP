@@ -57,10 +57,12 @@ const FriendUsernameInput = ({ friendUsername, setFriendUsername }) => {
 const ProfilePage = () => {
   const [friendsList, setFriendsList] = useState([]);
   const [showAddFriends, setShowAddFriends] = useState(false);
-  const [showAddError, setShowAddError] = useState(false);
   const [showRemoveFriends, setShowRemoveFriends] = useState(false);
-  const [addErrorMessage, setAddErrorMessage] = useState("");
   const [friendUsername, setFriendUsername] = useState("");
+  
+  // Error Message Handeling
+  const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   
   // User Info Object
   const [userInfo, setUserInfo] = useState ({
@@ -98,13 +100,10 @@ const ProfilePage = () => {
     assignUserInfo(); // Call the function
   }, []); // Only run on component mount
   
+  // Adding Friends
+
   const triggerAddFriends = () => {
     setShowAddFriends(true);
-  };
-
-  const cancelAddError = () => {
-    setAddErrorMessage("");
-    setShowAddError(false);
   };
 
   const cancelAddFriends = () => {
@@ -114,13 +113,13 @@ const ProfilePage = () => {
 
   const submitAddFriends = async () => {
     if (friendUsername === userInfo.userName) { 
-      setAddErrorMessage("Error: Cannot Remove Oneself")
-      setShowAddError(true);
+      setErrorMessage("Error: Cannot Remove Oneself")
+      setShowError(true);
       return; 
     }
     if (friendUsername === "") { 
-      setAddErrorMessage("Error: Username Cannot Be Empty")
-      setShowAddError(true);
+      setErrorMessage("Error: Username Cannot Be Empty")
+      setShowError(true);
       return; 
     }
     // Trigger Adding Friend On Backend:
@@ -135,6 +134,7 @@ const ProfilePage = () => {
   };
 
   // Removing Friends
+
   const submitRemoveFriends = async () => {
     // Error Handeling
     
@@ -155,6 +155,23 @@ const ProfilePage = () => {
     setShowRemoveFriends(false);
     setFriendUsername("");
   };
+  
+  // Error Message Handeling
+  const cancelError = () => {
+    setErrorMessage("");
+    setShowError(false);
+  };
+
+  const showErrorMessage = () => {
+    return(
+      <div>
+        <div className="addErrorMessage"> {errorMessage} </div>
+        <button className="cancelErrorButton" onClick={cancelError}/>
+      </div>
+    );
+  };
+
+  // JSX Component
 
   return (
     <div className="profile-page">
@@ -173,6 +190,7 @@ const ProfilePage = () => {
               <button className="add-friend-button" onClick={submitAddFriends}>
                 Add Friend
               </button>
+              {showError && (showErrorMessage())}
             </div>
           </div>
         </div>
@@ -193,6 +211,7 @@ const ProfilePage = () => {
               <button className="remove-friend-button" onClick={submitRemoveFriends}>
                 Remove Friend
               </button>
+              {showError && (showErrorMessage())}
             </div>
           </div>
         </div>
