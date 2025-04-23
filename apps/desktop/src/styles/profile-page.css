@@ -1,85 +1,68 @@
-/* General page styling */
-.profile-page {
+/* ===== Base Styling ===== */
+body {
+  margin: 0;
   font-family: Arial, sans-serif;
-  padding: 40px;
-  max-width: 600px;
-  margin: auto;
-  background-color: #f9f9f9;
+  background-color: #ffffff;
   color: #333;
 }
 
-/* Header */
+/* ===== Profile Page Container ===== */
+.profile-page {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* ===== Header ===== */
 .profile-page-header {
   font-size: 2rem;
   font-weight: bold;
   text-align: center;
   margin-bottom: 30px;
-}
-
-/* User Info Section */
-.profile-info {
-  background-color: #e9f5ff;
-  border: 1px solid #b3d8ff;
-  border-radius: 8px;
-  padding: 20px;
-  margin-bottom: 30px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.profile-info label {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 10px;
-  display: block;
   color: #0066cc;
 }
 
-#userInfo {
-  font-size: 1rem;
-  padding: 10px 0;
-  color: #333;
+/* ===== Section Containers ===== */
+.profile-info,
+.profile-friends-list {
+  background-color: #f5faff;
+  border: 1px solid #cce5ff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 25px;
 }
 
-#profile-userinfo-list {
+.profile-info label,
+.profile-friends-list label {
+  display: block;
+  font-weight: bold;
+  color: #0066cc;
+  margin-bottom: 12px;
+}
+
+/* ===== Info & Friends Lists ===== */
+#profile-userinfo-list,
+#profile-friends-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
 
-#profile-userinfo-list li {
-  background-color: #dceeff;
-  padding: 8px 12px;
+#profile-userinfo-list li,
+#profile-friends-list li {
+  background-color: #e6f2ff;
+  padding: 10px 14px;
   margin-bottom: 8px;
   border-radius: 6px;
 }
 
-/* Friends List */
-.profile-friends-list {
-  margin-bottom: 20px;
-}
-
-.profile-friends-list label {
-  font-weight: bold;
-  display: block;
-  margin-bottom: 10px;
-}
-
-.profile-friends-list ul {
-  list-style-type: none;
-  padding: 0;
-  margin: 0;
-}
-
-.profile-friends-list li {
-  background-color: #e3e3e3;
-  padding: 10px 12px;
-  margin-bottom: 8px;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-/* Add Friend Modal */
-.add-friends-modal {
+/* ===== Modal Styling ===== */
+.add-friends-modal,
+.remove-friends-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -89,94 +72,122 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 999;
 }
 
 .modal-content {
-  background-color: #fff;
+  background-color: #ffffff;
   padding: 30px 20px;
-  border-radius: 8px;
+  border-radius: 10px;
   width: 90%;
   max-width: 400px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
   text-align: center;
 }
 
-/* Input in Modal */
 .modal-content label {
-  display: block;
-  margin-bottom: 8px;
   font-weight: bold;
-  text-align: left;
+  color: #0066cc;
+  margin-bottom: 8px;
+  display: block;
 }
 
 .modal-content input[type="text"] {
   width: 80%;
-  padding: 10px 12px;
-  margin: 0 auto 20px auto;
-  display: block;
-  border-radius: 5px;
+  padding: 10px 14px;
+  font-size: 1rem;
   border: 1px solid #ccc;
-  font-size: 1rem;
+  border-radius: 6px;
+  margin-top: 10px;
 }
 
-/* Cancel (Red) and Add Friend (Green) Buttons */
-.cancel-button,
-.add-friend-confirm-button {
-  width: 48%;
-  padding: 10px 0;
-  margin: 0 1%;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+/* ===== Buttons ===== */
+.friend-actions,
+.modal-buttons-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 20px;
 }
 
-/* Red cancel button */
+.add-friend-button,
+.remove-friend-button,
 .cancel-button {
-  background-color: #cc0000;
+  flex: 1;
+  padding: 12px 0;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
   color: white;
-}
-
-.cancel-button:hover {
-  background-color: #990000;
-}
-
-/* Green add friend button */
-.add-friend-confirm-button {
-  background-color: #28a745;
-  color: white;
-}
-
-.add-friend-confirm-button:hover {
-  background-color: #218838;
-}
-
-/* Modal Buttons Clearfix */
-.modal-content::after {
-  content: "";
-  display: table;
-  clear: both;
-}
-
-/* Add Friend Button (Main Page) */
-.friend-actions {
-  text-align: center;
-  margin-top: 30px;
+  transition: background-color 0.3s ease;
 }
 
 .add-friend-button {
-  padding: 10px 20px;
-  background-color: #0066cc;
-  color: white;
-  font-size: 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
+  background-color: #28a745;
 }
 
 .add-friend-button:hover {
-  background-color: #004999;
+  background-color: #218838;
+}
+
+.remove-friend-button {
+  background-color: #cc0000;
+}
+
+.remove-friend-button:hover {
+  background-color: #b30000;
+}
+
+.cancel-button {
+  background-color: #888;
+}
+
+.cancel-button:hover {
+  background-color: #666;
+}
+
+/* ===== Responsive Label/Input Block ===== */
+.modal-content > div {
+  margin-bottom: 20px;
+}
+
+/* Full-screen overlay that prevents interaction */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999; /* Ensure it's above other content */
+}
+
+/* Error message box styling */
+.addErrorMessage {
+  background-color: #ff4c4c;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  text-align: center;
+}
+
+/* Cancel Error button styling */
+.cancelErrorButton {
+  background-color: #cc0000;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 20px;
+  font-size: 1rem;
+}
+
+.cancelErrorButton:hover {
+  background-color: #c82333;
 }

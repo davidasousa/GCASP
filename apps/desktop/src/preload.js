@@ -117,6 +117,15 @@ contextBridge.exposeInMainWorld('electron', {
 		'trigger-add-friend', friendUsername, token
 	),
 
+	removeFriend: (friendUsername, token) => ipcRenderer.invoke(
+		'trigger-remove-friend', friendUsername, token
+	),
+
+	getFriendsList: (token) => ipcRenderer.invoke(
+		'trigger-get-friendslist', token
+	),
+
+	
 	// Logging functions for renderer process
 	log: {
 		error: (message, meta = {}) => ipcRenderer.invoke('log', { level: 'error', message, meta }),
