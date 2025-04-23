@@ -34,12 +34,14 @@ export function setupFriendsListHandlers() {
         );
     
         console.log("Friend added successfully:", response.data);
+        return { success: true, data: response.data };
       } catch (error) {
-        if (error.response) {
           console.error("Request failed:", error.response.data);
-        } else {
-          console.error("Error:", error.message);
-        }
+          return {
+            success: false,
+            status: error.response.status,
+            message: error.response.data.message || "Request failed",
+          };
       }
     });
 
@@ -60,12 +62,14 @@ export function setupFriendsListHandlers() {
       );
   
       console.log("Friend removed successfully:", response.data);
+      return { success: true, data: response.data };
     } catch (error) {
-      if (error.response) {
         console.error("Request failed:", error.response.data);
-      } else {
-        console.error("Error:", error.message);
-      }
+        return {
+          success: false,
+          status: error.response.status,
+          message: error.response.data.message || "Request failed",
+        };
     }
   });
   

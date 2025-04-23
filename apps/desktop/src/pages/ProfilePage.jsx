@@ -112,39 +112,59 @@ const ProfilePage = () => {
   };
 
   const submitAddFriends = async () => {
-    if (friendUsername === userInfo.userName) { 
-      setErrorMessage("Error: Cannot Remove Oneself")
+    if(friendUsername === userInfo.userName) { 
+      setErrorMessage("Error: Cannot Add Oneself")
       setShowError(true);
       return; 
-    }
-    if (friendUsername === "") { 
+    } else if(friendUsername === "") { 
       setErrorMessage("Error: Username Cannot Be Empty")
       setShowError(true);
       return; 
     }
+    
     // Trigger Adding Friend On Backend:
     const token = await secureStorage.getToken();
     const response = await window.electron.addFriend(friendUsername, token);
-
-    updateFriendsList();
     
+    if(!response.success) {
+      setErrorMessage("Friend Username Not Found");
+      setShowError(true);
+    } else { 
+      updateFriendsList();
+      setShowAddFriends(false); 
+    }
+
     setFriendUsername("");
-    setShowAddFriends(false);
-    return response;
   };
 
   // Removing Friends
 
   const submitRemoveFriends = async () => {
     // Error Handeling
-    
+    if (friendUsername === userInfo.userName) { 
+      setErrorMessage("Error: Cannot Remove Oneself")
+      setShowError(true);
+      return; 
+    }
+    else if (friendUsername === "") { 
+      setErrorMessage("Error: Username Cannot Be Empty")
+      setShowError(true);
+      return; 
+    }
+
     // Trigger Adding Friend On Backend:
     const token = await secureStorage.getToken();
-    await window.electron.removeFriend(friendUsername, token);
+    const response = await window.electron.removeFriend(friendUsername, token);
 
-    updateFriendsList();
+    if(!response.success) {
+      setErrorMessage("Friend Username Not Found");
+      setShowError(true);
+    } else { 
+      updateFriendsList();
+      setShowRemoveFriends(false); 
+    }
+
     setFriendUsername("");
-    setShowRemoveFriends(false);
   };
 
   const triggerRemoveFriends = () => {
@@ -160,15 +180,6 @@ const ProfilePage = () => {
   const cancelError = () => {
     setErrorMessage("");
     setShowError(false);
-  };
-
-  const showErrorMessage = () => {
-    return(
-      <div>
-        <div className="addErrorMessage"> {errorMessage} </div>
-        <button className="cancelErrorButton" onClick={cancelError}/>
-      </div>
-    );
   };
 
   // JSX Component
@@ -190,7 +201,16 @@ const ProfilePage = () => {
               <button className="add-friend-button" onClick={submitAddFriends}>
                 Add Friend
               </button>
-              {showError && (showErrorMessage())}
+              {showError && (
+                <div className="overlay">
+                  <div>
+                    <div className="addErrorMessage"> {errorMessage} </div>
+                    <button className="cancelErrorButton" onClick={cancelError}>
+                      Ok
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -211,7 +231,16 @@ const ProfilePage = () => {
               <button className="remove-friend-button" onClick={submitRemoveFriends}>
                 Remove Friend
               </button>
-              {showError && (showErrorMessage())}
+              {showError && (
+                <div className="overlay">
+                  <div>
+                    <div className="addErrorMessage"> {errorMessage} </div>
+                    <button className="cancelErrorButton" onClick={cancelError}>
+                      Ok
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
