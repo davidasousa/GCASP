@@ -60,7 +60,8 @@ const upload = multer({
  *   post:
  *     summary: Upload a video file
  *     tags: [Video]
- *     security: [ { bearerAuth: [] } ]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -74,9 +75,7 @@ const upload = multer({
  *               video:
  *                 type: string
  *                 format: binary
- *                 description: |
- *                   Only .mp4, .mov, .avi, .mkv, .webm formats allowed.
- *                   Max size: 100MB.
+ *                 description: Only video formats (mp4, mov, mkv, avi, webm), max size 100MB
  *     responses:
  *       200:
  *         description: Video uploaded successfully
@@ -85,6 +84,8 @@ const upload = multer({
  *             schema:
  *               type: object
  *               properties:
+ *                 message:
+ *                   type: string
  *                 video:
  *                   type: object
  *                   properties:
@@ -102,33 +103,53 @@ const upload = multer({
  *                       description: Duration in seconds
  *                     resolution:
  *                       type: string
- *                       description: e.g. "1920x1080"
+ *                       description: Format "1920x1080"
+ *                     status:
+ *                       type: string
+ *                       enum: [published, hidden]
+ *                     processingStatus:
+ *                       type: string
+ *                       enum: [processing, ready, failed]
+ *                       description: Processing state of the video
+ *       400:
+ *         description: Invalid file or upload error
  */
-
-
 router.post("/upload", authenticateToken, upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
   const filepath = path.join(uploadDir, req.file.filename);
+  const baseData = {
+    userId: req.user.id,
+    title: req.body.title,
+    filename: req.file.filename,
+    size: req.file.size,
+    processingStatus: "processing", // start as processing
+  };
 
-  ffmpeg.ffprobe(filepath, async (err, metadata) => {
-    if (err) return res.status(500).json({ message: "Metadata extraction failed", error: err.message });
+  try {
+    const created = await Video.create(baseData); // create early to get ID
 
-    const videoStream = metadata.streams.find(s => s.codec_type === "video");
+    // Extract metadata
+    ffmpeg.ffprobe(filepath, async (err, metadata) => {
+      if (err) {
+        created.processingStatus = "failed";
+        await created.save();
+        return res.status(500).json({ message: "Metadata extraction failed", error: err.message });
+      }
 
-    const newVideo = await Video.create({
-      userId: req.user.id,
-      title: req.body.title,
-      filename: req.file.filename,
-      size: req.file.size,
-      duration: metadata.format.duration,
-      resolution: `${videoStream.width}x${videoStream.height}`,
+      const videoStream = metadata.streams.find(s => s.codec_type === "video");
+      created.duration = metadata.format.duration;
+      created.resolution = `${videoStream.width}x${videoStream.height}`;
+      created.processingStatus = "ready";
+      await created.save();
+
+      res.json({ message: "Video uploaded", video: created });
     });
 
-    res.json({ message: "Video uploaded", video: newVideo });
-  });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
 });
-
 
 /**
  * @swagger
@@ -209,5 +230,34 @@ router.patch("/:videoId/publish", authenticateToken, async (req, res) => {
   await video.save();
   res.json({ message: "Video published" });
 });
+
+/**
+ * @swagger
+ * /shared-videos:
+ *   get:
+ *     summary: Get all publicly shared videos
+ *     tags: [Video]
+ *     responses:
+ *       200:
+ *         description: A list of published videos
+ *       500:
+ *         description: Server error
+ */
+router.get("/shared-videos", async (req, res) => {
+  try {
+    const videos = await Video.findAll({
+      where: {
+        status: "published",
+        processingStatus: "ready",
+      },
+      order: [["createdAt", "DESC"]],
+    });
+    res.json({ videos });
+  } catch (err) {
+    console.error("Failed to fetch shared videos:", err);
+    res.status(500).json({ error: "Failed to load shared videos" });
+  }
+});
+
 
 module.exports = router;
