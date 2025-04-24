@@ -50,8 +50,17 @@ router.post("/add/:friendUsername", authenticateToken, async (req, res) => {
     const userId = req.user.id;
     const friend = await User.findOne({ where: { username: req.params.friendUsername } });
     if (!friend) return res.status(404).json({ message: "Friend not found" });
-    await Friendship.create({ userId, friendId: friend.id });
-    res.json({ message: "Friend added successfully" });
+
+    // Prevent self-friendship
+    if (friend.id === userId) {
+      return res.status(400).json({ message: "You cannot add yourself as a friend" });
+    }
+
+    // Create both directions
+    await Friendship.findOrCreate({ where: { userId, friendId: friend.id } });
+    await Friendship.findOrCreate({ where: { userId: friend.id, friendId: userId } });
+
+    res.json({ message: "Friend added successfully (mutual)" });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
   }

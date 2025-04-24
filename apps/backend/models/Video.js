@@ -38,6 +38,10 @@ const Video = sequelize.define("Video", {
   resolution: {
     type: DataTypes.STRING, // e.g., "1920x1080"
   },
+  username: {
+    type: DataTypes.STRING,
+    allowNull: true, // Optional if you still want to join from User
+  },
 }, { timestamps: true });
 
 Video.belongsTo(User, { foreignKey: "userId" });

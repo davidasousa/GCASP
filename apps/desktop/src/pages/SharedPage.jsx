@@ -99,12 +99,11 @@ const SharedPage = () => {
 
             {infoVideoId === video.id && (
               <div className="video-info">
+                <p><strong>Username:</strong> {video.username}</p>
                 <p><strong>Filename:</strong> {video.filename}</p>
                 <p><strong>Resolution:</strong> {video.resolution}</p>
                 <p><strong>Duration:</strong> {video.duration} sec</p>
                 <p><strong>Size:</strong> {(video.size / 1024 / 1024).toFixed(2)} MB</p>
-                <p><strong>Status:</strong> {video.status}</p>
-                <p><strong>Processing Status:</strong> {video.processingStatus}</p>
               </div>
             )}
           </div>

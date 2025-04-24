@@ -3,7 +3,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 const jwt = require("jsonwebtoken");
-const { Video } = require("../models");
+const {User, Video } = require("../models");
 const router = express.Router();
 const ffmpeg = require("fluent-ffmpeg");
 
@@ -116,6 +116,7 @@ const upload = multer({
  */
 router.post("/upload", authenticateToken, upload.single("video"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+  const user = await User.findByPk(req.user.id);
 
   const filepath = path.join(uploadDir, req.file.filename);
   const baseData = {
@@ -124,6 +125,7 @@ router.post("/upload", authenticateToken, upload.single("video"), async (req, re
     filename: req.file.filename,
     size: req.file.size,
     processingStatus: "processing", // start as processing
+    username: user?.username || "Unknown",
   };
 
   try {
