@@ -65,6 +65,13 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 				<h3 className="video-title">{title}</h3>
 				<div className="video-actions">
 					<button
+						onClick={handleUpload}
+						className="upload-button"
+						aria-label={`Upload ${title}`}
+					>
+						Upload
+					</button>
+					<button
 						onClick={handleEditClick}
 						className="edit-button"
 						aria-label={`Edit ${title}`}
@@ -77,13 +84,6 @@ const VideoContainer = ({ id, title, videoUrl, isActive, onActivate, onDelete })
 						aria-label={`Delete ${title}`}
 					>
 						Delete
-					</button>
-					<button
-						onClick={handleUpload}
-						className="upload-button"
-						aria-label={`Upload ${title}`}
-					>
-						Upload
 					</button>
 				</div>
 			</div>
