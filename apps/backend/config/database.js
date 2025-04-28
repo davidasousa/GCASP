@@ -12,8 +12,15 @@ if (process.env.PROD === "true") {
     process.env.POSTGRES_AWS_DB_PASSWORD,
     {
       host: process.env.POSTGRES_AWS_DB_HOST,
+      port: 5432,
       dialect: "postgres",
       logging: false,
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false,
+        },
+      },
     }
   );
 } else {
@@ -24,13 +31,15 @@ if (process.env.PROD === "true") {
     process.env.POSTGRES_PASSWORD,
     {
       host: process.env.POSTGRES_HOST,
+      port: 5432,
       dialect: "postgres",
       logging: false,
     }
   );
 }
 
-sequelize.authenticate()
+sequelize
+  .authenticate()
   .then(() => console.log("PostgreSQL Connected"))
   .catch(err => console.error("Database Connection Error:", err));
 
