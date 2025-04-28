@@ -6,7 +6,7 @@ import FormData from 'form-data';
 import path from 'path';
 import fs from 'fs';
 
-const logger = getModuleLogger('ipcSettingsHandlers.js');
+const logger = getModuleLogger('ipcUploadHandlers.js');
 
 const DEFAULT_API_URL = process.env.API_URL || 'http://gcasp.us-east-2.elasticbeanstalk.com';
 
@@ -15,7 +15,7 @@ const getApiUrl = () => {
   return process.env.API_URL || DEFAULT_API_URL;
 };
 
-// Taken From videoProtocal.js
+// Taken From videoProtocol.js
 const findClip = (videoTitle) => {
   const clipsPath = path.join(app.getPath('videos'), 'GCASP/clips');
   const clipFiles = fs.readdirSync(clipsPath);

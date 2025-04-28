@@ -1,8 +1,8 @@
 import { ipcMain } from 'electron';
 import { getModuleLogger } from './logger';
-import axios from 'axios';  // Correct import for axios
+import axios from 'axios';
 
-const logger = getModuleLogger('ipcSettingsHandlers.js');
+const logger = getModuleLogger('ipcFriendsListHandlers.js');
 
 const DEFAULT_API_URL = process.env.API_URL || 'http://gcasp.us-east-2.elasticbeanstalk.com';
 
