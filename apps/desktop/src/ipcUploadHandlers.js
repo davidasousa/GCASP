@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron';
 import { getModuleLogger } from './logger';
 import { app } from 'electron';
-import axios from 'axios';  // Correct import for axios
+import axios from 'axios';
 import FormData from 'form-data';
 import path from 'path';
 import fs from 'fs';
