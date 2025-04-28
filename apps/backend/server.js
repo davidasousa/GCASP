@@ -15,6 +15,9 @@ const xssClean = require("xss-clean");
 
 async function startServer() {
   try {
+    await sequelize.query(`
+      ALTER TABLE "Videos" DROP CONSTRAINT IF EXISTS "Videos_userId_fkey1";
+    `);
     await sequelize.sync({ alter: true });
     console.log('Database Synced');
 
@@ -47,7 +50,7 @@ async function startServer() {
       slowDown({
         windowMs: 15 * 60 * 1000,
         delayAfter: 50, // allow 50 free requests...
-        delayMs: 500, // begin adding 500ms of delay per request above 50
+        delayMs: () => 500, // begin adding 500ms of delay per request above 50
       })
     );
 
