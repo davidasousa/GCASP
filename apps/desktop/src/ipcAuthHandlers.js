@@ -4,8 +4,7 @@ import axios from 'axios';
 
 const logger = getModuleLogger('ipcAuthHandlers.js');
 
-// Default API URL - should be defined in environment variables or settings
-const DEFAULT_API_URL = 'http://localhost:5001';
+const DEFAULT_API_URL = process.env.API_URL || 'http://gcasp.us-east-2.elasticbeanstalk.com';
 
 // Helper to get API URL
 const getApiUrl = () => {
