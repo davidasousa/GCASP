@@ -8,7 +8,7 @@ import fs from 'fs';
 
 const logger = getModuleLogger('ipcSettingsHandlers.js');
 
-const DEFAULT_API_URL = process.env.API_URL || 'http://localhost:5001';
+const DEFAULT_API_URL = process.env.API_URL || 'http://gcasp.us-east-2.elasticbeanstalk.com';
 
 // Helper to get API URL
 const getApiUrl = () => {
