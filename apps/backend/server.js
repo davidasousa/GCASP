@@ -9,25 +9,38 @@ const authRoutes = require("./routes/auth");
 const videoRoutes = require("./routes/videos");
 const xssClean = require("xss-clean");
 
-const app = express();
-app.use(cors());
-app.use(express.json());
-app.use(xssClean());
-app.use("/auth", authRoutes);
-app.use("/videos", videoRoutes);
-app.use("/friends", friendRoutes);
+async function startServer() {
+  try {
+    await sequelize.sync({ alter: true });
+    console.log('Database Synced');
 
-app.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-      return res.status(400).json({ error: err.message });
-    } else if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-    next();
-  });
-  
+    const app = express();
+    app.use(cors());
+    app.use(express.json());
+    app.use(xssClean());
 
-setupSwagger(app);
+    app.use("/auth", authRoutes);
+    app.use("/videos", videoRoutes);
+    app.use("/friends", friendRoutes);
 
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+    app.use((err, req, res, next) => {
+        if (err instanceof multer.MulterError) {
+          return res.status(400).json({ error: err.message });
+        } else if (err) {
+          return res.status(400).json({ error: err.message });
+        }
+        next();
+      });
+    
+
+    setupSwagger(app);
+
+    const PORT = process.env.PORT || 5001;
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  } catch (err) {
+    console.error('Unable to start server & synch DB:', err);
+    process.exit(1);
+  }
+}
+
+startServer()
