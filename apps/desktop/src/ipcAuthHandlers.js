@@ -1,15 +1,14 @@
 import { ipcMain } from 'electron';
 import { getModuleLogger } from './logger';
 import axios from 'axios';
+import { API_URL } from './config';
 
 const logger = getModuleLogger('ipcAuthHandlers.js');
 
-const DEFAULT_API_URL = process.env.API_URL || 'http://gcasp.us-east-2.elasticbeanstalk.com';
+const DEFAULT_API_URL = API_URL;
 
 // Helper to get API URL
-const getApiUrl = () => {
-	return process.env.API_URL || DEFAULT_API_URL;
-};
+const getApiUrl = () => DEFAULT_API_URL;
 
 // Helper function to safely extract error information without circular references
 const safelyExtractErrorInfo = (error) => {

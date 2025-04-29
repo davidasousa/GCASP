@@ -13,12 +13,13 @@
     "test:update": "jest --config jest.config.js --updateSnapshot",
     "test:clear": "jest --config jest.config.js --clearCache",
     "lint": "npx eslint apps/**/*.{js,jsx}",
-    "start:desktop": "cd apps/desktop && npm start",
-    "start:backend": "cd apps/backend && npm start",
-    "dev:backend": "cd apps/backend && npm run dev",
-    "build:desktop": "cd apps/desktop && npm run make",
-    "start": "concurrently \"npm run start:backend\" \"npm run start:desktop\"",
-    "dev": "concurrently \"npm run dev:backend\" \"npm run start:desktop\""
+    "start:backend": "cd apps/backend && cross-env NODE_ENV=production npm start",
+    "dev:backend": "cd apps/backend && cross-env NODE_ENV=development npm start",
+    "start:desktop": "cd apps/desktop && cross-env NODE_ENV=production npm start",
+    "dev:desktop": "cd apps/desktop && cross-env NODE_ENV=development npm start",
+    "start": "npm run start:desktop",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:desktop\"",
+    "build:desktop": "cd apps/desktop && npm run make"
   },
   "repository": {
     "type": "git",
@@ -37,6 +38,7 @@
     "@testing-library/react": "^16.2.0",
     "babel-jest": "^29.7.0",
     "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "eslint": "^9.19.0",
     "eslint-plugin-react": "^7.37.4",
     "globals": "^15.14.0",

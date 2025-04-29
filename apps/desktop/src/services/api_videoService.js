@@ -1,0 +1,149 @@
+import config from './api_config';
+
+// Video service
+const videoService = {
+	// Get shared videos
+	async getSharedVideos() {
+		try {
+			if (window.electron?.log) {
+				window.electron.log.debug('Fetching shared videos from server');
+			}
+			
+			const response = await fetch(`${config.baseUrl}/videos/shared-videos`);
+			
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || `Error ${response.status}: Failed to fetch videos`);
+			}
+			
+			const data = await response.json();
+			
+			// Add videoUrl property to each video
+			const videos = data.videos.map(video => ({
+				...video,
+				videoUrl: `${config.baseUrl}/videos/stream/${video.filename}`
+			}));
+			
+			if (window.electron?.log) {
+				window.electron.log.info('Retrieved shared videos', { count: videos.length });
+			}
+			
+			return videos;
+		} catch (error) {
+			config.handleError(error, 'getSharedVideos');
+		}
+	},
+	
+	// Delete a video
+	async deleteVideo(id, token) {
+		try {
+			if (window.electron?.log) {
+				window.electron.log.debug('Deleting video', { id });
+			}
+			
+			const response = await fetch(`${config.baseUrl}/videos/${id}`, {
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
+				}
+			});
+			
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || `Error ${response.status}: Failed to delete video`);
+			}
+			
+			if (window.electron?.log) {
+				window.electron.log.info('Video deleted successfully', { id });
+			}
+			
+			return true;
+		} catch (error) {
+			config.handleError(error, 'deleteVideo');
+		}
+	},
+	
+	// Hide a video (make it private)
+	async hideVideo(id, token) {
+		try {
+			if (window.electron?.log) {
+				window.electron.log.debug('Hiding video', { id });
+			}
+			
+			const response = await fetch(`${config.baseUrl}/videos/${id}/hide`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
+				}
+			});
+			
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || `Error ${response.status}: Failed to hide video`);
+			}
+			
+			if (window.electron?.log) {
+				window.electron.log.info('Video hidden successfully', { id });
+			}
+			
+			return true;
+		} catch (error) {
+			config.handleError(error, 'hideVideo');
+		}
+	},
+	
+	// Publish a video (make it public)
+	async publishVideo(id, token) {
+		try {
+			if (window.electron?.log) {
+				window.electron.log.debug('Publishing video', { id });
+			}
+			
+			const response = await fetch(`${config.baseUrl}/videos/${id}/publish`, {
+				method: 'PATCH',
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${token}`
+				}
+			});
+			
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || `Error ${response.status}: Failed to publish video`);
+			}
+			
+			if (window.electron?.log) {
+				window.electron.log.info('Video published successfully', { id });
+			}
+			
+			return true;
+		} catch (error) {
+			config.handleError(error, 'publishVideo');
+		}
+	},
+	
+	// Upload a video
+	async uploadVideo(videoTitle, token) {
+		try {
+			if (!window.electron?.triggerUploadClip) {
+				throw new Error('Upload functionality not available');
+			}
+			
+			window.electron.log.debug('Uploading video to server', { title: videoTitle });
+			const response = await window.electron.triggerUploadClip(videoTitle, token);
+			
+			if (!response || !response.success) {
+				throw new Error(response?.message || 'Failed to upload video');
+			}
+			
+			window.electron.log.info('Video uploaded successfully', { title: videoTitle });
+			return response;
+		} catch (error) {
+			config.handleError(error, 'uploadVideo');
+		}
+	}
+};
+
+export default videoService;

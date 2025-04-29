@@ -5,15 +5,14 @@ import axios from 'axios';
 import FormData from 'form-data';
 import path from 'path';
 import fs from 'fs';
+import { API_URL } from './config';
 
 const logger = getModuleLogger('ipcUploadHandlers.js');
 
-const DEFAULT_API_URL = process.env.API_URL || 'http://gcasp.us-east-2.elasticbeanstalk.com';
+const DEFAULT_API_URL = API_URL;
 
 // Helper to get API URL
-const getApiUrl = () => {
-  return process.env.API_URL || DEFAULT_API_URL;
-};
+const getApiUrl = () => DEFAULT_API_URL;
 
 // Taken From videoProtocol.js
 const findClip = (videoTitle) => {
