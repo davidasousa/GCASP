@@ -38,7 +38,7 @@ async function startServer() {
     // Global rate limiter (catch-all): 100 req per 15m
     const globalLimiter = rateLimit({
       windowMs: 15 * 60 * 1000,
-      max: 100,
+      max: 1000,
       standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
       legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     });
@@ -48,7 +48,7 @@ async function startServer() {
     app.use(
       slowDown({
         windowMs: 15 * 60 * 1000,
-        delayAfter: 50, // allow 50 free requests...
+        delayAfter: 500, // allow 500 free requests...
         delayMs: () => 500, // begin adding 500ms of delay per request above 50
       })
     );
