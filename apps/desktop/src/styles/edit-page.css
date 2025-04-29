@@ -1,236 +1,257 @@
 /* Edit Page Styles */
 .edit-page {
-    padding: 0 20px 20px 0; /* Removed left padding to use more space */
-    max-width: 100%; /* Use full width */
-    margin: 0 auto;
-    height: calc(100vh - 40px); /* Use most of the viewport height */
-    display: flex;
-    flex-direction: column;
+	/* No forced min-height on small screens—lets content size naturally */
+	padding: 0 20px 20px 0;
+	max-width: 100%;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+}
+
+.edit-page .edit-container {
+	flex: 1;
+	min-height: 0;
 }
 
 .edit-page h2 {
-    margin-bottom: 20px;
-    text-align: center;
+	margin-bottom: 20px;
+	text-align: center;
 }
 
 .edit-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
 }
 
+/* Desktop and up */
 @media (min-width: 1200px) {
-    .edit-container {
-        flex-direction: row;
-    }
-    
-    .edit-page {
-        padding: 30px;
-    }
-    
-    .video-preview {
-        min-height: 75vh;
-    }
-    
-    .video-preview .video-js {
-        min-height: 70vh;
-    }
+	.edit-page {
+		padding: 30px;
+		min-height: calc(100vh - 40px);
+	}
+
+	.edit-container {
+		display: flex;
+		flex-direction: row;
+		gap: 20px;
+	}
+
+	.video-preview {
+		flex: 2;
+		min-height: 0;
+		max-height: 70vh;
+	}
+
+	.video-preview .video-js {
+		min-height: 70vh;
+	}
+
+	.edit-controls {
+		max-height: 60vh;
+		align-self: flex-start;
+	}
 }
 
 /* Extra large screens */
 @media (min-width: 1800px) {
-    .edit-page {
-        max-width: 1800px;
-        padding: 40px;
-    }
-    
-    .video-preview {
-        flex: 3; /* Even more space for video on very large screens */
-    }
+	.edit-page {
+		max-width: 1800px;
+		padding: 40px;
+	}
+
+	.video-preview {
+		flex: 3; /* Even more space for video on very large screens */
+	}
 }
 
 .video-preview {
-    flex: 2; /* Changed from 1 to 2 to make video larger relative to controls */
-    min-width: 0; /* Allows the flex item to shrink below its content size */
-    max-height: 70vh; /* Limit height to 70% of viewport height */
+	flex: 2; /* Make video larger relative to controls */
+	min-width: 0;
 }
 
 /* Make the video.js player fill the container */
 .video-preview .video-js {
-    width: 100% !important;
-    height: auto !important;
-    min-height: 60vh; /* Ensure minimum height */
+	width: 100% !important;
+	height: auto !important;
+	min-height: 60vh;
 }
 
 .video-preview .vjs-tech {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
 }
 
+/* Editing UI box */
 .edit-controls {
-    flex: 1; /* Takes less space compared to the video preview */
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    padding: 20px;
-    background-color: #f5f5f5;
-    border-radius: 8px;
-    overflow-y: auto; /* Add scrolling for smaller screens */
-    max-height: 70vh; /* Match video preview max height */
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 15px;
+	padding: 20px;
+	background-color: #f5f5f5;
+	border-radius: 8px;
+	overflow-y: auto;
+	/* no max-height or align-self here so it stretches on narrow screens */
 }
 
 .control-group {
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 20px;
-    margin-bottom: 20px;
+	border-bottom: 1px solid #ddd;
+	padding-bottom: 20px;
+	margin-bottom: 20px;
 }
 
 .control-group:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
+	border-bottom: none;
+	margin-bottom: 0;
 }
 
 .control-group h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    font-size: 1.2rem;
+	margin-top: 0;
+	margin-bottom: 15px;
+	font-size: 1.2rem;
 }
 
 .title-input {
-    width: 100%;
-    padding: 8px;
-    font-size: 1rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+	width: 100%;
+	padding: 8px;
+	font-size: 1rem;
+	border: 1px solid #ccc;
+	border-radius: 4px;
 }
 
 .time-display {
-    margin-bottom: 10px;
-    font-family: monospace;
-    font-size: 1.1rem;
+	margin-bottom: 10px;
+	font-family: monospace;
+	font-size: 1.1rem;
 }
 
 .trim-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
 .time-input {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 
 .time-input input {
-    width: 100px;
-    padding: 5px;
-    font-family: monospace;
-    text-align: center;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+	width: 100px;
+	padding: 5px;
+	font-family: monospace;
+	text-align: center;
+	border: 1px solid #ccc;
+	border-radius: 4px;
 }
 
 .time-input button,
 .preview-button {
-    padding: 5px 10px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+	padding: 5px 10px;
+	background-color: #007bff;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.2s;
 }
 
 .time-input button:hover,
 .preview-button:hover {
-    background-color: #0069d9;
+	background-color: #0069d9;
 }
 
 .compression-control {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }
 
 .compression-control input {
-    width: 80px;
-    padding: 5px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+	width: 80px;
+	padding: 5px;
+	border: 1px solid #ccc;
+	border-radius: 4px;
 }
 
 .metadata {
-    background-color: #eaeaea;
-    padding: 10px;
-    border-radius: 4px;
-    font-size: 0.9rem;
+	background-color: #eaeaea;
+	padding: 10px;
+	border-radius: 4px;
+	font-size: 0.9rem;
 }
 
 .metadata p {
-    margin: 5px 0;
+	margin: 5px 0;
 }
 
 .action-buttons {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
+	display: flex;
+	justify-content: center;
+	gap: 10px;
+	margin-top: 20px;
 }
 
 .cancel-button,
 .save-button {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.2s, transform 0.1s;
+	padding: 10px 20px;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: bold;
+	transition: background-color 0.2s, transform 0.1s;
+	min-width: 120px;
+	max-width: 140px;
+	font-size: 14px;
+	flex: 0 0 auto;
 }
 
 .cancel-button {
-    background-color: #6c757d;
-    color: white;
+	background-color: #6c757d;
+	color: white;
 }
 
 .save-button {
-    background-color: #28a745;
-    color: white;
+	background-color: #28a745;
+	color: white;
 }
 
 .cancel-button:hover {
-    background-color: #5a6268;
+	background-color: #5a6268;
 }
 
 .save-button:hover {
-    background-color: #218838;
+	background-color: #218838;
 }
 
 .cancel-button:active,
 .save-button:active {
-    transform: scale(0.98);
+	transform: scale(0.98);
 }
 
 .cancel-button:disabled,
 .save-button:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
+	opacity: 0.7;
+	cursor: not-allowed;
 }
 
 .error-message {
-    color: #dc3545;
-    background-color: #f8d7da;
-    padding: 10px;
-    border-radius: 4px;
-    margin-top: 15px;
+	color: #dc3545;
+	background-color: #f8d7da;
+	padding: 10px;
+	border-radius: 4px;
+	margin-top: 15px;
 }
 
 .loading {
-    text-align: center;
-    padding: 30px;
-    font-style: italic;
-    color: #6c757d;
+	text-align: center;
+	padding: 30px;
+	font-style: italic;
+	color: #6c757d;
 }
