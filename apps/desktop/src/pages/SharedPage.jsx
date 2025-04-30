@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { secureStorage } from '../utils/secureStorage';
 import '../styles/SharedPage.css'; // Import CSS if not already
 const SharedPage = () => {
   const [videos, setVideos] = useState([]);
-  const [currentUser, setCurrentUser] = useState(null); // store current logged-in username
+  const [currentUsername, setCurrentUsername] = useState('');
   const [notification, setNotification] = useState({ visible: false, message: '', type: 'success' });
   const [infoVideoId, setInfoVideoId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
@@ -22,26 +23,19 @@ const SharedPage = () => {
     }
   };
 
-  const fetchCurrentUser = async () => {
+  const fetchCurrentUsername = async () => {
     try {
-      const token = await window.secureStorage.getToken();
-      const res = await fetch("http://localhost:5001/profile", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await res.json();
-      setCurrentUser(data.username);
+      const user = await secureStorage.getUser();
+      setCurrentUsername(user.username);
     } catch (err) {
-      console.error("Error fetching current user:", err);
+      console.error('Failed to get current user:', err);
     }
   };
 
   const handleDelete = async (id) => {
     setDeletingId(id);
     try {
-      const token = await window.secureStorage.getToken();
+      const token = await secureStorage.getToken();
       const res = await fetch(`http://localhost:5001/videos/${id}`, {
         method: "DELETE",
         headers: {
@@ -71,7 +65,7 @@ const SharedPage = () => {
 
   useEffect(() => {
     fetchSharedVideos();
-    fetchCurrentUser(); // load current logged in user
+    fetchCurrentUsername();
 
     if (notification.visible) {
       const timer = setTimeout(() => {
@@ -103,13 +97,9 @@ const SharedPage = () => {
         videos.map(video => (
           <div key={video.id} className="video-card">
             <video src={video.videoUrl} controls width="100%" />
-
             <h3>{video.title}</h3>
-            
-            {/* Always show uploader */}
             <p><strong>Uploader:</strong> {video.username}</p>
 
-            {/* Action Buttons */}
             <div className="video-actions">
               <button
                 className="info-button"
@@ -118,8 +108,7 @@ const SharedPage = () => {
                 {infoVideoId === video.id ? "Hide Info" : "Show Info"}
               </button>
 
-              {/* Only show delete if uploader === current logged in user */}
-              {currentUser === video.username && (
+              {currentUsername === video.username && (
                 <button
                   className="delete-button"
                   onClick={() => handleDelete(video.id)}
@@ -130,7 +119,6 @@ const SharedPage = () => {
               )}
             </div>
 
-            {/* Detailed Info Section */}
             {infoVideoId === video.id && (
               <div className="video-info">
                 <p><strong>Filename:</strong> {video.filename}</p>
