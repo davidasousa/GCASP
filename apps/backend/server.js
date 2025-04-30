@@ -52,6 +52,12 @@ async function startServer() {
       });
     });
 
+    // LOG ANY HITS TO /videos/upload
+    app.use("/videos/upload", (req, res, next) => {
+      console.log("Hit /videos/upload at", new Date().toISOString());
+      next();
+    });
+
     app.use(helmet());
     app.use(compression());
 
