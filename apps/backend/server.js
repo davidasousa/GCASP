@@ -30,7 +30,7 @@ if (isProd) {
 
 async function startServer() {
   try {
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ force: true }); // Use force: true only in development to drop and recreate tables (remove this in production)
     console.log('Database Synced');
 
     const app = express();
@@ -139,7 +139,7 @@ async function startServer() {
     const PORT = process.env.PORT || 5001;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   } catch (err) {
-    console.error('Unable to start server & synch DB:', err);
+    console.error('Unable to start server & sync DB:', err);
     process.exit(1);
   }
 }
