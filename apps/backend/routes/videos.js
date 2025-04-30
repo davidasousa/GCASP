@@ -252,9 +252,22 @@ router.get("/shared-videos", async (req, res) => {
         status: "published",
         processingStatus: "ready",
       },
+      include: [{ model: User, attributes: ["username"] }],
       order: [["createdAt", "DESC"]],
     });
-    res.json({ videos });
+    const result = videos.map(video => ({
+      id: video.id,
+      userId: video.userId,                      // Add userId here!
+      title: video.title,
+      filename: video.filename,
+      resolution: video.resolution,
+      duration: video.duration,
+      size: video.size,
+      status: video.status,
+      processingStatus: video.processingStatus,
+      username: video.User?.username || "Unknown", // Also keep username
+    }));
+    res.json({ videos:result });
   } catch (err) {
     console.error("Failed to fetch shared videos:", err);
     res.status(500).json({ error: "Failed to load shared videos" });

@@ -202,7 +202,6 @@ router.post("/reset-password", [
   res.json({ message: "Password reset successfully" });
 });
 
-module.exports = router;
 
 /**
  * @swagger
@@ -219,21 +218,23 @@ module.exports = router;
  *         description: Invalid or missing token
  */
 router.get("/profile", async (req, res) => {
-	try {
-		const token = req.header("Authorization")?.split(" ")[1];
-		if (!token) return res.status(401).json({ message: "Access Denied" });
-		
-		const JWT_SECRET = process.env.JWT_SECRET;
-		const decoded = jwt.verify(token, JWT_SECRET);
-		
-		const user = await User.findByPk(decoded.id, {
-			attributes: ['id', 'username', 'email']
-		});
-		
-		if (!user) return res.status(404).json({ message: "User not found" });
-		
-		res.json(user);
-	} catch (error) {
-		res.status(401).json({ message: "Invalid Token" });
-	}
+  try {
+    const token = req.header("Authorization")?.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "Access Denied" });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findByPk(decoded.id, {
+      attributes: ['id', 'username', 'email'] // Only return safe fields
+    });
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (error) {
+    console.error("Profile fetch error:", error);
+    res.status(401).json({ message: "Invalid Token" });
+  }
 });
+
+module.exports = router;
