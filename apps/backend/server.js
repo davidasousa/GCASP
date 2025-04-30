@@ -37,7 +37,27 @@ console.log("Will use bucket:", process.env.S3_VIDEO_BUCKET);
 
 async function startServer() {
   try {
-    await sequelize.sync({ force: true }); // Use force: true only in development to drop and recreate tables (remove this in production)
+    // 1) Authenticate & connect
+    await sequelize.authenticate();
+    console.log('PostgreSQL Connected');
+
+    // 2) Drop all existing ENUMs
+    const [enumRows] = await sequelize.query(`
+      SELECT DISTINCT quote_ident(t.typname) AS enum_name
+        FROM pg_type t
+        JOIN pg_enum e       ON t.oid = e.enumtypid;
+    `);
+    if (enumRows.length) {
+      for (const { enum_name } of enumRows) {
+        await sequelize.query(`DROP TYPE IF EXISTS ${enum_name} CASCADE;`);
+        console.log('Dropped ENUM type:', enum_name);
+      }
+    } else {
+      console.log('No ENUM types to drop');
+    }
+
+    // 3) Sync all models, force-dropping tables
+    await sequelize.sync({ force: true });
     console.log('Database Synced');
 
     const app = express();
