@@ -31,7 +31,7 @@ function authenticateToken(req, res, next) {
 
 // Multer-S3-v3 storage
 const storage = multerS3({
-  client: s3Client,
+  s3: s3Client,
   bucket: process.env.S3_VIDEO_BUCKET,
   acl: 'private',
   contentType: multerS3.AUTO_CONTENT_TYPE,
