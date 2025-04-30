@@ -216,8 +216,8 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 				console.log('CloudFront token likely expired, requesting fresh URL');
 				
 				// Notify parent component to refresh the video URL
-				if (props.onVideoError) {
-					props.onVideoError();
+				if (onVideoError) {
+					onVideoError();
 				}
 			}
 			

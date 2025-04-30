@@ -6,7 +6,6 @@ import '../styles/shared-page.css';
 
 const SharedPage = () => {
 	const [videos, setVideos] = useState([]);
-	const [currentPage, setCurrentPage] = useState(1);
 	const [isLoading, setIsLoading] = useState(true);
 	const [currentUser, setCurrentUser] = useState(null);
 	const [notification, setNotification] = useState({
@@ -20,9 +19,16 @@ const SharedPage = () => {
 	const [filteredVideos, setFilteredVideos] = useState([]);
 	const [retryCount, setRetryCount] = useState(0);
 	const [networkError, setNetworkError] = useState(false);
-
-	// Pagination settings
-	const videosPerPage = 10;
+	
+	// Server-side pagination state
+	const [pagination, setPagination] = useState({
+		currentPage: 1,
+		totalPages: 1,
+		totalCount: 0,
+		pageSize: 10,
+		hasNextPage: false,
+		hasPreviousPage: false
+	});
 
 	// Handle notifications timing
 	useEffect(() => {
@@ -42,6 +48,9 @@ const SharedPage = () => {
 				setCurrentUser(user);
 			} catch (error) {
 				console.error('Error getting current user:', error);
+				window.electron?.log.error('Error getting current user', {
+					error: error.toString()
+				});
 			} finally {
 				setUserDataLoaded(true);
 			}
@@ -50,8 +59,11 @@ const SharedPage = () => {
 		getCurrentUser();
 	}, []);
 
-	// Function to load shared videos from the server
-	const fetchSharedVideos = async () => {
+	// Function to load shared videos from the server with pagination
+	const fetchSharedVideos = async (page = 1) => {
+		// Don't retry immediately if already loading
+		if (isLoading && retryCount > 0) return;
+		
 		setIsLoading(true);
 		setNetworkError(false);
 		
@@ -68,36 +80,38 @@ const SharedPage = () => {
 				});
 			}
 			
-			const sharedVideos = await API.getSharedVideos();
+			// Get videos with pagination
+			const result = await API.getSharedVideos(page, pagination.pageSize);
+			
+			if (!result || !result.videos) {
+				throw new Error('Invalid response from server');
+			}
 			
 			// Process the videos to add extra information needed for display
-			const processedVideos = sharedVideos.map(video => {
+			const processedVideos = result.videos.map(video => {
 				// Check for video ownership
 				const isOwnVideo = currentUser && 
 					currentUser.username && 
 					video.username && 
 					currentUser.username.toLowerCase() === video.username.toLowerCase();
 				
-				// Prioritize CloudFront URL
-				const videoUrl = video.cloudFrontUrl || video.videoUrl || 
-					`/videos/stream/${video.id}`;
-				
 				return {
 					id: video.id,
 					title: video.title || video.filename,
-					videoUrl: videoUrl,
+					videoUrl: video.videoUrl,
 					cloudFrontUrl: video.cloudFrontUrl,
 					username: video.username,
 					resolution: video.resolution,
 					duration: video.duration,
 					size: video.size,
 					createdAt: video.createdAt,
+					uploadedAt: video.uploadedAt,
 					isOwnVideo
 				};
 			});
 			
 			setVideos(processedVideos);
-			setCurrentPage(1);
+			setPagination(result.pagination);
 			setRetryCount(0); // Reset retry counter on success
 			
 			setNotification({
@@ -107,12 +121,17 @@ const SharedPage = () => {
 			});
 		} catch (error) {
 			console.error('Error loading shared videos:', error);
+			window.electron?.log.error('Error loading shared videos', {
+				error: error.toString()
+			});
 			
 			// Handle network connectivity issues
 			if (error.message && (
 				error.message.includes('network') || 
 				error.message.includes('connection') ||
-				error.message.includes('timeout')
+				error.message.includes('timeout') ||
+				error.message.includes('Failed to fetch') ||
+				error.message.includes('TypeError')
 			)) {
 				setNetworkError(true);
 			}
@@ -123,13 +142,16 @@ const SharedPage = () => {
 				type: 'error'
 			});
 			
-			// Retry logic for token expiration or network issues
-			if (retryCount < 2) {
-				setRetryCount(prevCount => prevCount + 1);
+			// Only retry on network errors, not on JSON parsing or other errors
+			if (networkError && retryCount < 2) {
+				const nextRetryCount = retryCount + 1;
+				window.electron?.log.debug(`Scheduling retry ${nextRetryCount} for video fetch`);
+				
+				// Use setTimeout for retry with increasing delay
 				setTimeout(() => {
-					console.log('Retrying video fetch after error...');
-					fetchSharedVideos();
-				}, 3000); // Retry after 3 seconds
+					setRetryCount(nextRetryCount);
+					fetchSharedVideos(pagination.currentPage);
+				}, 3000 * nextRetryCount); // 3s, 6s, etc.
 			}
 		} finally {
 			setIsLoading(false);
@@ -139,11 +161,11 @@ const SharedPage = () => {
 	// Load videos after user data is loaded
 	useEffect(() => {
 		if (userDataLoaded) {
-			fetchSharedVideos();
+			fetchSharedVideos(1);
 		}
 	}, [userDataLoaded]);
 
-	// Filter videos when category or videos array changes
+	// Filter videos when category changes
 	useEffect(() => {
 		let filtered;
 		if (activeCategory === 'all') {
@@ -155,12 +177,30 @@ const SharedPage = () => {
 		}
 		
 		setFilteredVideos(filtered);
-		setCurrentPage(1);
 	}, [activeCategory, videos]);
 
 	// Handle category change
 	const handleCategoryChange = (category) => {
+		if (category === activeCategory) return;
+		
 		setActiveCategory(category);
+		
+		// If changing to 'my-videos', we can filter locally
+		// If changing to 'all', we need to fetch from server again
+		if (category === 'all' && activeCategory !== 'all') {
+			fetchSharedVideos(1); // Reset to first page when switching to all
+		}
+	};
+
+	// Handle page change
+	const handlePageChange = (newPage) => {
+		if (newPage === pagination.currentPage) return;
+		
+		// Fetch new page from server
+		fetchSharedVideos(newPage);
+		
+		// Scroll to top
+		window.scrollTo(0, 0);
 	};
 
 	// Handle delete action
@@ -169,7 +209,16 @@ const SharedPage = () => {
 			const token = await secureStorage.getToken();
 			await API.deleteVideo(id, token);
 			
+			// Remove from local state
 			setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
+			setFilteredVideos(prevFiltered => prevFiltered.filter(video => video.id !== id));
+			
+			// Update pagination count
+			setPagination(prev => ({
+				...prev,
+				totalCount: prev.totalCount - 1,
+				totalPages: Math.max(1, Math.ceil((prev.totalCount - 1) / prev.pageSize))
+			}));
 			
 			setNotification({
 				visible: true,
@@ -178,6 +227,9 @@ const SharedPage = () => {
 			});
 		} catch (error) {
 			console.error('Error deleting video:', error);
+			window.electron?.log.error('Error deleting video', {
+				error: error.toString()
+			});
 			
 			// Check for token expiration
 			if (error.message && error.message.includes('token')) {
@@ -186,7 +238,6 @@ const SharedPage = () => {
 					message: 'Your session has expired. Please log in again.',
 					type: 'error'
 				});
-				// Could redirect to login here
 			} else {
 				setNotification({
 					visible: true,
@@ -198,37 +249,46 @@ const SharedPage = () => {
 	};
 
 	// Handle CloudFront URL token expiration
-	const handleVideoError = (videoId) => {
+	const handleVideoError = async (videoId) => {
 		// Find the video with expired token
 		const video = videos.find(v => v.id === videoId);
 		if (!video) return;
 		
 		console.log(`Handling video error for ${videoId}, refreshing CloudFront URL`);
+		window.electron?.log.debug(`Handling video error for ${videoId}`, {
+			action: 'refreshing CloudFront URL'
+		});
 		
 		// Request a fresh URL from the server
-		const refreshVideo = async () => {
-			try {
-				// This assumes your API has a method to refresh URLs
-				const refreshedVideo = await API.refreshVideoUrl(videoId);
-				
-				// Update the video in the list with the fresh URL
-				setVideos(prevVideos => 
-					prevVideos.map(v => 
-						v.id === videoId 
-							? { ...v, videoUrl: refreshedVideo.cloudFrontUrl || refreshedVideo.videoUrl }
-							: v
-					)
-				);
-				
-				return true;
-			} catch (err) {
-				console.error('Error refreshing video URL:', err);
-				return false;
-			}
-		};
-		
-		// Try to refresh the URL
-		refreshVideo();
+		try {
+			// This assumes your API has a method to refresh URLs
+			const refreshedVideo = await API.refreshVideoUrl(videoId);
+			
+			// Update the video in the list with the fresh URL
+			setVideos(prevVideos => 
+				prevVideos.map(v => 
+					v.id === videoId 
+						? { ...v, videoUrl: refreshedVideo.cloudFrontUrl || refreshedVideo.videoUrl }
+						: v
+				)
+			);
+			
+			setFilteredVideos(prevFiltered => 
+				prevFiltered.map(v => 
+					v.id === videoId 
+						? { ...v, videoUrl: refreshedVideo.cloudFrontUrl || refreshedVideo.videoUrl }
+						: v
+				)
+			);
+			
+			window.electron?.log.info(`CloudFront URL refreshed for video ${videoId}`);
+		} catch (err) {
+			console.error('Error refreshing video URL:', err);
+			window.electron?.log.error('Error refreshing CloudFront URL', {
+				error: err.toString(),
+				videoId
+			});
+		}
 	};
 
 	// Toggle showing video metadata
@@ -236,21 +296,8 @@ const SharedPage = () => {
 		setShowMetadataId(showMetadataId === id ? null : id);
 	};
 
-	// Calculate pagination
-	const indexOfLastVideo = currentPage * videosPerPage;
-	const indexOfFirstVideo = indexOfLastVideo - videosPerPage;
-	const currentVideos = filteredVideos.slice(indexOfFirstVideo, indexOfLastVideo);
-	const totalPages = Math.max(1, Math.ceil(filteredVideos.length / videosPerPage));
-
-	// Ensure current page is within valid bounds
-	useEffect(() => {
-		if (currentPage > totalPages && totalPages > 0) {
-			setCurrentPage(totalPages);
-		}
-	}, [currentPage, totalPages]);
-
 	// Process videos for VideoGrid
-	const gridVideos = currentVideos.map(video => {
+	const gridVideos = filteredVideos.map(video => {
 		return {
 			id: video.id,
 			title: video.title,
@@ -262,26 +309,14 @@ const SharedPage = () => {
 				resolution: video.resolution,
 				duration: video.duration,
 				size: video.size,
-				createdAt: video.createdAt
+				createdAt: video.createdAt,
+				uploadedAt: video.uploadedAt
 			},
 			showMetadata: showMetadataId === video.id,
 			toggleMetadata: () => toggleMetadata(video.id),
 			onVideoError: () => handleVideoError(video.id)
 		};
 	});
-
-	// Page navigation handlers
-	const handleNextPage = () => {
-		if (currentPage < totalPages) {
-			setCurrentPage(currentPage + 1);
-		}
-	};
-
-	const handlePrevPage = () => {
-		if (currentPage > 1) {
-			setCurrentPage(currentPage - 1);
-		}
-	};
 
 	return (
 		<div className="shared-page">
@@ -307,7 +342,7 @@ const SharedPage = () => {
 			<div className="button-group">
 				<button 
 					className="refresh-button" 
-					onClick={fetchSharedVideos}
+					onClick={() => fetchSharedVideos(pagination.currentPage)}
 					disabled={isLoading}
 				>
 					{isLoading ? 'Loading...' : 'Refresh Videos'}
@@ -323,7 +358,7 @@ const SharedPage = () => {
 			{networkError && (
 				<div className="network-error-banner">
 					<p>Network connection issues detected. Some videos may not load correctly.</p>
-					<button onClick={fetchSharedVideos}>Try Again</button>
+					<button onClick={() => fetchSharedVideos(pagination.currentPage)}>Try Again</button>
 				</div>
 			)}
 			
@@ -341,19 +376,30 @@ const SharedPage = () => {
 						renderInfo={true}
 					/>
 					
-					{totalPages > 1 && (
+					{/* Server-side pagination controls */}
+					{pagination.totalPages > 1 && (
 						<div className="pagination">
-							<button onClick={handlePrevPage} disabled={currentPage === 1}>
+							<button 
+								onClick={() => handlePageChange(pagination.currentPage - 1)} 
+								disabled={!pagination.hasPreviousPage}
+							>
 								Previous
 							</button>
 							<span>
-								Page {currentPage} of {totalPages}
+								Page {pagination.currentPage} of {pagination.totalPages}
 							</span>
-							<button onClick={handleNextPage} disabled={currentPage === totalPages}>
+							<button 
+								onClick={() => handlePageChange(pagination.currentPage + 1)} 
+								disabled={!pagination.hasNextPage}
+							>
 								Next
 							</button>
 						</div>
 					)}
+					
+					<div className="pagination-info">
+						Showing {filteredVideos.length} of {pagination.totalCount} videos
+					</div>
 				</div>
 			) : (
 				<div className="no-videos-message">

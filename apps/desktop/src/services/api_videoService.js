@@ -1,15 +1,16 @@
 import config from './api_config';
+import { secureStorage } from '../utils/secureStorage';
 
 // Video service
 const videoService = {
 	// Get shared videos
-	async getSharedVideos() {
+	async getSharedVideos(page = 1, limit = 10) {
 		try {
 			if (window.electron?.log) {
-				window.electron.log.debug('Fetching shared videos from server');
+				window.electron.log.debug('Fetching shared videos from server', { page, limit });
 			}
 			
-			const response = await fetch(`${config.baseUrl}/videos/shared-videos`);
+			const response = await fetch(`${config.baseUrl}/videos/shared-videos?page=${page}&limit=${limit}`);
 			
 			if (!response.ok) {
 				const errorData = await response.json();
@@ -18,22 +19,28 @@ const videoService = {
 			
 			const data = await response.json();
 			
-			// Add videoUrl property to each video
-            const videos = data.videos.map(video => ({
-                ...video,
-                videoUrl: video.cloudFrontUrl || `${config.baseUrl}/videos/stream/${video.id}`
-            }));
+			// Add videoUrl property to each video if not already present
+			const videos = data.videos.map(video => ({
+				...video,
+				videoUrl: video.cloudFrontUrl || video.videoUrl || `${config.baseUrl}/videos/stream/${video.id}`
+			}));
 			
 			if (window.electron?.log) {
-				window.electron.log.info('Retrieved shared videos', { count: videos.length });
+				window.electron.log.info('Retrieved shared videos', { 
+					count: videos.length,
+					page: data.pagination.currentPage,
+					totalPages: data.pagination.totalPages,
+				});
 			}
 			
-			return videos;
+			return {
+				videos,
+				pagination: data.pagination
+			};
 		} catch (error) {
 			config.handleError(error, 'getSharedVideos');
 		}
 	},
-	
 	// Delete a video
 	async deleteVideo(id, token) {
 		try {

@@ -216,16 +216,41 @@ router.patch("/:videoId/publish", authenticateToken, async (req, res) => {
  */
 router.get("/shared-videos", async (req, res) => {
   try {
-    const videos = await Video.findAll({
+    // Parse pagination parameters with defaults
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    // Validate pagination parameters
+    if (page < 1 || limit < 1 || limit > 50) {
+      return res.status(400).json({ 
+        error: "Invalid pagination parameters. Page must be >= 1 and limit between 1-50" 
+      });
+    }
+    
+    // Calculate offset for SQL query
+    const offset = (page - 1) * limit;
+    
+    // Get total count and paginated results
+    const { count, rows } = await Video.findAndCountAll({
       where: {
         status: "published",
         processingStatus: "ready",
       },
       order: [["createdAt", "DESC"]],
+      limit,
+      offset,
+      // Include username for display purposes
+      include: [
+        {
+          model: User,
+          attributes: ['username'],
+          required: false
+        }
+      ]
     });
     
     // Process videos to ensure they have CloudFront URLs
-    const processedVideos = videos.map(video => {
+    const processedVideos = rows.map(video => {
       const videoJson = video.toJSON();
       
       // Make sure CloudFront URL exists
@@ -239,16 +264,39 @@ router.get("/shared-videos", async (req, res) => {
         ).catch(err => console.error(`Error updating CloudFront URL: ${err}`));
       }
       
+      // Use username from User relationship if available
+      if (video.User && video.User.username && !videoJson.username) {
+        videoJson.username = video.User.username;
+      }
+      
       // Set videoUrl property for frontend consumption
-      videoJson.videoUrl = videoJson.cloudFrontUrl;
+      videoJson.videoUrl = videoJson.cloudFrontUrl || 
+                          `/videos/stream/${video.id}`;
+      
+      // Add formatted timestamp
+      videoJson.uploadedAt = new Date(videoJson.createdAt).toLocaleString();
       
       return videoJson;
     });
     
-    res.json({ videos: processedVideos });
+    // Return videos with pagination metadata
+    res.json({ 
+      videos: processedVideos,
+      pagination: {
+        totalCount: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        pageSize: limit,
+        hasNextPage: page < Math.ceil(count / limit),
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (err) {
     console.error("Failed to fetch shared videos:", err);
-    res.status(500).json({ error: "Failed to load shared videos" });
+    res.status(500).json({ 
+      error: "Failed to load shared videos",
+      message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
 
