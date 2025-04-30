@@ -200,17 +200,32 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 		}
 	};
 	
-	// Handle player errors based on URL type
+	// Handle player errors
 	const handlePlayerError = (e) => {
 		setHasError(true);
 		const error = playerRef.current.error();
 		console.error('Video.js error:', error);
 		
-		// Handle range errors (common with CloudFront)
-		if (error.code === 4) {
-			if (error.message.includes('416') || 
+		// CloudFront specific error handling
+		if (error && error.message) {
+			// Handle expired token or 403 errors (common with CloudFront)
+			if (error.message.includes('403') || 
+				error.message.includes('Forbidden') ||
+				error.message.includes('Access Denied')) {
+				
+				console.log('CloudFront token likely expired, requesting fresh URL');
+				
+				// Notify parent component to refresh the video URL
+				if (props.onVideoError) {
+					props.onVideoError();
+				}
+			}
+			
+			// Handle range errors (also common with CloudFront)
+			if (error.code === 4 || 
+				(error.message.includes('416') || 
 				error.message.includes('range') || 
-				error.message.includes('satisfiable')) {
+				error.message.includes('satisfiable'))) {
 				
 				console.log('Handling range error, attempting to reload video');
 				

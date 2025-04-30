@@ -18,6 +18,8 @@ const SharedPage = () => {
 	const [activeCategory, setActiveCategory] = useState('all');
 	const [userDataLoaded, setUserDataLoaded] = useState(false);
 	const [filteredVideos, setFilteredVideos] = useState([]);
+	const [retryCount, setRetryCount] = useState(0);
+	const [networkError, setNetworkError] = useState(false);
 
 	// Pagination settings
 	const videosPerPage = 10;
@@ -51,6 +53,8 @@ const SharedPage = () => {
 	// Function to load shared videos from the server
 	const fetchSharedVideos = async () => {
 		setIsLoading(true);
+		setNetworkError(false);
+		
 		try {
 			// Wait for user data if needed
 			if (!userDataLoaded) {
@@ -74,16 +78,15 @@ const SharedPage = () => {
 					video.username && 
 					currentUser.username.toLowerCase() === video.username.toLowerCase();
 				
-				// Create a proper video URL - use the videoUrl provided by the API
-				// This will be either a CloudFront URL or a local streaming endpoint
-				const videoUrl = video.videoUrl || 
-					video.cloudFrontUrl || 
+				// Prioritize CloudFront URL
+				const videoUrl = video.cloudFrontUrl || video.videoUrl || 
 					`/videos/stream/${video.id}`;
 				
 				return {
 					id: video.id,
 					title: video.title || video.filename,
 					videoUrl: videoUrl,
+					cloudFrontUrl: video.cloudFrontUrl,
 					username: video.username,
 					resolution: video.resolution,
 					duration: video.duration,
@@ -95,6 +98,8 @@ const SharedPage = () => {
 			
 			setVideos(processedVideos);
 			setCurrentPage(1);
+			setRetryCount(0); // Reset retry counter on success
+			
 			setNotification({
 				visible: true,
 				message: 'Videos loaded successfully',
@@ -102,11 +107,30 @@ const SharedPage = () => {
 			});
 		} catch (error) {
 			console.error('Error loading shared videos:', error);
+			
+			// Handle network connectivity issues
+			if (error.message && (
+				error.message.includes('network') || 
+				error.message.includes('connection') ||
+				error.message.includes('timeout')
+			)) {
+				setNetworkError(true);
+			}
+			
 			setNotification({
 				visible: true,
-				message: 'Failed to load videos',
+				message: 'Failed to load videos: ' + (error.message || 'Unknown error'),
 				type: 'error'
 			});
+			
+			// Retry logic for token expiration or network issues
+			if (retryCount < 2) {
+				setRetryCount(prevCount => prevCount + 1);
+				setTimeout(() => {
+					console.log('Retrying video fetch after error...');
+					fetchSharedVideos();
+				}, 3000); // Retry after 3 seconds
+			}
 		} finally {
 			setIsLoading(false);
 		}
@@ -154,12 +178,57 @@ const SharedPage = () => {
 			});
 		} catch (error) {
 			console.error('Error deleting video:', error);
-			setNotification({
-				visible: true,
-				message: 'Failed to delete video',
-				type: 'error'
-			});
+			
+			// Check for token expiration
+			if (error.message && error.message.includes('token')) {
+				setNotification({
+					visible: true,
+					message: 'Your session has expired. Please log in again.',
+					type: 'error'
+				});
+				// Could redirect to login here
+			} else {
+				setNotification({
+					visible: true,
+					message: 'Failed to delete video: ' + (error.message || 'Unknown error'),
+					type: 'error'
+				});
+			}
 		}
+	};
+
+	// Handle CloudFront URL token expiration
+	const handleVideoError = (videoId) => {
+		// Find the video with expired token
+		const video = videos.find(v => v.id === videoId);
+		if (!video) return;
+		
+		console.log(`Handling video error for ${videoId}, refreshing CloudFront URL`);
+		
+		// Request a fresh URL from the server
+		const refreshVideo = async () => {
+			try {
+				// This assumes your API has a method to refresh URLs
+				const refreshedVideo = await API.refreshVideoUrl(videoId);
+				
+				// Update the video in the list with the fresh URL
+				setVideos(prevVideos => 
+					prevVideos.map(v => 
+						v.id === videoId 
+							? { ...v, videoUrl: refreshedVideo.cloudFrontUrl || refreshedVideo.videoUrl }
+							: v
+					)
+				);
+				
+				return true;
+			} catch (err) {
+				console.error('Error refreshing video URL:', err);
+				return false;
+			}
+		};
+		
+		// Try to refresh the URL
+		refreshVideo();
 	};
 
 	// Toggle showing video metadata
@@ -196,7 +265,8 @@ const SharedPage = () => {
 				createdAt: video.createdAt
 			},
 			showMetadata: showMetadataId === video.id,
-			toggleMetadata: () => toggleMetadata(video.id)
+			toggleMetadata: () => toggleMetadata(video.id),
+			onVideoError: () => handleVideoError(video.id)
 		};
 	});
 
@@ -247,6 +317,13 @@ const SharedPage = () => {
 			{notification.visible && (
 				<div className={`notification ${notification.type}`}>
 					{notification.message}
+				</div>
+			)}
+			
+			{networkError && (
+				<div className="network-error-banner">
+					<p>Network connection issues detected. Some videos may not load correctly.</p>
+					<button onClick={fetchSharedVideos}>Try Again</button>
 				</div>
 			)}
 			

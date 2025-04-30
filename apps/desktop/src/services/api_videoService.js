@@ -19,10 +19,10 @@ const videoService = {
 			const data = await response.json();
 			
 			// Add videoUrl property to each video
-			const videos = data.videos.map(video => ({
-				...video,
-				videoUrl: `${config.baseUrl}/videos/stream/${video.filename}`
-			}));
+            const videos = data.videos.map(video => ({
+                ...video,
+                videoUrl: video.cloudFrontUrl || `${config.baseUrl}/videos/stream/${video.id}`
+            }));
 			
 			if (window.electron?.log) {
 				window.electron.log.info('Retrieved shared videos', { count: videos.length });
@@ -143,7 +143,41 @@ const videoService = {
 		} catch (error) {
 			config.handleError(error, 'uploadVideo');
 		}
-	}
+	},
+
+    // Refresh an expired video URL
+    async refreshVideoUrl(videoId) {
+        try {
+            const token = await secureStorage.getToken();
+            
+            if (!token) {
+                throw new Error('Authentication required');
+            }
+            
+            const response = await fetch(`${config.baseUrl}/videos/${videoId}/refresh-url`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `Error ${response.status}: Failed to refresh video URL`);
+            }
+            
+            const data = await response.json();
+            
+            return {
+                id: data.id,
+                cloudFrontUrl: data.cloudFrontUrl,
+                videoUrl: data.cloudFrontUrl || data.videoUrl
+            };
+        } catch (error) {
+            config.handleError(error, 'refreshVideoUrl');
+        }
+    }
 };
 
 export default videoService;

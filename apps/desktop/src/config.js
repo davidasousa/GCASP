@@ -1,5 +1,5 @@
 // Flip this to true when you want to point at the real GCASP API.
-export const useProdApi = true;
+export const useProdApi = false;
 
 // The two URLs you’re switching between:
 const LOCAL_API_URL    = 'http://localhost:5001';
