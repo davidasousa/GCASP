@@ -16,16 +16,18 @@ const videoRoutes = require("./routes/videos");
 const xssClean = require("xss-clean");
 const { Video } = require("./models");
 const isProd = process.env.PROD === "true";
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 let s3;
 if (isProd) {
-  const AWS = require('aws-sdk');
-  AWS.config.update({
-    accessKeyId: process.env.ACCESS_KEY_AWS,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS,
-    region: process.env.REGION_AWS || 'us-east-2'
+  s3 = new S3Client({
+    region: process.env.REGION_AWS || 'us-east-2',
+    credentials: {
+      accessKeyId: process.env.ACCESS_KEY_AWS,
+      secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS
+    }
   });
-  s3 = new AWS.S3();
 }
 
 async function startServer() {
@@ -79,43 +81,23 @@ async function startServer() {
     app.get("/videos/stream/:videoId", async (req, res) => {
       try {
         const videoId = req.params.videoId;
-        
-        // Security check to prevent path traversal
-        if (videoId.includes('..') || videoId.includes('/') || videoId.includes('\\')) {
+        if (["..","/","\\"].some(ch => videoId.includes(ch))) {
           return res.status(400).send("Invalid video ID");
         }
-        
-        // Find video in database
         const video = await Video.findByPk(videoId);
-        if (!video) {
-          return res.status(404).send("Video not found");
-        }
-        
-        // Handle CloudFront URL
+        if (!video) return res.status(404).send("Video not found");
+
         if (video.cloudFrontUrl) {
           return res.redirect(video.cloudFrontUrl);
-        } 
-        else if (video.s3Key) {
-          // Generate CloudFront URL if not in database
-          const cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${video.s3Key}`;
-          
-          // Update video record with CloudFront URL for future use
-          video.cloudFrontUrl = cloudFrontUrl;
-          await video.save();
-          
-          return res.redirect(cloudFrontUrl);
-        }
-        else if (video.s3Location) {
-          // Generate a signed URL for private S3 objects
-          const signedUrl = s3.getSignedUrl('getObject', {
+        } else if (video.s3Key) {
+          // generate signed URL
+          const command = new GetObjectCommand({
             Bucket: process.env.S3_VIDEO_BUCKET,
-            Key: video.s3Key,
-            Expires: 60 // URL valid for 60 seconds
+            Key: video.s3Key
           });
-          
+          const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
           return res.redirect(signedUrl);
-        } 
-        else {
+        } else {
           return res.status(500).send("Video source not available");
         }
       } catch (error) {
