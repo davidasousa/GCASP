@@ -7,12 +7,12 @@ import '../styles/shared-page.css';
 const SharedPage = () => {
 	const [videos, setVideos] = useState([]);
 	const [currentPage, setCurrentPage] = useState(1);
-	const [isLoading, setIsLoading] = useState(true); // Start as loading
+	const [isLoading, setIsLoading] = useState(true);
 	const [currentUser, setCurrentUser] = useState(null);
 	const [notification, setNotification] = useState({
 		visible: false,
 		message: '',
-		type: 'success' // 'success' or 'error'
+		type: 'success'
 	});
 	const [showMetadataId, setShowMetadataId] = useState(null);
 	const [activeCategory, setActiveCategory] = useState('all');
@@ -32,7 +32,7 @@ const SharedPage = () => {
 		}
 	}, [notification.visible]);
 
-	// Get current user data first (important to do this before loading videos)
+	// Get current user data first
 	useEffect(() => {
 		const getCurrentUser = async () => {
 			try {
@@ -41,7 +41,7 @@ const SharedPage = () => {
 			} catch (error) {
 				console.error('Error getting current user:', error);
 			} finally {
-				setUserDataLoaded(true); // Mark user data as loaded
+				setUserDataLoaded(true);
 			}
 		};
 		
@@ -52,7 +52,7 @@ const SharedPage = () => {
 	const fetchSharedVideos = async () => {
 		setIsLoading(true);
 		try {
-			// First ensure we have user data
+			// Wait for user data if needed
 			if (!userDataLoaded) {
 				await new Promise(resolve => {
 					const checkInterval = setInterval(() => {
@@ -68,27 +68,33 @@ const SharedPage = () => {
 			
 			// Process the videos to add extra information needed for display
 			const processedVideos = sharedVideos.map(video => {
-				// Explicitly check username equality for ownership
+				// Check for video ownership
 				const isOwnVideo = currentUser && 
 					currentUser.username && 
 					video.username && 
 					currentUser.username.toLowerCase() === video.username.toLowerCase();
 				
+				// Create a proper video URL - use the videoUrl provided by the API
+				// This will be either a CloudFront URL or a local streaming endpoint
+				const videoUrl = video.videoUrl || 
+					video.cloudFrontUrl || 
+					`/videos/stream/${video.id}`;
+				
 				return {
 					id: video.id,
 					title: video.title || video.filename,
-					videoUrl: video.videoUrl,
+					videoUrl: videoUrl,
 					username: video.username,
 					resolution: video.resolution,
 					duration: video.duration,
 					size: video.size,
 					createdAt: video.createdAt,
-					isOwnVideo // Track if this is the current user's video
+					isOwnVideo
 				};
 			});
 			
 			setVideos(processedVideos);
-			setCurrentPage(1); // Reset to page 1 when loading new videos
+			setCurrentPage(1);
 			setNotification({
 				visible: true,
 				message: 'Videos loaded successfully',
@@ -125,14 +131,12 @@ const SharedPage = () => {
 		}
 		
 		setFilteredVideos(filtered);
-		// Always reset to page 1 when the filter changes
 		setCurrentPage(1);
 	}, [activeCategory, videos]);
 
 	// Handle category change
 	const handleCategoryChange = (category) => {
 		setActiveCategory(category);
-		// No need to reset page here as it's handled in the useEffect
 	};
 
 	// Handle delete action
@@ -141,7 +145,6 @@ const SharedPage = () => {
 			const token = await secureStorage.getToken();
 			await API.deleteVideo(id, token);
 			
-			// Remove the deleted video from the state
 			setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
 			
 			setNotification({
@@ -167,7 +170,6 @@ const SharedPage = () => {
 	// Calculate pagination
 	const indexOfLastVideo = currentPage * videosPerPage;
 	const indexOfFirstVideo = indexOfLastVideo - videosPerPage;
-	// Make sure we don't try to slice beyond the array bounds
 	const currentVideos = filteredVideos.slice(indexOfFirstVideo, indexOfLastVideo);
 	const totalPages = Math.max(1, Math.ceil(filteredVideos.length / videosPerPage));
 
@@ -178,15 +180,15 @@ const SharedPage = () => {
 		}
 	}, [currentPage, totalPages]);
 
-	// Process videos into the format expected by VideoGrid
+	// Process videos for VideoGrid
 	const gridVideos = currentVideos.map(video => {
 		return {
 			id: video.id,
 			title: video.title,
 			videoUrl: video.videoUrl,
 			username: video.username,
-			isOwnVideo: video.isOwnVideo, // Pass true or false, never undefined
-			isSharedVideo: true, // Explicitly mark as shared video
+			isOwnVideo: video.isOwnVideo,
+			isSharedVideo: true,
 			metadata: {
 				resolution: video.resolution,
 				duration: video.duration,
@@ -198,7 +200,7 @@ const SharedPage = () => {
 		};
 	});
 
-	// Handlers to navigate pages
+	// Page navigation handlers
 	const handleNextPage = () => {
 		if (currentPage < totalPages) {
 			setCurrentPage(currentPage + 1);
@@ -209,11 +211,6 @@ const SharedPage = () => {
 		if (currentPage > 1) {
 			setCurrentPage(currentPage - 1);
 		}
-	};
-
-	// Notification handlers
-	const handleCloseNotification = () => {
-		setNotification({ ...notification, visible: false });
 	};
 
 	return (
@@ -247,7 +244,6 @@ const SharedPage = () => {
 				</button>
 			</div>
 			
-			{/* Notification component */}
 			{notification.visible && (
 				<div className={`notification ${notification.type}`}>
 					{notification.message}

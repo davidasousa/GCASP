@@ -42,6 +42,21 @@ const Video = sequelize.define("Video", {
     type: DataTypes.STRING,
     allowNull: true, // Optional if you still want to join from User
   },
+  s3Key: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: "S3 object key path"
+  },
+  s3Location: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    comment: "Direct S3 URL"
+  },
+  cloudFrontUrl: {
+    type: DataTypes.STRING,
+    allowNull: true, 
+    comment: "CloudFront distribution URL"
+  }
 }, { timestamps: true });
 
 Video.belongsTo(User, { foreignKey: "userId" });

@@ -1,136 +1,87 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import videojs from 'video.js';
 import 'video.js/dist/video-js.css';
 
 const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 	const videoRef = useRef(null);
 	const playerRef = useRef(null);
+	const [hasError, setHasError] = useState(false);
 
-	// Create a new player only once on mount.
+	// Create player only once on mount
 	useEffect(() => {
-		// Create a new player if it doesn't exist
 		if (!playerRef.current) {
 			const videoElement = videoRef.current;
 			if (!videoElement) return;
 
 			// Default configuration options for video.js
 			const defaultOptions = {
-				// Basic player settings
 				controls: true,
 				autoplay: false,
 				preload: 'metadata',
 				fluid: true,
 				playbackRates: [0.5, 1, 1.5, 2],
-                responsive: true,
-                
-                // Improve performance and reliability
-                html5: {
-                    vhs: {
-                        overrideNative: true,
-                        limitRenditionByPlayerDimensions: false,
-                        smoothQualityChange: true,
-                        handleManifestRedirects: true,
-                    },
-                    nativeAudioTracks: false,
-                    nativeVideoTracks: false
-                },
-                
-                // Improve seeking behavior
-                liveui: false,
-                liveTracker: false,
-                inactivityTimeout: 2000,
-                
-                // Error handling improvements
-                techOrder: ['html5'],
-                enableSourceset: true,
+				responsive: true,
+				
+				// Improve performance and reliability
+				html5: {
+					vhs: {
+						overrideNative: true,
+						limitRenditionByPlayerDimensions: false,
+						smoothQualityChange: true,
+						handleManifestRedirects: true,
+					},
+					nativeAudioTracks: false,
+					nativeVideoTracks: false
+				},
+				
+				// Improve seeking behavior
+				liveui: false,
+				liveTracker: false,
+				inactivityTimeout: 2000,
+				
+				// Error handling improvements
+				techOrder: ['html5'],
+				enableSourceset: true,
 
 				// Control bar configuration
 				controlBar: {
-					timeControls: true, // Enable time control display
+					timeControls: true,
 					children: [
-						'playToggle', // Play/Pause button
-						'volumePanel', // Volume control
-						'currentTimeDisplay', // Display current video time
-						'timeDivider', // Divider between current and total time
-						'durationDisplay', // Total video time
-						'progressControl', // Progress bar
-						'playbackRateMenuButton', // Speed control
-						'fullscreenToggle' // Fullscreen button
+						'playToggle',
+						'volumePanel',
+						'currentTimeDisplay',
+						'timeDivider',
+						'durationDisplay',
+						'progressControl',
+						'playbackRateMenuButton',
+						'fullscreenToggle'
 					]
 				},
 
 				// User interaction settings
 				userActions: {
-					hotkeys: true // Enable keyboard shortcuts
+					hotkeys: true
 				},
 
-				loadingSpinner: true, // Show loading animation
-				errorDisplay: true, // Show error messages
-				bigPlayButton: true, // Show large play button in center
+				loadingSpinner: true,
+				errorDisplay: true,
+				bigPlayButton: true,
 				sources: [{
-					src: videoUrl, // URL of the video
-					type: 'video/mp4' // Video format
+					src: videoUrl,
+					type: detectVideoType(videoUrl)
 				}]
 			};
 
-			// Create new video.js player instance
+			// Create new player
 			const player = videojs(
 				videoElement,
-				{ ...defaultOptions, ...options }, // Merge default and custom options
+				{ ...defaultOptions, ...options },
 				function onPlayerReady() {
 					// Setup keyboard shortcuts
-					player.on('keydown', (e) => {
-						// Space bar - toggle play/pause
-						if (e.code === 'Space') {
-							if (player.paused()) {
-								player.play();
-							} else {
-								player.pause();
-							}
-						}
-						// Left arrow - Rewind 5 seconds
-						if (e.code === 'ArrowLeft') {
-							player.currentTime(player.currentTime() - 5);
-						}
-						// Right arrow - Fast forward 5 seconds
-						if (e.code === 'ArrowRight') {
-							player.currentTime(player.currentTime() + 5);
-						}
-						// Up arrow - Increase volume by 10%
-						if (e.code === 'ArrowUp') {
-							player.volume(Math.min(player.volume() + 0.1, 1));
-						}
-						// Down arrow - Decrease volume by 10%
-						if (e.code === 'ArrowDown') {
-							player.volume(Math.max(player.volume() - 0.1, 0));
-						}
-					});
-
-					// Improve error handling for seeking
-					player.on('error', function(e) {
-						const error = player.error();
-						console.error('Video.js error:', error);
-						
-						// Handle range not satisfiable errors specifically
-						if (error.code === 4 && (error.message.includes('416') || 
-							error.message.includes('range') || 
-							error.message.includes('satisfiable'))) {
-							console.log('Handling range error, attempting to reload video');
-							
-							// Try to recover by reloading with the current time
-							const currentTime = player.currentTime();
-							
-							player.src({
-								src: `${videoUrl}?reload=${Date.now()}`,
-								type: 'video/mp4'
-							});
-							
-							player.load();
-							player.on('loadedmetadata', () => {
-								player.currentTime(currentTime);
-							});
-						}
-					});
+					player.on('keydown', handleKeypress);
+					
+					// Handle errors
+					player.on('error', handlePlayerError);
 					
 					// Monitor seeking behavior
 					player.on('seeking', () => {
@@ -150,35 +101,37 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 			playerRef.current = player;
 		}
 
-		// Cleanup function when component unmounts
+		// Cleanup function
 		return () => {
 			if (playerRef.current) {
 				playerRef.current.dispose();
 				playerRef.current = null;
 			}
 		};
-	}, []); // Run only once on mount
+	}, []);
 
-	// Update the video source when videoUrl changes.
+	// Update video source when videoUrl changes
 	useEffect(() => {
-		if (playerRef.current) {
-			playerRef.current.src({ 
-				src: videoUrl, 
-				type: 'video/mp4' 
-			});
+		if (playerRef.current && videoUrl) {
+			setHasError(false);
 			
-			// Add timestamp query parameter to bust cache
+			// Detect video type (mp4, webm, etc.)
+			const videoType = detectVideoType(videoUrl);
+			
+			// Add cache-busting parameter for CloudFront
+			const cacheBustUrl = addCacheBustingParam(videoUrl);
+			
 			playerRef.current.src({
-				src: `${videoUrl}?t=${Date.now()}`,
-				type: 'video/mp4'
+				src: cacheBustUrl,
+				type: videoType
 			});
 		}
 	}, [videoUrl]);
 
-	// Play or pause based on isActive.
+	// Handle play/pause based on isActive
 	useEffect(() => {
 		if (playerRef.current) {
-			if (isActive) {
+			if (isActive && !hasError) {
 				playerRef.current.play().catch((error) => {
 					console.error('Error playing video:', error);
 				});
@@ -186,7 +139,98 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 				playerRef.current.pause();
 			}
 		}
-	}, [isActive]);
+	}, [isActive, hasError]);
+
+	// Helper function to detect video type from URL
+	const detectVideoType = (url) => {
+		if (!url) return 'video/mp4'; // Default
+		
+		const extension = url.split('.').pop().toLowerCase();
+		const typeMap = {
+			'mp4': 'video/mp4',
+			'webm': 'video/webm',
+			'mov': 'video/quicktime',
+			'avi': 'video/x-msvideo',
+			'mkv': 'video/x-matroska'
+		};
+		
+		// For CloudFront URLs which may not have file extension
+		if (url.includes('cloudfront.net')) {
+			return 'video/mp4'; // Assume MP4 for CloudFront
+		}
+		
+		return typeMap[extension] || 'video/mp4';
+	};
+	
+	// Add cache-busting parameter to URL
+	const addCacheBustingParam = (url) => {
+		if (!url) return '';
+		
+		// Only add for CloudFront/S3 URLs to prevent issues with signed URLs
+		if (url.includes('cloudfront.net') || url.includes('amazonaws.com')) {
+			const separator = url.includes('?') ? '&' : '?';
+			return `${url}${separator}_cb=${Date.now()}`;
+		}
+		
+		return url;
+	};
+	
+	// Handle video player keypress events
+	const handleKeypress = (e) => {
+		// Space bar - toggle play/pause
+		if (e.code === 'Space') {
+			if (playerRef.current.paused()) {
+				playerRef.current.play();
+			} else {
+				playerRef.current.pause();
+			}
+		}
+		// Arrow key controls
+		if (e.code === 'ArrowLeft') {
+			playerRef.current.currentTime(playerRef.current.currentTime() - 5);
+		}
+		if (e.code === 'ArrowRight') {
+			playerRef.current.currentTime(playerRef.current.currentTime() + 5);
+		}
+		if (e.code === 'ArrowUp') {
+			playerRef.current.volume(Math.min(playerRef.current.volume() + 0.1, 1));
+		}
+		if (e.code === 'ArrowDown') {
+			playerRef.current.volume(Math.max(playerRef.current.volume() - 0.1, 0));
+		}
+	};
+	
+	// Handle player errors based on URL type
+	const handlePlayerError = (e) => {
+		setHasError(true);
+		const error = playerRef.current.error();
+		console.error('Video.js error:', error);
+		
+		// Handle range errors (common with CloudFront)
+		if (error.code === 4) {
+			if (error.message.includes('416') || 
+				error.message.includes('range') || 
+				error.message.includes('satisfiable')) {
+				
+				console.log('Handling range error, attempting to reload video');
+				
+				// Try to recover by reloading with the current time
+				const currentTime = playerRef.current.currentTime();
+				const cacheBustUrl = `${videoUrl}?reload=${Date.now()}`;
+				
+				playerRef.current.src({
+					src: cacheBustUrl,
+					type: detectVideoType(videoUrl)
+				});
+				
+				playerRef.current.load();
+				playerRef.current.on('loadedmetadata', () => {
+					playerRef.current.currentTime(currentTime);
+					setHasError(false);
+				});
+			}
+		}
+	};
 
 	// Render video element with video.js wrapper
 	return (
@@ -195,6 +239,11 @@ const VideoPlayer = ({ videoUrl, isActive, options = {}, onReady }) => {
 				ref={videoRef}
 				className="video-js vjs-big-play-centered vjs-fluid"
 			/>
+			{hasError && (
+				<div className="video-error-message">
+					Unable to load video. Please try again later.
+				</div>
+			)}
 		</div>
 	);
 };

@@ -14,6 +14,19 @@ const setupSwagger = require("./swagger");
 const authRoutes = require("./routes/auth");
 const videoRoutes = require("./routes/videos");
 const xssClean = require("xss-clean");
+const { Video } = require("./models");
+const isProd = process.env.PROD === "true";
+
+let s3;
+if (isProd) {
+  const AWS = require('aws-sdk');
+  AWS.config.update({
+    accessKeyId: process.env.ACCESS_KEY_AWS,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS,
+    region: process.env.REGION_AWS || 'us-east-2'
+  });
+  s3 = new AWS.S3();
+}
 
 async function startServer() {
   try {
@@ -62,64 +75,115 @@ async function startServer() {
     app.use("/videos", videoRoutes);
     app.use("/friends", friendRoutes);
     
-    // Add the video streaming endpoint with security improvements
-    app.get("/videos/stream/:filename", (req, res) => {
-      const filename = req.params.filename;
-      
-      // Security check to prevent path traversal
-      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-        return res.status(400).send("Invalid filename");
-      }
-      
-      const filePath = path.join(__dirname, "uploads", filename);
-
-      fs.stat(filePath, (err, stats) => {
-        if (err || !stats.isFile()) {
+    // Video streaming endpoint for both local and S3 videos
+    app.get("/videos/stream/:videoId", async (req, res) => {
+      try {
+        const videoId = req.params.videoId;
+        
+        // Security check to prevent path traversal
+        if (videoId.includes('..') || videoId.includes('/') || videoId.includes('\\')) {
+          return res.status(400).send("Invalid video ID");
+        }
+        
+        // Find video in database
+        const video = await Video.findByPk(videoId);
+        if (!video) {
           return res.status(404).send("Video not found");
         }
-
-        const range = req.headers.range;
         
-        // Handle missing range header gracefully
-        if (!range) {
-          res.setHeader('Content-Type', 'video/mp4');
-          res.setHeader('Accept-Ranges', 'bytes');
-          const stream = fs.createReadStream(filePath);
-          stream.on('error', (error) => {
-            console.error('Stream error:', error);
-            if (!res.headersSent) {
-              res.status(500).send('Error streaming video');
-            }
-          });
-          return stream.pipe(res);
-        }
-
-        const CHUNK_SIZE = 10 ** 6;
-        const start = Number(range.replace(/\D/g, ""));
-        const end = Math.min(start + CHUNK_SIZE, stats.size - 1);
-        const contentLength = end - start + 1;
-
-        const headers = {
-          "Content-Range": `bytes ${start}-${end}/${stats.size}`,
-          "Accept-Ranges": "bytes",
-          "Content-Length": contentLength,
-          "Content-Type": "video/mp4", // adjust if you support other formats
-        };
-
-        res.writeHead(206, headers);
-        const stream = fs.createReadStream(filePath, { start, end });
-        
-        stream.on('error', (error) => {
-          console.error('Stream error:', error);
-          if (!res.headersSent) {
-            res.status(500).send('Error streaming video');
+        if (isProd) {
+          // PRODUCTION: Handle S3/CloudFront
+          if (video.cloudFrontUrl) {
+            return res.redirect(video.cloudFrontUrl);
+          } 
+          else if (video.s3Key) {
+            // Generate CloudFront URL if not in database
+            const cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${video.s3Key}`;
+            
+            // Update video record with CloudFront URL for future use
+            video.cloudFrontUrl = cloudFrontUrl;
+            await video.save();
+            
+            return res.redirect(cloudFrontUrl);
           }
-        });
-        
-        stream.pipe(res);
-      });
-    });
+          else if (video.s3Location) {
+            // Generate a signed URL for private S3 objects
+            const signedUrl = s3.getSignedUrl('getObject', {
+              Bucket: process.env.S3_VIDEO_BUCKET,
+              Key: video.s3Key,
+              Expires: 60 // URL valid for 60 seconds
+            });
+            
+            return res.redirect(signedUrl);
+          } 
+          else {
+            return res.status(500).send("Video source not available");
+          }
+        } else {
+          // DEVELOPMENT: Stream from local file system
+          // Find the video file in uploads directory
+          const uploadDir = path.join(__dirname, "uploads");
+          const files = fs.readdirSync(uploadDir);
+          const videoFile = files.find(file => file.startsWith(video.filename));
+          
+          if (!videoFile) {
+            return res.status(404).send("Video file not found");
+          }
+          
+          const filePath = path.join(uploadDir, videoFile);
+          
+          // Stream the video
+          fs.stat(filePath, (err, stats) => {
+            if (err || !stats.isFile()) {
+              return res.status(404).send("Video not found");
+            }
 
+            const range = req.headers.range;
+            
+            // Handle missing range header
+            if (!range) {
+              res.setHeader('Content-Type', 'video/mp4');
+              res.setHeader('Accept-Ranges', 'bytes');
+              const stream = fs.createReadStream(filePath);
+              stream.on('error', (error) => {
+                console.error('Stream error:', error);
+                if (!res.headersSent) {
+                  res.status(500).send('Error streaming video');
+                }
+              });
+              return stream.pipe(res);
+            }
+
+            const CHUNK_SIZE = 10 ** 6; // ~1MB
+            const start = Number(range.replace(/\D/g, ""));
+            const end = Math.min(start + CHUNK_SIZE, stats.size - 1);
+            const contentLength = end - start + 1;
+
+            const headers = {
+              "Content-Range": `bytes ${start}-${end}/${stats.size}`,
+              "Accept-Ranges": "bytes",
+              "Content-Length": contentLength,
+              "Content-Type": "video/mp4",
+            };
+
+            res.writeHead(206, headers);
+            const stream = fs.createReadStream(filePath, { start, end });
+            
+            stream.on('error', (error) => {
+              console.error('Stream error:', error);
+              if (!res.headersSent) {
+                res.status(500).send('Error streaming video');
+              }
+            });
+            
+            stream.pipe(res);
+          });
+        }
+      } catch (error) {
+        console.error("Error streaming video:", error);
+        return res.status(500).send("Server error");
+      }
+    });
     // Global error handler
     app.use((err, req, res, next) => {
       if (err instanceof multer.MulterError) {
