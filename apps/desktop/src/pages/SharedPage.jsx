@@ -2,11 +2,28 @@ import React, { useEffect, useState } from 'react';
 import { secureStorage } from '../utils/secureStorage';
 import '../styles/SharedPage.css'; // Import CSS if not already
 const SharedPage = () => {
-  const [videos, setVideos] = useState([]);
+  const [videos, setVideos] = useState(() => {
+    const saved = localStorage.getItem('sharedVideos');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [currentUsername, setCurrentUsername] = useState('');
   const [notification, setNotification] = useState({ visible: false, message: '', type: 'success' });
   const [infoVideoId, setInfoVideoId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+
+  useEffect(() => {
+    const fetchCurrentUsername = async () => {
+      try {
+        const user = await secureStorage.getUser();
+        setCurrentUsername(user.username);
+      } catch (err) {
+        console.error('Failed to get current user:', err);
+      }
+    };
+
+    fetchCurrentUsername();
+  }, []);
 
   const fetchSharedVideos = async () => {
     try {
@@ -17,18 +34,10 @@ const SharedPage = () => {
         videoUrl: `http://localhost:5001/videos/stream/${video.filename}`,
       }));
       setVideos(processed);
+      localStorage.setItem('sharedVideos', JSON.stringify(processed)); // persist videos
     } catch (err) {
       console.error('Error loading shared videos:', err);
       setNotification({ visible: true, message: 'Failed to load shared videos', type: 'error' });
-    }
-  };
-
-  const fetchCurrentUsername = async () => {
-    try {
-      const user = await secureStorage.getUser();
-      setCurrentUsername(user.username);
-    } catch (err) {
-      console.error('Failed to get current user:', err);
     }
   };
 
@@ -45,7 +54,9 @@ const SharedPage = () => {
       });
 
       if (res.ok) {
-        setVideos(prev => prev.filter(video => video.id !== id));
+        const updatedVideos = videos.filter(video => video.id !== id);
+        setVideos(updatedVideos);
+        localStorage.setItem('sharedVideos', JSON.stringify(updatedVideos)); // update local copy
         setNotification({ visible: true, message: 'Video deleted successfully', type: 'success' });
       } else {
         const data = await res.json();
@@ -62,18 +73,6 @@ const SharedPage = () => {
   const toggleInfo = (id) => {
     setInfoVideoId(infoVideoId === id ? null : id);
   };
-
-  useEffect(() => {
-    fetchSharedVideos();
-    fetchCurrentUsername();
-
-    if (notification.visible) {
-      const timer = setTimeout(() => {
-        setNotification({ ...notification, visible: false });
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [notification.visible]);
 
   return (
     <div className="home-page">
