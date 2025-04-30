@@ -62,36 +62,76 @@ const upload = multer({
 
 // Upload video endpoint
 router.post("/upload", authenticateToken, upload.single("video"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+  console.log("=== /videos/upload called ===");
+  console.log("  Authenticated user ID:", req.user?.id);
+  console.log("  Original filename:      ", req.file?.originalname);
+  console.log("  File size (bytes):      ", req.file?.size);
+  console.log("  Detected mime type:     ", req.file?.mimetype);
+  console.log("  S3 bucket:              ", process.env.S3_VIDEO_BUCKET);
+  console.log("  Multer-S3 key (S3 path):", req.file?.key);
+
+  if (!req.file) {
+    console.log("  → No file in request!");
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+
   try {
+    // confirm your user lookup
     const user = await User.findByPk(req.user.id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      console.log("  → User not found in DB:", req.user.id);
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    const s3Key = req.file.key;
+    // build CloudFront URL
+    const s3Key         = req.file.key;
     const cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${s3Key}`;
-    let metadata = {};
-    try { metadata = req.body.metadata && JSON.parse(req.body.metadata); } catch {}
+    console.log("  Computed cloudFrontUrl:", cloudFrontUrl);
 
+    let metadata = {};
+    try {
+      metadata = req.body.metadata
+        ? JSON.parse(req.body.metadata)
+        : {};
+      console.log("  Parsed metadata from body:", metadata);
+    } catch (parseErr) {
+      console.warn("  Failed to parse metadata JSON:", parseErr.message);
+    }
+
+    // create DB record
+    console.log("  Creating Video record in DB…");
     const created = await Video.create({
-      userId: req.user.id,
-      title: req.body.title || path.basename(req.file.originalname, path.extname(req.file.originalname)),
-      filename: path.basename(req.file.originalname),
-      size: req.file.size,
+      userId:           req.user.id,
+      title:            req.body.title || path.basename(req.file.originalname, path.extname(req.file.originalname)),
+      filename:         req.file.originalname,
+      size:             req.file.size,
       processingStatus: "ready",
-      username: user.username,
+      username:         user.username,
       s3Key,
       cloudFrontUrl,
-      duration: metadata.duration || 0,
-      resolution: metadata.width && metadata.height ? `${metadata.width}x${metadata.height}` : undefined
+      duration:         metadata.duration || 0,
+      resolution:       metadata.width && metadata.height
+                        ? `${metadata.width}x${metadata.height}`
+                        : undefined
+    });
+    console.log("  Video.create() result:", created.toJSON());
+
+    res.json({
+      message: "Video uploaded successfully",
+      video: {
+        id:         created.id,
+        title:      created.title,
+        videoUrl:   cloudFrontUrl,
+        duration:   created.duration,
+        resolution: created.resolution
+      }
     });
 
-    res.json({ message: "Video uploaded successfully", video: { id: created.id, title: created.title, videoUrl: cloudFrontUrl, duration: created.duration, resolution: created.resolution }});
   } catch (err) {
-    console.error("Upload error:", err);
+    console.error("  → Upload endpoint error:", err);
     res.status(500).json({ message: "Server error", error: err.message });
   }
 });
-
 /**
  * Delete a video
  */
