@@ -6,6 +6,7 @@ import FormData from 'form-data';
 import path from 'path';
 import fs from 'fs';
 import { API_URL } from './config';
+import { spawn } from 'child_process';
 
 const logger = getModuleLogger('ipcUploadHandlers.js');
 
@@ -27,8 +28,95 @@ const findClip = (videoTitle) => {
 	}
 };
 
-// Upload a clip file to the server
+// Extract metadata using FFmpeg
+const extractMetadata = (filePath) => {
+	return new Promise((resolve, reject) => {
+		logger.debug(`Extracting metadata from ${filePath}`);
+		
+		// Use FFprobe to get video metadata
+		const ffprobe = spawn('ffprobe', [
+			'-v', 'error',
+			'-select_streams', 'v:0',
+			'-show_entries', 'stream=width,height,codec_name,r_frame_rate',
+			'-show_entries', 'format=duration,size',
+			'-of', 'json',
+			filePath
+		]);
+		
+		let stdout = '';
+		let stderr = '';
+		
+		ffprobe.stdout.on('data', (data) => {
+			stdout += data.toString();
+		});
+		
+		ffprobe.stderr.on('data', (data) => {
+			stderr += data.toString();
+		});
+		
+		ffprobe.on('close', (code) => {
+			if (code === 0) {
+				try {
+					const metadata = JSON.parse(stdout);
+					const videoStream = metadata.streams.find(s => s.codec_type === 'video');
+					const format = metadata.format || {};
+					
+					// Calculate frame rate from fraction
+					let frameRate = 0;
+					if (videoStream && videoStream.r_frame_rate) {
+						const [numerator, denominator] = videoStream.r_frame_rate.split('/');
+						frameRate = Math.round(parseInt(numerator) / parseInt(denominator));
+					}
+					
+					const result = {
+						width: videoStream ? videoStream.width : null,
+						height: videoStream ? videoStream.height : null,
+						duration: parseFloat(format.duration || 0),
+						size: parseInt(format.size || 0),
+						codec: videoStream ? videoStream.codec_name : null,
+						frameRate
+					};
+					
+					logger.debug('Metadata extraction successful', result);
+					resolve(result);
+				} catch (error) {
+					logger.error('Error parsing ffprobe output:', error);
+					reject(new Error('Failed to parse metadata: ' + error.message));
+				}
+			} else {
+				logger.error(`FFprobe process exited with code ${code}: ${stderr}`);
+				reject(new Error(`FFprobe failed with code ${code}`));
+			}
+		});
+		
+		ffprobe.on('error', (err) => {
+			logger.error('Failed to start FFprobe:', err);
+			reject(new Error('Failed to start FFprobe: ' + err.message));
+		});
+	});
+};
+
+// Upload a clip file to the server with metadata
 async function uploadClipFile(file, title, token) {
+	// First extract metadata
+	let metadata;
+	try {
+		metadata = await extractMetadata(file);
+		logger.info('Metadata extracted successfully', metadata);
+	} catch (error) {
+		logger.warn('Metadata extraction failed, continuing with upload:', error);
+		// Default empty metadata if extraction fails
+		metadata = {
+			width: null,
+			height: null,
+			duration: 0,
+			size: fs.statSync(file).size,
+			codec: null,
+			frameRate: null
+		};
+	}
+
+	// Create form data with file and metadata
 	const form = new FormData();
 
 	// Read file stats to show upload progress
@@ -54,6 +142,9 @@ async function uploadClipFile(file, title, token) {
 
 	// Append the title
 	form.append("title", title);
+	
+	// Append metadata as JSON
+	form.append("metadata", JSON.stringify(metadata));
 
 	try {
 		// Send the POST request with the form data

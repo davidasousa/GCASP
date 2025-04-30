@@ -4,7 +4,6 @@ const path = require("path");
 const jwt = require("jsonwebtoken");
 const { User, Video } = require("../models");
 const router = express.Router();
-const ffmpeg = require("fluent-ffmpeg");
 const { v4: uuidv4 } = require('uuid');
 const AWS = require('aws-sdk');
 const multerS3 = require('multer-s3');
@@ -93,7 +92,7 @@ router.post("/upload", authenticateToken, upload.single("video"), async (req, re
     const s3Key = req.file.key;
     const s3Location = req.file.location;
     
-    // Create CloudFront URL using the domain from environment variables
+    // Create CloudFront URL
     const cloudFrontDomain = process.env.CLOUDFRONT_DOMAIN;
     if (!cloudFrontDomain) {
       return res.status(500).json({ message: "CloudFront domain not configured" });
@@ -101,70 +100,42 @@ router.post("/upload", authenticateToken, upload.single("video"), async (req, re
     
     const cloudFrontUrl = `https://${cloudFrontDomain}/${s3Key}`;
     
-    // Create initial database record
+    // Parse metadata from request body
+    let metadata = {};
+    try {
+      if (req.body.metadata) {
+        metadata = JSON.parse(req.body.metadata);
+      }
+    } catch (parseError) {
+      console.error("Error parsing metadata:", parseError);
+      // Continue with upload even if metadata parsing fails
+    }
+    
+    // Create database record with metadata
     const created = await Video.create({
       userId: req.user.id,
       title: req.body.title || path.basename(req.file.originalname, path.extname(req.file.originalname)),
       filename: path.basename(req.file.originalname),
       size: req.file.size,
-      processingStatus: "processing",
+      processingStatus: "ready",
       username: user.username,
       s3Key: s3Key,
       s3Location: s3Location,
-      cloudFrontUrl: cloudFrontUrl
+      cloudFrontUrl: cloudFrontUrl,
+      duration: metadata.duration || 0,
+      resolution: (metadata.width && metadata.height) ? 
+        `${metadata.width}x${metadata.height}` : undefined
     });
     
-    // Get a signed URL for ffprobe with longer expiration for processing
-    const signedUrl = s3.getSignedUrl('getObject', {
-      Bucket: process.env.S3_VIDEO_BUCKET,
-      Key: s3Key,
-      Expires: 300 // URL expires in 5 minutes to allow processing time
-    });
-    
-    // Extract metadata using ffprobe in the background
-    ffmpeg.ffprobe(signedUrl, async (err, metadata) => {
-      if (err) {
-        console.error("Metadata extraction failed:", err);
-        try {
-          created.processingStatus = "failed";
-          await created.save();
-        } catch (updateErr) {
-          console.error("Error updating processing status:", updateErr);
-        }
-        return;
-      }
-      
-      try {
-        const videoStream = metadata.streams.find(s => s.codec_type === "video");
-        if (videoStream) {
-          const updates = {
-            duration: metadata.format.duration || 0,
-            resolution: videoStream.width && videoStream.height ? 
-              `${videoStream.width}x${videoStream.height}` : 'unknown',
-            processingStatus: "ready"
-          };
-          
-          await Video.update(updates, { where: { id: created.id } });
-          console.log(`Video metadata updated successfully for ${created.id}`);
-        } else {
-          await Video.update(
-            { processingStatus: "failed" }, 
-            { where: { id: created.id } }
-          );
-          console.error("No video stream found in file");
-        }
-      } catch (updateErr) {
-        console.error("Error updating video metadata:", updateErr);
-      }
-    });
-    
-    // Respond immediately without waiting for ffprobe
+    // Respond with the created video
     res.json({ 
       message: "Video uploaded successfully",
       video: {
         id: created.id,
         title: created.title,
-        videoUrl: cloudFrontUrl
+        videoUrl: cloudFrontUrl,
+        duration: created.duration,
+        resolution: created.resolution
       }
     });
     
