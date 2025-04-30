@@ -12,8 +12,6 @@ const DisplayUserInfoList = ({ userInfo }) => {
           <li>GCASP Username: {userInfo.userName}</li>
           <li>GCASP Email: {userInfo.userEmail}</li>
           <li>GCASP Friends: {userInfo.userFriendCount}</li>
-          <li>GCASP Total Clips Uploaded: {userInfo.userClipsUploaded}</li>
-          <li>GCASP Total Clip Views: {userInfo.userViewCountTotal}</li>
         </ul>
     </div>
   );
@@ -68,9 +66,7 @@ const ProfilePage = () => {
   const [userInfo, setUserInfo] = useState ({
     userName: "",
     userEmail: "",
-    userFriendCount: 0,
-    userClipsUploaded: 0,
-    userViewCountTotal: 0
+    userFriendCount: 0
   });
 
   const updateFriendsList = async () => {
