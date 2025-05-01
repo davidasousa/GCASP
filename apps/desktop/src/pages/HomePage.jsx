@@ -1,19 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import VideoGrid from '../components/VideoGrid';
 
 const HomePage = () => {
+	// auth state
 	const { isAuthenticated, isOfflineMode } = useAuth();
+	
+	// video & pagination state
 	const [videos, setVideos] = useState([]);
 	const [currentPage, setCurrentPage] = useState(1);
+	
+	// UI state
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-	const [showUploadConfirm, setShowUploadConfirm] = useState(false);
 	const [notification, setNotification] = useState({
 		visible: false,
 		message: '',
 		type: 'success' // 'success' or 'error'
 	});
+	
 	const videosPerPage = 10;
+	
+	// ref to top of the clips section
+	const topRef = useRef(null);
 
 	// Function to load videos from the folder.
 	const loadVideos = async () => {
@@ -88,31 +96,40 @@ const HomePage = () => {
 		}
 	}, [notification.visible]);
 
-    const handleDeleteVideo = (id) => {
-        setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
-    };
+	// Remove a single video from state
+	const handleDeleteVideo = (id) => {
+		setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
+	};
 
-    // Calculate slice of videos to show on current page.
-    const indexOfLastVideo = currentPage * videosPerPage;
-    const indexOfFirstVideo = indexOfLastVideo - videosPerPage;
-    const currentVideos = videos.slice(indexOfFirstVideo, indexOfLastVideo);
-    const totalPages = Math.ceil(videos.length / videosPerPage);
+	// Calculate slice of videos to show on current page.
+	const indexOfLastVideo = currentPage * videosPerPage;
+	const indexOfFirstVideo = indexOfLastVideo - videosPerPage;
+	const currentVideos = videos.slice(indexOfFirstVideo, indexOfLastVideo);
+	const totalPages = Math.ceil(videos.length / videosPerPage);
 
-    // Handlers to navigate pages.
-    const handleNextPage = () => {
-        if (currentPage < totalPages) {
-            setCurrentPage(currentPage + 1);
-        }
-    };
+	// Handlers to navigate pages.
+	const handleNextPage = () => {
+		if (currentPage < totalPages) {
+			const next = currentPage + 1;
+			setCurrentPage(next);
+			// scroll the clips section back to top
+			topRef.current?.scrollIntoView();
+		}
+	};
 
-    const handlePrevPage = () => {
-        if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
-        }
-    };
+	const handlePrevPage = () => {
+		if (currentPage > 1) {
+			const prev = currentPage - 1;
+			setCurrentPage(prev);
+			// scroll the clips section back to top
+			topRef.current?.scrollIntoView();
+		}
+	};
 
 	return (
 		<div className="home-page">
+			{/* clips list */}
+			<div ref={topRef}></div>
 			<div className="page-header">
 				<h1>My Clips</h1>
 				{isOfflineMode && (
