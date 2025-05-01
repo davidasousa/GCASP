@@ -22,6 +22,14 @@ const VideoContainer = ({
 	const [hasError, setHasError] = useState(false);
 	const [showDeletePrompt, setShowDeletePrompt] = useState(false);
 	const [showUploadConfirm, setShowUploadConfirm] = useState(false);
+	const [uploading, setUploading] = useState(false);
+	const [uploadProgress, setUploadProgress] = useState(0);
+	const [notification, setNotification] = useState({
+		visible: false,
+		message: '',
+		type: 'success'
+	});
+	
 	const navigate = useNavigate();
 
 	const handlePlayerReady = (player) => {
@@ -69,7 +77,7 @@ const VideoContainer = ({
 		setShowUploadConfirm(false); 
 	};
 
-	// Upload Functions
+	// Upload Functions with progress and notification
 	const handleUploadSubmit = async () => {
 		try {
 			setShowUploadConfirm(false);
@@ -77,25 +85,44 @@ const VideoContainer = ({
 			setUploadProgress(0);
 			
 			const token = await secureStorage.getToken();
+			
+			// Setup progress event listener if available
+			if (window.electron?.onUploadProgress) {
+				window.electron.onUploadProgress((progress) => {
+					setUploadProgress(progress);
+				});
+			}
+			
 			const uploadResult = await window.electron.triggerUploadClip(title, token);
 			
 			setUploading(false);
 			setUploadProgress(0);
 			
-			if (uploadResult.success) {
+			if (uploadResult && uploadResult.success) {
 				setNotification({
 					visible: true,
 					message: 'Video uploaded successfully!',
 					type: 'success'
 				});
+				
+				// Hide notification after 3 seconds
+				setTimeout(() => {
+					setNotification(prev => ({...prev, visible: false}));
+				}, 3000);
 			} else {
 				setNotification({
 					visible: true,
-					message: `Upload failed: ${uploadResult.message || 'Unknown error'}`,
+					message: `Upload failed: ${uploadResult?.message || 'Unknown error'}`,
 					type: 'error'
 				});
+				
+				// Hide notification after 5 seconds
+				setTimeout(() => {
+					setNotification(prev => ({...prev, visible: false}));
+				}, 5000);
 			}
 		} catch (error) {
+			console.error('Upload error:', error);
 			setUploading(false);
 			setUploadProgress(0);
 			
@@ -104,6 +131,11 @@ const VideoContainer = ({
 				message: `Upload error: ${error.message || 'Unknown error'}`,
 				type: 'error'
 			});
+			
+			// Hide notification after 5 seconds
+			setTimeout(() => {
+				setNotification(prev => ({...prev, visible: false}));
+			}, 5000);
 		}
 	};
 
@@ -143,6 +175,7 @@ const VideoContainer = ({
 					options={{ inactivityTimeout: 2000 }}
 				/>
 			</div>
+			
 			<div className="video-header">
 				<h3 className="video-title">{title}</h3>
 				
@@ -171,8 +204,9 @@ const VideoContainer = ({
 							onClick={handleUpload}
 							className="upload-button"
 							aria-label={`Upload ${title}`}
+							disabled={uploading}
 						>
-							Upload
+							{uploading ? 'Uploading...' : 'Upload'}
 						</button>
 					)}
 					
@@ -212,6 +246,15 @@ const VideoContainer = ({
 				</div>
 			)}
 			
+			{/* Notification display */}
+			{notification.visible && (
+				<div className={`notification ${notification.type}`}>
+					{notification.message}
+				</div>
+			)}
+			
+			{/* Removed the separate upload progress indicator */}
+			
 			{/* Delete confirmation modal */}
 			{showDeletePrompt && (
 				<div className="delete-modal">
@@ -233,7 +276,7 @@ const VideoContainer = ({
 			{showUploadConfirm && (
 				<div className="upload-modal">
 					<div className="modal-content">
-						<p>Are you sure you want to upload?</p>
+						<p>Are you sure you want to upload "{title}"?</p>
 						<div className="modal-buttons">
 							<button onClick={cancelUpload} className="cancel-upload-button">
 								Cancel
