@@ -329,4 +329,54 @@ router.get("/:videoId/refresh-url", authenticateToken, async (req, res) => {
 	}
 });
 
+// Get all videos uploaded by the authenticated user
+router.get("/my-videos", authenticateToken, async (req, res) => {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 10;
+		if (page < 1 || limit < 1 || limit > 50) {
+			return res.status(400).json({
+				error: "Invalid pagination parameters. Page >=1, limit 1-50"
+			});
+		}
+
+		const offset = (page - 1) * limit;
+		// fetch only this user's videos
+		const { count, rows } = await Video.findAndCountAll({
+			where: { userId: req.user.id },
+			order: [["createdAt", "DESC"]],
+			limit,
+			offset
+		});
+
+		// map to JSON + ensure URL
+		const videos = rows.map(v => {
+			const json = v.toJSON();
+			json.cloudFrontUrl = json.cloudFrontUrl ||
+				`https://${process.env.CLOUDFRONT_DOMAIN}/${json.s3Key}`;
+			json.videoUrl = json.cloudFrontUrl;
+			json.uploadedAt = new Date(json.createdAt).toLocaleString();
+			return json;
+		});
+
+		res.json({
+			videos,
+			pagination: {
+				totalCount: count,
+				totalPages: Math.ceil(count / limit),
+				currentPage: page,
+				pageSize: limit,
+				hasNextPage: page < Math.ceil(count / limit),
+				hasPreviousPage: page > 1
+			}
+		});
+	} catch (err) {
+		console.error("[my-videos]", err);
+		res.status(500).json({ error: "Failed to fetch your videos" });
+	}
+});
+
+module.exports = router;
+
+
 module.exports = router;

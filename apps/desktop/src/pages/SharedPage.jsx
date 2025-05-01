@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { secureStorage } from '../utils/secureStorage';
 import API from '../services/api_index';
 import VideoGrid from '../components/VideoGrid';
@@ -16,12 +16,15 @@ const SharedPage = () => {
 	const [showMetadataId, setShowMetadataId] = useState(null);
 	const [activeCategory, setActiveCategory] = useState('all');
 	const [userDataLoaded, setUserDataLoaded] = useState(false);
-	const [filteredVideos, setFilteredVideos] = useState([]);
 	const [retryCount, setRetryCount] = useState(0);
 	const [networkError, setNetworkError] = useState(false);
 	
-	// Server-side pagination state
-	const [pagination, setPagination] = useState({
+	// Client-side pagination for filtered view
+	const [currentPage, setCurrentPage] = useState(1);
+	const pageSize = 10; // Match server pagination size
+	
+	// Server-side pagination state (for "All Videos" or "My Videos")
+	const [serverPagination, setServerPagination] = useState({
 		currentPage: 1,
 		totalPages: 1,
 		totalCount: 0,
@@ -29,6 +32,11 @@ const SharedPage = () => {
 		hasNextPage: false,
 		hasPreviousPage: false
 	});
+
+	// Critical effect: Reset page to 1 when category changes
+	useEffect(() => {
+		setCurrentPage(1);
+	}, [activeCategory]);
 
 	// Handle notifications timing
 	useEffect(() => {
@@ -59,8 +67,8 @@ const SharedPage = () => {
 		getCurrentUser();
 	}, []);
 
-	// Function to load shared videos from the server with pagination
-	const fetchSharedVideos = async (page = 1) => {
+	// Function to load shared OR my videos from the server with pagination
+	const fetchVideos = async (page = 1) => {
 		// Don't retry immediately if already loading
 		if (isLoading && retryCount > 0) return;
 		
@@ -80,8 +88,13 @@ const SharedPage = () => {
 				});
 			}
 			
-			// Get videos with pagination
-			const result = await API.getSharedVideos(page, pagination.pageSize);
+			// Choose endpoint based on category
+			let result;
+			if (activeCategory === 'all') {
+				result = await API.getSharedVideos(page, pageSize);
+			} else {
+				result = await API.getMyVideos(page, pageSize);
+			}
 			
 			if (!result || !result.videos) {
 				throw new Error('Invalid response from server');
@@ -110,8 +123,9 @@ const SharedPage = () => {
 				};
 			});
 			
+			// Store the page of videos
 			setVideos(processedVideos);
-			setPagination(result.pagination);
+			setServerPagination(result.pagination);
 			setRetryCount(0); // Reset retry counter on success
 			
 			setNotification({
@@ -120,8 +134,8 @@ const SharedPage = () => {
 				type: 'success'
 			});
 		} catch (error) {
-			console.error('Error loading shared videos:', error);
-			window.electron?.log.error('Error loading shared videos', {
+			console.error('Error loading videos:', error);
+			window.electron?.log.error('Error loading videos', {
 				error: error.toString()
 			});
 			
@@ -150,7 +164,7 @@ const SharedPage = () => {
 				// Use setTimeout for retry with increasing delay
 				setTimeout(() => {
 					setRetryCount(nextRetryCount);
-					fetchSharedVideos(pagination.currentPage);
+					fetchVideos(serverPagination.currentPage);
 				}, 3000 * nextRetryCount); // 3s, 6s, etc.
 			}
 		} finally {
@@ -158,47 +172,53 @@ const SharedPage = () => {
 		}
 	};
 
-	// Load videos after user data is loaded
+	// Load videos after user data is loaded or category changes
 	useEffect(() => {
 		if (userDataLoaded) {
-			fetchSharedVideos(1);
+			fetchVideos(1);
 		}
-	}, [userDataLoaded]);
+	}, [userDataLoaded, activeCategory]);
 
-	// Filter videos when category changes
+	// Filter videos based on category and handle pagination
+	const { filteredVideos, paginationInfo } = useMemo(() => {
+		// For service‐side filtering, just pass through
+		return {
+			filteredVideos: videos,
+			paginationInfo: {
+				...serverPagination,
+				isClientSide: false
+			}
+		};
+	}, [videos, serverPagination]);
+
+	// Update videos whenever filteredVideos changes
 	useEffect(() => {
-		let filtered;
-		if (activeCategory === 'all') {
-			filtered = videos;
-		} else if (activeCategory === 'my-videos') {
-			filtered = videos.filter(video => video.isOwnVideo);
-		} else {
-			filtered = videos;
-		}
-		
-		setFilteredVideos(filtered);
-	}, [activeCategory, videos]);
+		setVideos(filteredVideos);
+	}, [filteredVideos]);
 
 	// Handle category change
 	const handleCategoryChange = (category) => {
 		if (category === activeCategory) return;
 		
+		// reset to page 1 on any category switch
+		setCurrentPage(1);
+		setServerPagination(prev => ({
+			...prev,
+			currentPage: 1
+		}));
 		setActiveCategory(category);
-		
-		// If changing to 'my-videos', we can filter locally
-		// If changing to 'all', we need to fetch from server again
-		if (category === 'all' && activeCategory !== 'all') {
-			fetchSharedVideos(1); // Reset to first page when switching to all
-		}
 	};
 
 	// Handle page change
 	const handlePageChange = (newPage) => {
-		if (newPage === pagination.currentPage) return;
+		if (newPage === paginationInfo.currentPage) return;
 		
-		// Fetch new page from server
-		fetchSharedVideos(newPage);
-		
+		// change page on the active category
+		fetchVideos(newPage);
+		setServerPagination(prev => ({
+			...prev,
+			currentPage: newPage
+		}));
 		// Scroll to top
 		window.scrollTo(0, 0);
 	};
@@ -209,12 +229,11 @@ const SharedPage = () => {
 			const token = await secureStorage.getToken();
 			await API.deleteVideo(id, token);
 			
-			// Remove from local state
-			setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
-			setFilteredVideos(prevFiltered => prevFiltered.filter(video => video.id !== id));
+			// Remove from current page
+			setVideos(prev => prev.filter(video => video.id !== id));
 			
-			// Update pagination count
-			setPagination(prev => ({
+			// Update server pagination count
+			setServerPagination(prev => ({
 				...prev,
 				totalCount: prev.totalCount - 1,
 				totalPages: Math.max(1, Math.ceil((prev.totalCount - 1) / prev.pageSize))
@@ -261,20 +280,11 @@ const SharedPage = () => {
 		
 		// Request a fresh URL from the server
 		try {
-			// This assumes your API has a method to refresh URLs
 			const refreshedVideo = await API.refreshVideoUrl(videoId);
 			
 			// Update the video in the list with the fresh URL
-			setVideos(prevVideos => 
-				prevVideos.map(v => 
-					v.id === videoId 
-						? { ...v, videoUrl: refreshedVideo.cloudFrontUrl || refreshedVideo.videoUrl }
-						: v
-				)
-			);
-			
-			setFilteredVideos(prevFiltered => 
-				prevFiltered.map(v => 
+			setVideos(prev => 
+				prev.map(v => 
 					v.id === videoId 
 						? { ...v, videoUrl: refreshedVideo.cloudFrontUrl || refreshedVideo.videoUrl }
 						: v
@@ -297,7 +307,7 @@ const SharedPage = () => {
 	};
 
 	// Process videos for VideoGrid
-	const gridVideos = filteredVideos.map(video => {
+	const gridVideos = videos.map(video => {
 		return {
 			id: video.id,
 			title: video.title,
@@ -317,6 +327,9 @@ const SharedPage = () => {
 			onVideoError: () => handleVideoError(video.id)
 		};
 	});
+
+	// Debug helper to show current state
+	console.log(`Category: ${activeCategory}, Page: ${currentPage}, Videos: ${videos.length}`);
 
 	return (
 		<div className="shared-page">
@@ -342,7 +355,10 @@ const SharedPage = () => {
 			<div className="button-group">
 				<button 
 					className="refresh-button" 
-					onClick={() => fetchSharedVideos(pagination.currentPage)}
+					onClick={() => {
+						setCurrentPage(1);
+						fetchVideos(1);
+					}}
 					disabled={isLoading}
 				>
 					{isLoading ? 'Loading...' : 'Refresh Videos'}
@@ -358,7 +374,6 @@ const SharedPage = () => {
 			{networkError && (
 				<div className="network-error-banner">
 					<p>Network connection issues detected. Some videos may not load correctly.</p>
-					<button onClick={() => fetchSharedVideos(pagination.currentPage)}>Try Again</button>
 				</div>
 			)}
 			
@@ -367,7 +382,7 @@ const SharedPage = () => {
 					<div className="loading-spinner"></div>
 					<p>Loading videos...</p>
 				</div>
-			) : filteredVideos.length > 0 ? (
+			) : videos.length > 0 ? (
 				<div>
 					<VideoGrid 
 						videos={gridVideos} 
@@ -376,21 +391,21 @@ const SharedPage = () => {
 						renderInfo={true}
 					/>
 					
-					{/* Server-side pagination controls */}
-					{pagination.totalPages > 1 && (
+					{/* Pagination controls */}
+					{paginationInfo.totalPages > 1 && (
 						<div className="pagination">
 							<button 
-								onClick={() => handlePageChange(pagination.currentPage - 1)} 
-								disabled={!pagination.hasPreviousPage}
+								onClick={() => handlePageChange(paginationInfo.currentPage - 1)} 
+								disabled={!paginationInfo.hasPreviousPage}
 							>
 								Previous
 							</button>
 							<span>
-								Page {pagination.currentPage} of {pagination.totalPages}
+								Page {paginationInfo.currentPage} of {paginationInfo.totalPages}
 							</span>
 							<button 
-								onClick={() => handlePageChange(pagination.currentPage + 1)} 
-								disabled={!pagination.hasNextPage}
+								onClick={() => handlePageChange(paginationInfo.currentPage + 1)} 
+								disabled={!paginationInfo.hasNextPage}
 							>
 								Next
 							</button>
@@ -398,7 +413,10 @@ const SharedPage = () => {
 					)}
 					
 					<div className="pagination-info">
-						Showing {filteredVideos.length} of {pagination.totalCount} videos
+						{activeCategory === 'all'
+							? `Showing ${videos.length} of ${paginationInfo.totalCount} videos`
+							: `Showing ${videos.length} of ${paginationInfo.totalCount} of your videos`
+						}
 					</div>
 				</div>
 			) : (
