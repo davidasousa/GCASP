@@ -312,6 +312,7 @@ const SharedPage = () => {
 			id: video.id,
 			title: video.title,
 			videoUrl: video.videoUrl,
+			cloudFrontUrl: video.cloudFrontUrl,
 			username: video.username,
 			isOwnVideo: video.isOwnVideo,
 			isSharedVideo: true,

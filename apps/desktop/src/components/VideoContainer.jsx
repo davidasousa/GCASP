@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import VideoPlayer from './VideoPlayer';
 import { secureStorage } from '../utils/secureStorage';
 
-const VideoContainer = ({ 
-	id, 
-	title, 
-	videoUrl, 
+const VideoContainer = ({
+	id,
+	title,
+	videoUrl,
+	cloudFrontUrl,    // CloudFront URL for sharing
 	username,
-	isActive, 
-	onActivate, 
+	isActive,
+	onActivate,
 	onDelete,
 	isOwnVideo,
 	isSharedVideo = false,
@@ -68,6 +69,27 @@ const VideoContainer = ({
 		}
 	};
 
+	// Copy CloudFront URL to clipboard (only on shared videos)
+	const handleCopyClick = () => {
+		const link = cloudFrontUrl || videoUrl;
+		navigator.clipboard.writeText(link)
+			.then(() =>
+				setNotification({
+					visible: true,
+					message: 'Link copied to clipboard!',
+					type: 'success'
+				})
+			)
+			.catch(() =>
+				setNotification({
+					visible: true,
+					message: 'Failed to copy link.',
+					type: 'error'
+				})
+			);
+		setTimeout(() => setNotification(prev => ({ ...prev, visible: false })), 3000);
+	};
+
 	// Upload
 	const handleUpload = () => { 
 		setShowUploadConfirm(true); 
@@ -106,9 +128,7 @@ const VideoContainer = ({
 				});
 				
 				// Hide notification after 3 seconds
-				setTimeout(() => {
-					setNotification(prev => ({...prev, visible: false}));
-				}, 3000);
+				setTimeout(() => setNotification(prev => ({ ...prev, visible: false })), 3000);
 			} else {
 				setNotification({
 					visible: true,
@@ -117,9 +137,7 @@ const VideoContainer = ({
 				});
 				
 				// Hide notification after 5 seconds
-				setTimeout(() => {
-					setNotification(prev => ({...prev, visible: false}));
-				}, 5000);
+				setTimeout(() => setNotification(prev => ({ ...prev, visible: false })), 5000);
 			}
 		} catch (error) {
 			console.error('Upload error:', error);
@@ -133,9 +151,7 @@ const VideoContainer = ({
 			});
 			
 			// Hide notification after 5 seconds
-			setTimeout(() => {
-				setNotification(prev => ({...prev, visible: false}));
-			}, 5000);
+			setTimeout(() => setNotification(prev => ({ ...prev, visible: false })), 5000);
 		}
 	};
 
@@ -198,6 +214,18 @@ const VideoContainer = ({
 						</button>
 					)}
 					
+					{/* Copy Link button: only for shared videos */}
+					{renderInfo && isSharedVideo && (
+						<button
+							onClick={handleCopyClick}
+							className="copy-button"
+							aria-label={`Copy link for ${title}`}
+							style={{ marginLeft: '2px' }}
+						>
+							Copy Link
+						</button>
+					)}
+					
 					{/* Upload button - only for local videos */}
 					{showUploadButton && (
 						<button
@@ -253,8 +281,6 @@ const VideoContainer = ({
 					{notification.message}
 				</div>
 			)}
-			
-			{/* Removed the separate upload progress indicator */}
 			
 			{/* Delete confirmation modal */}
 			{showDeletePrompt && (
