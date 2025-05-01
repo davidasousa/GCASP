@@ -5,8 +5,8 @@ const jwt = require("jsonwebtoken");
 const { User, Video } = require("../models");
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const { S3Client, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const multerS3 = require('multer-s3-v3');
+const {S3Client, PutObjectCommand, DeleteObjectCommand} = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
 // Configure AWS from environment variables
 const s3Client = new S3Client({
@@ -29,109 +29,144 @@ function authenticateToken(req, res, next) {
   }
 }
 
-// Multer-S3-v3 storage
-const storage = multerS3({
-  s3: s3Client,
-  bucket: process.env.S3_VIDEO_BUCKET,
-  acl: 'private',
-  contentType: multerS3.AUTO_CONTENT_TYPE,
-  key: async (req, file) => {
-    const videoId = uuidv4();
-    const userId = req.user?.id || 'anonymous';
-    const name = path.basename(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
-    req.videoId = videoId;
-    return `users/${userId}/videos/${videoId}/${name}`;
-  },
-  metadata: async (req, file) => ({
-    fieldName: file.fieldname,
-    userId: req.user?.id || 'anonymous',
-    contentType: file.mimetype
-  })
-});
-
-// Setup upload with size limit and file type filtering
-const upload = multer({
-  storage,
-  limits: { fileSize: 200 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = /mp4|mov|avi|mkv|webm/.test(path.extname(file.originalname).toLowerCase())
-                && file.mimetype.startsWith("video/");
-    cb(allowed ? null : new Error("Only video files are allowed!"), allowed);
-  }
-});
-
-// Upload video endpoint
-router.post("/upload", authenticateToken, upload.single("video"), async (req, res) => {
-  console.log("=== /videos/upload called ===");
+// Step 1: Request a presigned URL for upload
+router.post("/request-upload-url", authenticateToken, async (req, res) => {
+  console.log("=== /videos/request-upload-url called ===");
   console.log("  Authenticated user ID:", req.user?.id);
-  console.log("  Original filename:      ", req.file?.originalname);
-  console.log("  File size (bytes):      ", req.file?.size);
-  console.log("  Detected mime type:     ", req.file?.mimetype);
-  console.log("  S3 bucket:              ", process.env.S3_VIDEO_BUCKET);
-  console.log("  Multer-S3 key (S3 path):", req.file?.key);
-
-  if (!req.file) {
-    console.log("  → No file in request!");
-    return res.status(400).json({ message: "No file uploaded" });
-  }
-
+  console.log("  Requested filename:", req.body.filename);
+  console.log("  Content type:", req.body.contentType);
+  
   try {
-    // confirm your user lookup
+    // Validate request
+    if (!req.body.filename || !req.body.contentType) {
+      return res.status(400).json({ 
+        message: "Missing required fields", 
+        required: ["filename", "contentType"] 
+      });
+    }
+    
+    // Sanitize filename
+    const safeFilename = path.basename(req.body.filename)
+      .replace(/[^a-zA-Z0-9.-]/g, '_');
+    
+    // Generate unique ID for this upload
+    const videoId = uuidv4();
+    
+    // Create S3 key (path)
+    const s3Key = `users/${req.user.id}/videos/${videoId}/${safeFilename}`;
+    console.log("  Generated S3 key:", s3Key);
+    
+    // Create command for presigned URL
+    const command = new PutObjectCommand({
+      Bucket: process.env.S3_VIDEO_BUCKET,
+      Key: s3Key,
+      ContentType: req.body.contentType
+    });
+    
+    // Generate presigned URL
+    const signedUrl = await getSignedUrl(s3Client, command, { 
+      expiresIn: 3600 // URL valid for 1 hour
+    });
+    console.log("  Presigned URL generated with 1 hour expiry");
+    
+    // Generate CloudFront URL for later use
+    const cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${s3Key}`;
+    
+    // Return the presigned URL and related info
+    res.json({
+      uploadUrl: signedUrl,
+      videoId,
+      s3Key,
+      cloudFrontUrl
+    });
+  } catch (error) {
+    console.error("  → Error generating presigned URL:", error);
+    res.status(500).json({ 
+      message: "Failed to generate upload URL", 
+      error: error.message 
+    });
+  }
+});
+
+// Step 2: Complete the upload process after file is uploaded to S3
+router.post("/complete-upload", authenticateToken, async (req, res) => {
+  console.log("=== /videos/complete-upload called ===");
+  console.log("  Authenticated user ID:", req.user?.id);
+  console.log("  Video ID:", req.body.videoId);
+  console.log("  S3 Key:", req.body.s3Key);
+  
+  try {
+    // Validate request
+    if (!req.body.videoId || !req.body.s3Key || !req.body.title) {
+      return res.status(400).json({ 
+        message: "Missing required fields", 
+        required: ["videoId", "s3Key", "title"] 
+      });
+    }
+    
+    // Confirm user exists
     const user = await User.findByPk(req.user.id);
     if (!user) {
       console.log("  → User not found in DB:", req.user.id);
       return res.status(404).json({ message: "User not found" });
     }
-
-    // build CloudFront URL
-    const s3Key         = req.file.key;
-    const cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${s3Key}`;
-    console.log("  Computed cloudFrontUrl:", cloudFrontUrl);
-
+    
+    // Generate CloudFront URL
+    const cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${req.body.s3Key}`;
+    console.log("  CloudFront URL:", cloudFrontUrl);
+    
+    // Extract metadata from request
     let metadata = {};
     try {
       metadata = req.body.metadata
-        ? JSON.parse(req.body.metadata)
+        ? (typeof req.body.metadata === 'string' 
+          ? JSON.parse(req.body.metadata) 
+          : req.body.metadata)
         : {};
-      console.log("  Parsed metadata from body:", metadata);
+      console.log("  Processed metadata:", metadata);
     } catch (parseErr) {
-      console.warn("  Failed to parse metadata JSON:", parseErr.message);
+      console.warn("  Failed to parse metadata:", parseErr.message);
     }
-
-    // create DB record
-    console.log("  Creating Video record in DB…");
+    
+    // Create video record in database
+    console.log("  Creating Video record in DB...");
     const created = await Video.create({
-      userId:           req.user.id,
-      title:            req.body.title || path.basename(req.file.originalname, path.extname(req.file.originalname)),
-      filename:         req.file.originalname,
-      size:             req.file.size,
+      id: req.body.videoId, // Use the ID generated at request time
+      userId: req.user.id,
+      title: req.body.title,
+      filename: path.basename(req.body.s3Key),
+      size: req.body.fileSize || 0,
       processingStatus: "ready",
-      username:         user.username,
-      s3Key,
+      username: user.username,
+      s3Key: req.body.s3Key,
       cloudFrontUrl,
-      duration:         metadata.duration || 0,
-      resolution:       metadata.width && metadata.height
-                        ? `${metadata.width}x${metadata.height}`
-                        : undefined
+      duration: metadata.duration || 0,
+      resolution: metadata.width && metadata.height
+        ? `${metadata.width}x${metadata.height}`
+        : undefined
     });
-    console.log("  Video.create() result:", created.toJSON());
-
+    console.log("  Video.create() result:", created.id);
+    
+    // Return success response
     res.json({
-      message: "Video uploaded successfully",
+      message: "Video upload completed and recorded successfully",
       video: {
-        id:         created.id,
-        title:      created.title,
-        videoUrl:   cloudFrontUrl,
-        duration:   created.duration,
+        id: created.id,
+        title: created.title,
+        videoUrl: cloudFrontUrl,
+        duration: created.duration,
         resolution: created.resolution
       }
     });
-
-  } catch (err) {
-    console.error("  → Upload endpoint error:", err);
-    res.status(500).json({ message: "Server error", error: err.message });
+  } catch (error) {
+    console.error("  → Complete upload error:", error);
+    res.status(500).json({ 
+      message: "Server error recording upload", 
+      error: error.message 
+    });
   }
 });
+
 /**
  * Delete a video
  */

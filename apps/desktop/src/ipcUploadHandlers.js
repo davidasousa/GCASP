@@ -2,14 +2,12 @@ import { ipcMain } from 'electron';
 import { getModuleLogger } from './logger';
 import { app } from 'electron';
 import axios from 'axios';
-import FormData from 'form-data';
 import path from 'path';
 import fs from 'fs';
 import { API_URL } from './config';
 import { spawn } from 'child_process';
 
 const logger = getModuleLogger('ipcUploadHandlers.js');
-
 const DEFAULT_API_URL = API_URL;
 
 // Helper to get API URL
@@ -22,7 +20,7 @@ const findClip = (videoTitle) => {
 	const match = clipFiles.find(file => file === videoTitle);
 
 	if (match) {
-		return path.join(clipsPath, match); // full path
+		return path.join(clipsPath, match);
 	} else {
 		return null;
 	}
@@ -58,7 +56,7 @@ const extractMetadata = (filePath) => {
 			if (code === 0) {
 				try {
 					const metadata = JSON.parse(stdout);
-					const videoStream = metadata.streams.find(s => s.codec_type === 'video');
+					const videoStream = metadata.streams.find(s => s.codec_type === 'video') || metadata.streams[0];
 					const format = metadata.format || {};
 					
 					// Calculate frame rate from fraction
@@ -96,86 +94,156 @@ const extractMetadata = (filePath) => {
 	});
 };
 
-// Upload a clip file to the server with metadata
-async function uploadClipFile(file, title, token) {
-	// First extract metadata
-	let metadata;
+// Upload a clip file to S3 using presigned URL
+async function uploadClipWithPresignedUrl(file, title, token) {
+	logger.info(`Starting direct-to-S3 upload for: ${path.basename(file)}`);
+	
 	try {
-		metadata = await extractMetadata(file);
-		logger.info('Metadata extracted successfully', metadata);
-	} catch (error) {
-		logger.warn('Metadata extraction failed, continuing with upload:', error);
-		// Default empty metadata if extraction fails
-		metadata = {
-			width: null,
-			height: null,
-			duration: 0,
-			size: fs.statSync(file).size,
-			codec: null,
-			frameRate: null
-		};
-	}
-
-	// Create form data with file and metadata
-	const form = new FormData();
-
-	// Read file stats to show upload progress
-	const stats = fs.statSync(file);
-	const totalSize = stats.size;
-	logger.debug(`Uploading file: ${path.basename(file)}, size: ${totalSize} bytes`);
-	
-	// Create readable stream with progress tracking
-	const fileStream = fs.createReadStream(file);
-	let uploadedBytes = 0;
-	
-	fileStream.on('data', (chunk) => {
-		uploadedBytes += chunk.length;
-		const progress = Math.round((uploadedBytes / totalSize) * 100);
-		logger.debug(`Upload progress: ${progress}%`);
-	});
-
-	// Append the video file
-	form.append("video", fileStream, {
-		filename: path.basename(file),
-		contentType: "video/mp4",
-	});
-
-	// Append the title
-	form.append("title", title);
-	
-	// Append metadata as JSON
-	form.append("metadata", JSON.stringify(metadata));
-
-	try {
-		// Send the POST request with the form data
-		const response = await axios.post(`${getApiUrl()}/videos/upload`, form, {
-			headers: {
-				...form.getHeaders(),
-				Authorization: `Bearer ${token}`,
+		// Step 1: Extract metadata from the file
+		let metadata;
+		try {
+			metadata = await extractMetadata(file);
+			logger.info('Metadata extracted successfully', metadata);
+		} catch (error) {
+			logger.warn('Metadata extraction failed, continuing with upload:', error);
+			// Default empty metadata if extraction fails
+			metadata = {
+				width: null,
+				height: null,
+				duration: 0,
+				size: fs.statSync(file).size,
+				codec: null,
+				frameRate: null
+			};
+		}
+		
+		// Read file stats
+		const stats = fs.statSync(file);
+		const totalSize = stats.size;
+		logger.debug(`File: ${path.basename(file)}, size: ${totalSize} bytes`);
+		
+		// Step 2: Request a presigned URL from the server
+		logger.debug('Requesting presigned upload URL from server');
+		const presignedUrlResponse = await axios.post(
+			`${getApiUrl()}/videos/request-upload-url`,
+			{
+				filename: path.basename(file),
+				contentType: 'video/mp4',
+				fileSize: totalSize
 			},
-			// Increase timeout for large files
-			timeout: 300000, // 5 minutes
-			// Add progress tracking for axios
+			{
+				headers: {
+					'Authorization': `Bearer ${token}`,
+					'Content-Type': 'application/json'
+				},
+				timeout: 30000 // 30 second timeout for this request
+			}
+		);
+		
+		// Check if we got a valid response
+		if (!presignedUrlResponse.data || !presignedUrlResponse.data.uploadUrl) {
+			throw new Error('Invalid response from server when requesting upload URL');
+		}
+		
+		const { 
+			uploadUrl, 
+			videoId, 
+			s3Key, 
+			cloudFrontUrl 
+		} = presignedUrlResponse.data;
+		
+		logger.info(`Received presigned URL for upload, videoId: ${videoId}`);
+		
+		// Step 3: Upload the file directly to S3 using the presigned URL
+		logger.debug('Starting direct upload to S3');
+		
+		// Create a read stream from the file
+		const fileStream = fs.createReadStream(file);
+		let uploadedBytes = 0;
+		
+		// Create a transform stream to track progress
+		fileStream.on('data', (chunk) => {
+			uploadedBytes += chunk.length;
+			const progress = Math.round((uploadedBytes / totalSize) * 100);
+			if (progress % 5 === 0) { // Log every 5%
+				logger.debug(`Upload progress: ${progress}%`);
+			}
+		});
+		
+		// Upload directly to S3 using the presigned URL
+		const fileBuffer = fs.readFileSync(file);
+		
+		// To provide progress, we'll use onUploadProgress
+		logger.debug('Uploading file to S3 via presigned URL');
+		await axios.put(uploadUrl, fileBuffer, {
+			headers: {
+				'Content-Type': 'video/mp4',
+				'Content-Length': totalSize.toString()
+			},
+			maxContentLength: Infinity,
+			maxBodyLength: Infinity,
+			timeout: 600000, // 10 minutes
 			onUploadProgress: (progressEvent) => {
 				const percentCompleted = Math.round(
 					(progressEvent.loaded * 100) / progressEvent.total
 				);
-				logger.debug(`Upload progress (axios): ${percentCompleted}%`);
-			},
+				if (percentCompleted % 5 === 0) { // Log every 5%
+					logger.debug(`S3 upload progress: ${percentCompleted}%`);
+				}
+			}
 		});
-
-		logger.info("Upload successful:", response.data);
+		
+		logger.info('File successfully uploaded to S3');
+		
+		// Step 4: Notify the server that the upload is complete
+		logger.debug('Notifying server of completed upload');
+		const completeResponse = await axios.post(
+			`${getApiUrl()}/videos/complete-upload`,
+			{
+				videoId,
+				s3Key,
+				title: path.basename(file, path.extname(file)), // Remove extension
+				fileSize: totalSize,
+				metadata
+			},
+			{
+				headers: {
+					'Authorization': `Bearer ${token}`,
+					'Content-Type': 'application/json'
+				},
+				timeout: 30000 // 30 second timeout
+			}
+		);
+		
+		logger.info('Upload process completed successfully');
 		return {
 			success: true,
-			data: response.data
+			data: completeResponse.data
 		};
 	} catch (error) {
-		logger.error("Upload failed:", error.response?.data || error.message);
-		return {
-			success: false,
-			status: error.response?.status || 500,
-			message: error.response?.data?.message || "Upload failed",
-		};
+		logger.error('Upload failed:', error.response?.data || error.message);
+		
+		// Improved error handling
+		if (error.response) {
+			// Server returned an error response
+			return {
+				success: false,
+				status: error.response.status,
+				message: error.response.data.message || 'Server error'
+			};
+		} else if (error.request) {
+			// No response received
+			return {
+				success: false,
+				message: 'No response from server. The upload may have timed out.'
+			};
+		} else {
+			// Something else went wrong
+			return {
+				success: false,
+				message: error.message || 'Unknown error during upload'
+			};
+		}
 	}
 }
 
@@ -184,7 +252,7 @@ export function setupUploadHandlers() {
 	logger.debug("Setting Up Upload Handlers");
 	
 	// Trigger Upload Clip
-	logger.debug("Registering Upload");
+	logger.debug("Registering Upload handler");
 	ipcMain.handle('trigger-upload-clip', async (event, title, token) => {
 		logger.debug('Uploading Clip');
 		const clip = findClip(title);
@@ -198,7 +266,8 @@ export function setupUploadHandlers() {
 		}
 
 		try {
-			const response = await uploadClipFile(clip, title, token);
+			// Use the presigned URL upload method
+			const response = await uploadClipWithPresignedUrl(clip, title, token);
 			return response;
 		} catch (error) {
 			logger.error('Upload failed:', error.message);

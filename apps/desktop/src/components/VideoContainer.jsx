@@ -71,9 +71,40 @@ const VideoContainer = ({
 
 	// Upload Functions
 	const handleUploadSubmit = async () => {
-		setShowUploadConfirm(false);
-		const token = await secureStorage.getToken();
-		await window.electron.triggerUploadClip(title, token);
+		try {
+			setShowUploadConfirm(false);
+			setUploading(true);
+			setUploadProgress(0);
+			
+			const token = await secureStorage.getToken();
+			const uploadResult = await window.electron.triggerUploadClip(title, token);
+			
+			setUploading(false);
+			setUploadProgress(0);
+			
+			if (uploadResult.success) {
+				setNotification({
+					visible: true,
+					message: 'Video uploaded successfully!',
+					type: 'success'
+				});
+			} else {
+				setNotification({
+					visible: true,
+					message: `Upload failed: ${uploadResult.message || 'Unknown error'}`,
+					type: 'error'
+				});
+			}
+		} catch (error) {
+			setUploading(false);
+			setUploadProgress(0);
+			
+			setNotification({
+				visible: true,
+				message: `Upload error: ${error.message || 'Unknown error'}`,
+				type: 'error'
+			});
+		}
 	};
 
 	// Format file size to human-readable format
