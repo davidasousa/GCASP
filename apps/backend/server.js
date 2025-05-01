@@ -8,7 +8,7 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const { sequelize } = require("./models");
+const { sequelize, User, Video, Friendship } = require("./models");
 const friendRoutes = require("./routes/friends");
 const setupSwagger = require("./swagger");
 const authRoutes = require("./routes/auth");
@@ -18,12 +18,6 @@ const { Video } = require("./models");
 const isProd = process.env.PROD === "true";
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-
-// Simple env-var prints for debugging
-console.log("S3_VIDEO_BUCKET:       ", process.env.S3_VIDEO_BUCKET);
-console.log("ACCESS_KEY_AWS:        ", process.env.ACCESS_KEY_AWS);
-console.log("SECRET_ACCESS_KEY_AWS: ", process.env.SECRET_ACCESS_KEY_AWS);
-console.log("REGION_AWS:            ", process.env.REGION_AWS);
 
 const s3 = new S3Client({
   region: process.env.REGION_AWS,
