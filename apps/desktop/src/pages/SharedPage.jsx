@@ -23,7 +23,7 @@ const SharedPage = () => {
 	const [currentPage, setCurrentPage] = useState(1);
 	const pageSize = 10; // Match server pagination size
 	
-	// Server-side pagination state (for "All Videos" or "My Videos")
+	// Server-side pagination state (for "All Videos", "My Videos", or "Friends’ Videos")
 	const [serverPagination, setServerPagination] = useState({
 		currentPage: 1,
 		totalPages: 1,
@@ -67,7 +67,7 @@ const SharedPage = () => {
 		getCurrentUser();
 	}, []);
 
-	// Function to load shared OR my videos from the server with pagination
+	// Function to load shared, my, or friends' videos from the server with pagination
 	const fetchVideos = async (page = 1) => {
 		// Don't retry immediately if already loading
 		if (isLoading && retryCount > 0) return;
@@ -92,8 +92,10 @@ const SharedPage = () => {
 			let result;
 			if (activeCategory === 'all') {
 				result = await API.getSharedVideos(page, pageSize);
-			} else {
+			} else if (activeCategory === 'my-videos') {
 				result = await API.getMyVideos(page, pageSize);
+			} else { // friends-videos
+				result = await API.getFriendsVideos(page, pageSize);
 			}
 			
 			if (!result || !result.videos) {
@@ -179,23 +181,6 @@ const SharedPage = () => {
 		}
 	}, [userDataLoaded, activeCategory]);
 
-	// Filter videos based on category and handle pagination
-	const { filteredVideos, paginationInfo } = useMemo(() => {
-		// For service‐side filtering, just pass through
-		return {
-			filteredVideos: videos,
-			paginationInfo: {
-				...serverPagination,
-				isClientSide: false
-			}
-		};
-	}, [videos, serverPagination]);
-
-	// Update videos whenever filteredVideos changes
-	useEffect(() => {
-		setVideos(filteredVideos);
-	}, [filteredVideos]);
-
 	// Handle category change
 	const handleCategoryChange = (category) => {
 		if (category === activeCategory) return;
@@ -211,7 +196,7 @@ const SharedPage = () => {
 
 	// Handle page change
 	const handlePageChange = (newPage) => {
-		if (newPage === paginationInfo.currentPage) return;
+		if (newPage === serverPagination.currentPage) return;
 		
 		// change page on the active category
 		fetchVideos(newPage);
@@ -312,7 +297,6 @@ const SharedPage = () => {
 			id: video.id,
 			title: video.title,
 			videoUrl: video.videoUrl,
-			cloudFrontUrl: video.cloudFrontUrl,
 			username: video.username,
 			isOwnVideo: video.isOwnVideo,
 			isSharedVideo: true,
@@ -350,6 +334,12 @@ const SharedPage = () => {
 					onClick={() => handleCategoryChange('my-videos')}
 				>
 					My Videos
+				</button>
+				<button 
+					className={`category-pill ${activeCategory === 'friends-videos' ? 'active' : ''}`}
+					onClick={() => handleCategoryChange('friends-videos')}
+				>
+					Friends’ Videos
 				</button>
 			</div>
 			
@@ -393,20 +383,20 @@ const SharedPage = () => {
 					/>
 					
 					{/* Pagination controls */}
-					{paginationInfo.totalPages > 1 && (
+					{serverPagination.totalPages > 1 && (
 						<div className="pagination">
 							<button 
-								onClick={() => handlePageChange(paginationInfo.currentPage - 1)} 
-								disabled={!paginationInfo.hasPreviousPage}
+								onClick={() => handlePageChange(serverPagination.currentPage - 1)} 
+								disabled={!serverPagination.hasPreviousPage}
 							>
 								Previous
 							</button>
 							<span>
-								Page {paginationInfo.currentPage} of {paginationInfo.totalPages}
+								Page {serverPagination.currentPage} of {serverPagination.totalPages}
 							</span>
 							<button 
-								onClick={() => handlePageChange(paginationInfo.currentPage + 1)} 
-								disabled={!paginationInfo.hasNextPage}
+								onClick={() => handlePageChange(serverPagination.currentPage + 1)} 
+								disabled={!serverPagination.hasNextPage}
 							>
 								Next
 							</button>
@@ -415,8 +405,10 @@ const SharedPage = () => {
 					
 					<div className="pagination-info">
 						{activeCategory === 'all'
-							? `Showing ${videos.length} of ${paginationInfo.totalCount} videos`
-							: `Showing ${videos.length} of ${paginationInfo.totalCount} of your videos`
+							? `Showing ${videos.length} of ${serverPagination.totalCount} videos`
+							: activeCategory === 'my-videos'
+								? `Showing ${videos.length} of ${serverPagination.totalCount} of your videos`
+								: `Showing ${videos.length} of ${serverPagination.totalCount} from friends`
 						}
 					</div>
 				</div>
@@ -425,6 +417,9 @@ const SharedPage = () => {
 					<p>No Shared Videos Available</p>
 					{activeCategory === 'my-videos' && (
 						<p className="help-text">You haven't uploaded any videos yet</p>
+					)}
+					{activeCategory === 'friends-videos' && (
+						<p className="help-text">Your friends haven't uploaded any videos yet</p>
 					)}
 				</div>
 			)}

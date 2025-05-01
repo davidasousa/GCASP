@@ -2,7 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const jwt = require("jsonwebtoken");
-const { User, Video } = require("../models");
+const { User, Video, Friendship } = require("../models");
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const {S3Client, PutObjectCommand, DeleteObjectCommand} = require('@aws-sdk/client-s3');
@@ -376,7 +376,65 @@ router.get("/my-videos", authenticateToken, async (req, res) => {
 	}
 });
 
-module.exports = router;
+/**
+ * Get videos uploaded by users you follow (your “friends”)
+ */
+router.get("/friends-videos", authenticateToken, async (req, res) => {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 10;
+		if (page < 1 || limit < 1 || limit > 50) {
+			return res.status(400).json({
+				error: "Invalid pagination parameters. Page >=1, limit 1-50"
+			});
+		}
 
+		// 1) get your friendIds
+		const friendships = await Friendship.findAll({
+			where: { userId: req.user.id },
+			attributes: ["friendId"]
+		});
+		const friendIds = friendships.map(f => f.friendId);
+
+		// 2) query their videos
+		const offset = (page - 1) * limit;
+		const { count, rows } = await Video.findAndCountAll({
+			where: {
+				userId: friendIds,
+				status: "published",
+				processingStatus: "ready"
+			},
+			order: [["createdAt", "DESC"]],
+			limit,
+			offset,
+			include: [{ model: User, attributes: ["username"], required: false }]
+		});
+
+		// 3) format payload
+		const videos = rows.map(video => {
+			const json = video.toJSON();
+			json.cloudFrontUrl ||= `https://${process.env.CLOUDFRONT_DOMAIN}/${json.s3Key}`;
+			json.videoUrl = json.cloudFrontUrl;
+			json.username = video.User?.username;
+			json.uploadedAt = new Date(json.createdAt).toLocaleString();
+			return json;
+		});
+
+		res.json({
+			videos,
+			pagination: {
+				totalCount: count,
+				totalPages: Math.ceil(count / limit),
+				currentPage: page,
+				pageSize: limit,
+				hasNextPage: page < Math.ceil(count / limit),
+				hasPreviousPage: page > 1
+			}
+		});
+	} catch (err) {
+		console.error("[friends-videos]", err);
+		res.status(500).json({ error: "Failed to fetch friends' videos" });
+	}
+});
 
 module.exports = router;
