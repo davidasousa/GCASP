@@ -14,8 +14,6 @@ const setupSwagger = require("./swagger");
 const authRoutes = require("./routes/auth");
 const videoRoutes = require("./routes/videos");
 const xssClean = require("xss-clean");
-const { Video } = require("./models");
-const isProd = process.env.PROD === "true";
 const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 
