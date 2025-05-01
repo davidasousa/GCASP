@@ -1,11 +1,21 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
 const jwt = require("jsonwebtoken");
-const {User, Video } = require("../models");
+const { User, Video } = require("../models");
 const router = express.Router();
-const ffmpeg = require("fluent-ffmpeg");
+const { v4: uuidv4 } = require('uuid');
+const {S3Client, PutObjectCommand, DeleteObjectCommand} = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+
+// Configure AWS from environment variables
+const s3Client = new S3Client({
+  region: process.env.REGION_AWS || 'us-east-2',
+  credentials: {
+    accessKeyId: process.env.ACCESS_KEY_AWS,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS
+  }
+});
 
 // Middleware to authenticate token
 function authenticateToken(req, res, next) {
@@ -19,182 +29,166 @@ function authenticateToken(req, res, next) {
   }
 }
 
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
-// Multer storage config
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname)),
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // limit to 100MB
-  fileFilter: (req, file, cb) => {
-    const filetypes = /mp4|mov|avi|mkv|webm/;
-    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = file.mimetype.startsWith("video/");
-
-    if (extname && mimetype) {
-      return cb(null, true);
-    } else {
-      cb(new Error("Only video files are allowed!"));
-    }
-  },
-});
-
-
-/**
- * @swagger
- * tags:
- *   name: Video
- *   description: Video management
- */
-
-/**
- * @swagger
- * /videos/upload:
- *   post:
- *     summary: Upload a video file
- *     tags: [Video]
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required: [title, video]
- *             properties:
- *               title:
- *                 type: string
- *               video:
- *                 type: string
- *                 format: binary
- *                 description: Only video formats (mp4, mov, mkv, avi, webm), max size 100MB
- *     responses:
- *       200:
- *         description: Video uploaded successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 video:
- *                   type: object
- *                   properties:
- *                     id:
- *                       type: string
- *                     title:
- *                       type: string
- *                     filename:
- *                       type: string
- *                     size:
- *                       type: integer
- *                       description: File size in bytes
- *                     duration:
- *                       type: number
- *                       description: Duration in seconds
- *                     resolution:
- *                       type: string
- *                       description: Format "1920x1080"
- *                     status:
- *                       type: string
- *                       enum: [published, hidden]
- *                     processingStatus:
- *                       type: string
- *                       enum: [processing, ready, failed]
- *                       description: Processing state of the video
- *       400:
- *         description: Invalid file or upload error
- */
-router.post("/upload", authenticateToken, upload.single("video"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-  const user = await User.findByPk(req.user.id);
-
-  const filepath = path.join(uploadDir, req.file.filename);
-  const baseData = {
-    userId: req.user.id,
-    title: req.body.title,
-    filename: req.file.filename,
-    size: req.file.size,
-    processingStatus: "processing", // start as processing
-    username: user?.username || "Unknown",
-  };
-
+// Step 1: Request a presigned URL for upload
+router.post("/request-upload-url", authenticateToken, async (req, res) => {
+  console.log("=== /videos/request-upload-url called ===");
+  console.log("  Authenticated user ID:", req.user?.id);
+  console.log("  Requested filename:", req.body.filename);
+  console.log("  Content type:", req.body.contentType);
+  
   try {
-    const created = await Video.create(baseData); // create early to get ID
-
-    // Extract metadata
-    ffmpeg.ffprobe(filepath, async (err, metadata) => {
-      if (err) {
-        created.processingStatus = "failed";
-        await created.save();
-        return res.status(500).json({ message: "Metadata extraction failed", error: err.message });
-      }
-
-      const videoStream = metadata.streams.find(s => s.codec_type === "video");
-      created.duration = metadata.format.duration;
-      created.resolution = `${videoStream.width}x${videoStream.height}`;
-      created.processingStatus = "ready";
-      await created.save();
-
-      res.json({ message: "Video uploaded", video: created });
+    // Validate request
+    if (!req.body.filename || !req.body.contentType) {
+      return res.status(400).json({ 
+        message: "Missing required fields", 
+        required: ["filename", "contentType"] 
+      });
+    }
+    
+    // Sanitize filename
+    const safeFilename = path.basename(req.body.filename)
+      .replace(/[^a-zA-Z0-9.-]/g, '_');
+    
+    // Generate unique ID for this upload
+    const videoId = uuidv4();
+    
+    // Create S3 key (path)
+    const s3Key = `users/${req.user.id}/videos/${videoId}/${safeFilename}`;
+    console.log("  Generated S3 key:", s3Key);
+    
+    // Create command for presigned URL
+    const command = new PutObjectCommand({
+      Bucket: process.env.S3_VIDEO_BUCKET,
+      Key: s3Key,
+      ContentType: req.body.contentType
     });
+    
+    // Generate presigned URL
+    const signedUrl = await getSignedUrl(s3Client, command, { 
+      expiresIn: 3600 // URL valid for 1 hour
+    });
+    console.log("  Presigned URL generated with 1 hour expiry");
+    
+    // Generate CloudFront URL for later use
+    const cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${s3Key}`;
+    
+    // Return the presigned URL and related info
+    res.json({
+      uploadUrl: signedUrl,
+      videoId,
+      s3Key,
+      cloudFrontUrl
+    });
+  } catch (error) {
+    console.error("  → Error generating presigned URL:", error);
+    res.status(500).json({ 
+      message: "Failed to generate upload URL", 
+      error: error.message 
+    });
+  }
+});
 
-  } catch (err) {
-    res.status(500).json({ message: "Server error", error: err.message });
+// Step 2: Complete the upload process after file is uploaded to S3
+router.post("/complete-upload", authenticateToken, async (req, res) => {
+  console.log("=== /videos/complete-upload called ===");
+  console.log("  Authenticated user ID:", req.user?.id);
+  console.log("  Video ID:", req.body.videoId);
+  console.log("  S3 Key:", req.body.s3Key);
+  
+  try {
+    // Validate request
+    if (!req.body.videoId || !req.body.s3Key || !req.body.title) {
+      return res.status(400).json({ 
+        message: "Missing required fields", 
+        required: ["videoId", "s3Key", "title"] 
+      });
+    }
+    
+    // Confirm user exists
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      console.log("  → User not found in DB:", req.user.id);
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    // Generate CloudFront URL
+    const cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${req.body.s3Key}`;
+    console.log("  CloudFront URL:", cloudFrontUrl);
+    
+    // Extract metadata from request
+    let metadata = {};
+    try {
+      metadata = req.body.metadata
+        ? (typeof req.body.metadata === 'string' 
+          ? JSON.parse(req.body.metadata) 
+          : req.body.metadata)
+        : {};
+      console.log("  Processed metadata:", metadata);
+    } catch (parseErr) {
+      console.warn("  Failed to parse metadata:", parseErr.message);
+    }
+    
+    // Create video record in database
+    console.log("  Creating Video record in DB...");
+    const created = await Video.create({
+      id: req.body.videoId, // Use the ID generated at request time
+      userId: req.user.id,
+      title: req.body.title,
+      filename: path.basename(req.body.s3Key),
+      size: req.body.fileSize || 0,
+      processingStatus: "ready",
+      username: user.username,
+      s3Key: req.body.s3Key,
+      cloudFrontUrl,
+      duration: metadata.duration || 0,
+      resolution: metadata.width && metadata.height
+        ? `${metadata.width}x${metadata.height}`
+        : undefined
+    });
+    console.log("  Video.create() result:", created.id);
+    
+    // Return success response
+    res.json({
+      message: "Video upload completed and recorded successfully",
+      video: {
+        id: created.id,
+        title: created.title,
+        videoUrl: cloudFrontUrl,
+        duration: created.duration,
+        resolution: created.resolution
+      }
+    });
+  } catch (error) {
+    console.error("  → Complete upload error:", error);
+    res.status(500).json({ 
+      message: "Server error recording upload", 
+      error: error.message 
+    });
   }
 });
 
 /**
- * @swagger
- * /videos/{videoId}:
- *   delete:
- *     summary: Delete a video
- *     tags: [Video]
- *     security: [ { bearerAuth: [] } ]
- *     parameters:
- *       - in: path
- *         name: videoId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Video deleted successfully
+ * Delete a video
  */
 router.delete("/:videoId", authenticateToken, async (req, res) => {
-  const video = await Video.findByPk(req.params.videoId);
-  if (!video || video.userId !== req.user.id)
-    return res.status(404).json({ message: "Video not found or unauthorized" });
-
-  await video.destroy();
-  res.json({ message: "Video deleted" });
+  try {
+    const video = await Video.findByPk(req.params.videoId);
+    if (!video) return res.status(404).json({ message: "Video not found" });
+    if (video.userId !== req.user.id) return res.status(403).json({ message: "Unauthorized" });
+    if (video.s3Key) {
+      await s3Client.send(new DeleteObjectCommand({ Bucket: process.env.S3_VIDEO_BUCKET, Key: video.s3Key }));
+      console.log(`Deleted S3 object: ${video.s3Key}`);
+    }
+    await video.destroy();
+    res.json({ message: "Video deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting video:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 });
 
 /**
- * @swagger
- * /videos/{videoId}/hide:
- *   patch:
- *     summary: Hide a video
- *     tags: [Video]
- *     security: [ { bearerAuth: [] } ]
- *     parameters:
- *       - in: path
- *         name: videoId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Video hidden
+ * Hide a video
  */
 router.patch("/:videoId/hide", authenticateToken, async (req, res) => {
   const video = await Video.findByPk(req.params.videoId);
@@ -207,21 +201,7 @@ router.patch("/:videoId/hide", authenticateToken, async (req, res) => {
 });
 
 /**
- * @swagger
- * /videos/{videoId}/publish:
- *   patch:
- *     summary: Publish a hidden video
- *     tags: [Video]
- *     security: [ { bearerAuth: [] } ]
- *     parameters:
- *       - in: path
- *         name: videoId
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Video published
+ * Publish a hidden video
  */
 router.patch("/:videoId/publish", authenticateToken, async (req, res) => {
   const video = await Video.findByPk(req.params.videoId);
@@ -234,32 +214,169 @@ router.patch("/:videoId/publish", authenticateToken, async (req, res) => {
 });
 
 /**
- * @swagger
- * /shared-videos:
- *   get:
- *     summary: Get all publicly shared videos
- *     tags: [Video]
- *     responses:
- *       200:
- *         description: A list of published videos
- *       500:
- *         description: Server error
+ * Get all publicly shared videos
  */
 router.get("/shared-videos", async (req, res) => {
   try {
-    const videos = await Video.findAll({
+    // Parse pagination parameters with defaults
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    
+    // Validate pagination parameters
+    if (page < 1 || limit < 1 || limit > 50) {
+      return res.status(400).json({ 
+        error: "Invalid pagination parameters. Page must be >= 1 and limit between 1-50" 
+      });
+    }
+    
+    // Calculate offset for SQL query
+    const offset = (page - 1) * limit;
+    
+    // Get total count and paginated results
+    const { count, rows } = await Video.findAndCountAll({
       where: {
         status: "published",
         processingStatus: "ready",
       },
       order: [["createdAt", "DESC"]],
+      limit,
+      offset,
+      // Include username for display purposes
+      include: [
+        {
+          model: User,
+          attributes: ['username'],
+          required: false
+        }
+      ]
     });
-    res.json({ videos });
+    
+    // Process videos to ensure they have CloudFront URLs
+    const processedVideos = rows.map(video => {
+      const videoJson = video.toJSON();
+      
+      // Make sure CloudFront URL exists
+      if (!videoJson.cloudFrontUrl && videoJson.s3Key) {
+        videoJson.cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${videoJson.s3Key}`;
+        
+        // Update in database if missing
+        Video.update(
+          { cloudFrontUrl: videoJson.cloudFrontUrl },
+          { where: { id: video.id } }
+        ).catch(err => console.error(`Error updating CloudFront URL: ${err}`));
+      }
+      
+      // Use username from User relationship if available
+      if (video.User && video.User.username && !videoJson.username) {
+        videoJson.username = video.User.username;
+      }
+      
+      // Set videoUrl property for frontend consumption
+      videoJson.videoUrl = videoJson.cloudFrontUrl || 
+                          `/videos/stream/${video.id}`;
+      
+      // Add formatted timestamp
+      videoJson.uploadedAt = new Date(videoJson.createdAt).toLocaleString();
+      
+      return videoJson;
+    });
+    
+    // Return videos with pagination metadata
+    res.json({ 
+      videos: processedVideos,
+      pagination: {
+        totalCount: count,
+        totalPages: Math.ceil(count / limit),
+        currentPage: page,
+        pageSize: limit,
+        hasNextPage: page < Math.ceil(count / limit),
+        hasPreviousPage: page > 1
+      }
+    });
   } catch (err) {
     console.error("Failed to fetch shared videos:", err);
-    res.status(500).json({ error: "Failed to load shared videos" });
+    res.status(500).json({ 
+      error: "Failed to load shared videos",
+      message: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 });
+
+/**
+ * Refresh a video's CloudFront URL (handles token expiration)
+ */
+router.get("/:videoId/refresh-url", authenticateToken, async (req, res) => {
+	try {
+		const video = await Video.findByPk(req.params.videoId);
+		if (!video) {
+			return res.status(404).json({ message: "Video not found" });
+		}
+		
+		// Generate a fresh CloudFront URL
+		const cloudFrontUrl = `https://${process.env.CLOUDFRONT_DOMAIN}/${video.s3Key}`;
+		
+		// Update video record with new CloudFront URL
+		video.cloudFrontUrl = cloudFrontUrl;
+		await video.save();
+		
+		res.json({
+			id: video.id,
+			cloudFrontUrl: cloudFrontUrl
+		});
+	} catch (error) {
+		console.error("Error refreshing video URL:", error);
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
+
+// Get all videos uploaded by the authenticated user
+router.get("/my-videos", authenticateToken, async (req, res) => {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 10;
+		if (page < 1 || limit < 1 || limit > 50) {
+			return res.status(400).json({
+				error: "Invalid pagination parameters. Page >=1, limit 1-50"
+			});
+		}
+
+		const offset = (page - 1) * limit;
+		// fetch only this user's videos
+		const { count, rows } = await Video.findAndCountAll({
+			where: { userId: req.user.id },
+			order: [["createdAt", "DESC"]],
+			limit,
+			offset
+		});
+
+		// map to JSON + ensure URL
+		const videos = rows.map(v => {
+			const json = v.toJSON();
+			json.cloudFrontUrl = json.cloudFrontUrl ||
+				`https://${process.env.CLOUDFRONT_DOMAIN}/${json.s3Key}`;
+			json.videoUrl = json.cloudFrontUrl;
+			json.uploadedAt = new Date(json.createdAt).toLocaleString();
+			return json;
+		});
+
+		res.json({
+			videos,
+			pagination: {
+				totalCount: count,
+				totalPages: Math.ceil(count / limit),
+				currentPage: page,
+				pageSize: limit,
+				hasNextPage: page < Math.ceil(count / limit),
+				hasPreviousPage: page > 1
+			}
+		});
+	} catch (err) {
+		console.error("[my-videos]", err);
+		res.status(500).json({ error: "Failed to fetch your videos" });
+	}
+});
+
+module.exports = router;
 
 
 module.exports = router;

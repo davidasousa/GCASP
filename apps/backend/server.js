@@ -8,16 +8,50 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const { sequelize } = require("./models");
+const { sequelize, User, Video, Friendship } = require("./models");
 const friendRoutes = require("./routes/friends");
 const setupSwagger = require("./swagger");
 const authRoutes = require("./routes/auth");
 const videoRoutes = require("./routes/videos");
 const xssClean = require("xss-clean");
+const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+
+const s3 = new S3Client({
+  region: process.env.REGION_AWS,
+  credentials: {
+    accessKeyId:     process.env.ACCESS_KEY_AWS,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY_AWS
+  }
+});
+console.log("Initialized S3 client");
+console.log("Will use bucket:", process.env.S3_VIDEO_BUCKET);
 
 async function startServer() {
   try {
-    await sequelize.sync({ alter: true });
+    // 1) Authenticate & connect
+    await sequelize.authenticate();
+    console.log('PostgreSQL Connected');
+
+    // 2) Drop all existing ENUMs
+    const [enumRows] = await sequelize.query(`
+      SELECT DISTINCT quote_ident(t.typname) AS enum_name
+        FROM pg_type t
+        JOIN pg_enum e       ON t.oid = e.enumtypid;
+    `);
+    if (enumRows.length) {
+      for (const { enum_name } of enumRows) {
+        await sequelize.query(`DROP TYPE IF EXISTS ${enum_name} CASCADE;`);
+        console.log('Dropped ENUM type:', enum_name);
+      }
+    } else {
+      console.log('No ENUM types to drop');
+    }
+    await User.sync({ force: true });
+    await Video.sync({ force: true });
+    await Friendship.sync({ force: true });
+    console.log('All dependent tables synced');
+    
     console.log('Database Synced');
 
     const app = express();
@@ -32,13 +66,19 @@ async function startServer() {
       });
     });
 
+    // LOG ANY HITS TO /videos/upload
+    app.use("/videos/upload", (req, res, next) => {
+      console.log("Hit /videos/upload at", new Date().toISOString());
+      next();
+    });
+
     app.use(helmet());
     app.use(compression());
 
     // Global rate limiter (catch-all): 100 req per 15m
     const globalLimiter = rateLimit({
       windowMs: 15 * 60 * 1000,
-      max: 100,
+      max: 1000,
       standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
       legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     });
@@ -48,7 +88,7 @@ async function startServer() {
     app.use(
       slowDown({
         windowMs: 15 * 60 * 1000,
-        delayAfter: 50, // allow 50 free requests...
+        delayAfter: 500, // allow 500 free requests...
         delayMs: () => 500, // begin adding 500ms of delay per request above 50
       })
     );
@@ -62,64 +102,35 @@ async function startServer() {
     app.use("/videos", videoRoutes);
     app.use("/friends", friendRoutes);
     
-    // Add the video streaming endpoint with security improvements
-    app.get("/videos/stream/:filename", (req, res) => {
-      const filename = req.params.filename;
-      
-      // Security check to prevent path traversal
-      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-        return res.status(400).send("Invalid filename");
-      }
-      
-      const filePath = path.join(__dirname, "uploads", filename);
-
-      fs.stat(filePath, (err, stats) => {
-        if (err || !stats.isFile()) {
-          return res.status(404).send("Video not found");
+    // Video streaming endpoint
+    app.get("/videos/stream/:videoId", async (req, res) => {
+      try {
+        const videoId = req.params.videoId;
+        if (["..","/","\\"].some(ch => videoId.includes(ch))) {
+          return res.status(400).send("Invalid video ID");
         }
+        const video = await Video.findByPk(videoId);
+        if (!video) return res.status(404).send("Video not found");
 
-        const range = req.headers.range;
-        
-        // Handle missing range header gracefully
-        if (!range) {
-          res.setHeader('Content-Type', 'video/mp4');
-          res.setHeader('Accept-Ranges', 'bytes');
-          const stream = fs.createReadStream(filePath);
-          stream.on('error', (error) => {
-            console.error('Stream error:', error);
-            if (!res.headersSent) {
-              res.status(500).send('Error streaming video');
-            }
+        if (video.cloudFrontUrl) {
+          return res.redirect(video.cloudFrontUrl);
+        } else if (video.s3Key) {
+          // generate signed URL
+          const command = new GetObjectCommand({
+            Bucket: process.env.S3_VIDEO_BUCKET,
+            Key: video.s3Key
           });
-          return stream.pipe(res);
+          const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
+          return res.redirect(signedUrl);
+        } else {
+          return res.status(500).send("Video source not available");
         }
-
-        const CHUNK_SIZE = 10 ** 6;
-        const start = Number(range.replace(/\D/g, ""));
-        const end = Math.min(start + CHUNK_SIZE, stats.size - 1);
-        const contentLength = end - start + 1;
-
-        const headers = {
-          "Content-Range": `bytes ${start}-${end}/${stats.size}`,
-          "Accept-Ranges": "bytes",
-          "Content-Length": contentLength,
-          "Content-Type": "video/mp4", // adjust if you support other formats
-        };
-
-        res.writeHead(206, headers);
-        const stream = fs.createReadStream(filePath, { start, end });
-        
-        stream.on('error', (error) => {
-          console.error('Stream error:', error);
-          if (!res.headersSent) {
-            res.status(500).send('Error streaming video');
-          }
-        });
-        
-        stream.pipe(res);
-      });
+      } catch (error) {
+        console.error("Error streaming video:", error);
+        return res.status(500).send("Server error");
+      }
     });
-
+    
     // Global error handler
     app.use((err, req, res, next) => {
       if (err instanceof multer.MulterError) {
@@ -135,7 +146,7 @@ async function startServer() {
     const PORT = process.env.PORT || 5001;
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   } catch (err) {
-    console.error('Unable to start server & synch DB:', err);
+    console.error('Unable to start server & sync DB:', err);
     process.exit(1);
   }
 }

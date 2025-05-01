@@ -10,7 +10,6 @@ import { stopContinuousRecording } from './recorder';
 import { setupRendererLogging, getModuleLogger } from './logger';
 import { getCurrentSettings } from './settings';
 import { spawn } from 'child_process';
-import { setupUploadHandlers } from './ipcUploadHandler';
 
 const logger = getModuleLogger('main.js');
 

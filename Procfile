@@ -1,1 +1,1 @@
-web: npm run start:backend
+web: cd apps/backend && NODE_ENV=production npm start

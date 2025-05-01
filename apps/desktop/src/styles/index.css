@@ -18,6 +18,7 @@
 @import './settings-page.css';
 @import './login-page.css';
 @import './home-page.css';
+@import './shared-page.css';
 
 /* Utilities */
 @import './utilities.css';

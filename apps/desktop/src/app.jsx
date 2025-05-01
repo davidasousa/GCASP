@@ -129,6 +129,14 @@ const AppLayout = () => {
 	
 	// Load settings on component mount
 	useEffect(() => {
+		import('./services/api_index').then(module => {
+			const API = module.default;
+			API.init();
+			window.electron.log.info('API services initialized');
+		}).catch(error => {
+			window.electron.log.error('Failed to initialize API services', { error: error.toString() });
+		});
+
 		const loadSettings = async () => {
 			try {
 				// Get settings once when component loads, using cached settings

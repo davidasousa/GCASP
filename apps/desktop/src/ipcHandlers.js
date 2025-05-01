@@ -5,7 +5,7 @@ import { setupHotkeyHandler, unregisterHotkeys } from './ipcHotkeyHandlers';
 import { setupRecordingHandlers } from './ipcRecordingHandlers';
 import { setupVideoHandlers } from './ipcVideoHandlers';
 import { setupSystemHandlers } from './ipcSystemHandlers';
-import { setupUploadHandlers } from './ipcUploadHandler';
+import { setupUploadHandlers } from './ipcUploadHandlers';
 import { setupFriendsListHandlers } from './ipcFriendsListHandlers';
 
 const logger = getModuleLogger('ipcHandlers.js');
