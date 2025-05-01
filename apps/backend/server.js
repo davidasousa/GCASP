@@ -55,9 +55,11 @@ async function startServer() {
     } else {
       console.log('No ENUM types to drop');
     }
-
-    // 3) Sync all models, force-dropping tables
-    await sequelize.sync({ force: true });
+    await User.sync({ force: true });
+    await Video.sync({ force: true });
+    await Friendship.sync({ force: true });
+    console.log('All dependent tables synced');
+    
     console.log('Database Synced');
 
     const app = express();
