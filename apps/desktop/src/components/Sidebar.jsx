@@ -5,7 +5,7 @@ import logo from '../resources/gcasp-text-logo.png';
 import '../styles/index.css';
 
 const Sidebar = () => {
-    const { isAuthenticated, isOfflineMode, openLoginModal, logout } = useAuth();
+    const { isAuthenticated, isOfflineMode, openLoginModal, logout, currentUser } = useAuth();
     const navigate = useNavigate();
 
     const handleProtectedLink = (e, requiresAuth, allowOffline) => {
@@ -31,6 +31,12 @@ const Sidebar = () => {
             <div className="logo">
                 <img src={logo} alt="GCASP Logo" style={{ width: '100%', height: 'auto' }} />
             </div>
+            {/* Greeting */}
+            {isAuthenticated && (
+                <div className="sidebar-greeting">
+                    Hi {currentUser?.username || 'there'}!
+                </div>
+            )}
             <div className="sidebar-content">
                 <ul className="nav-links">
                     <li>
