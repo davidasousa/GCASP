@@ -5,130 +5,107 @@ import VideoGrid from '../components/VideoGrid';
 const HomePage = () => {
 	// auth state
 	const { isAuthenticated, isOfflineMode } = useAuth();
-	
+
 	// video & pagination state
 	const [videos, setVideos] = useState([]);
 	const [currentPage, setCurrentPage] = useState(1);
-	
+
 	// UI state
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const [notification, setNotification] = useState({
 		visible: false,
 		message: '',
-		type: 'success' // 'success' or 'error'
+		type: 'success'
 	});
-	
+
 	const videosPerPage = 10;
-	
-	// ref to top of the clips section
 	const topRef = useRef(null);
 
-	// Function to load videos from the folder.
+	// Load videos from disk
 	const loadVideos = async () => {
 		try {
 			const localVideos = await window.electron.getLocalVideos();
-			// Sort videos by timestamp in descending order (newest first)
 			localVideos.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-			const processedVideos = localVideos.map(video => ({
-				id: video.id,
-				title: video.filename,
-				videoUrl: `gcasp://${video.id.replace('clip_', '')}/`
+			const processed = localVideos.map(v => ({
+				id: v.id,
+				title: v.filename,
+				filename: v.filename,      // keep the real filename
+				videoUrl: `gcasp://${v.id.replace('clip_', '')}/`
 			}));
-			setVideos(processedVideos);
-			setCurrentPage(1); // Reset to first page after refresh
-		} catch (error) {
-			console.error('Error loading videos:', error);
-			setNotification({
-				visible: true,
-				message: 'Failed to load videos',
-				type: 'error'
-			});
+			setVideos(processed);
+			setCurrentPage(1);
+		} catch (err) {
+			console.error('Error loading videos:', err);
+			setNotification({ visible: true, message: 'Failed to load videos', type: 'error' });
 		}
 	};
 
-    // Show delete confirmation dialog
-    const promptDeleteAllClips = () => {
-        setShowDeleteConfirm(true);
-    };
+	// Delete a single video both on disk and in UI
+	const handleDeleteVideo = async (id, filename) => {
+		try {
+			const res = await window.electron.removeSpecificVideo(filename);
+			if (!res.success) throw new Error(res.error || 'Unknown error');
+			setVideos(prev => prev.filter(v => v.id !== id));
+			setNotification({ visible: true, message: 'Clip deleted', type: 'success' });
+		} catch (err) {
+			console.error('Delete failed:', err);
+			setNotification({ visible: true, message: `Delete failed: ${err.message}`, type: 'error' });
+		}
+	};
 
-	// Handle clearing all clips after confirmation
+	// Show delete all confirmation
+	const promptDeleteAllClips = () => setShowDeleteConfirm(true);
+
+	// Delete all clips
 	const handleClearClips = async () => {
-		try { 
-			await window.electron.removeLocalClips(); 
+		try {
+			await window.electron.removeLocalClips();
 			loadVideos();
 			setShowDeleteConfirm(false);
-			setNotification({
-				visible: true,
-				message: 'All clips deleted successfully',
-				type: 'success'
-			});
-		} catch (error) { 
-			console.error('Error clearing clips:', error); 
+			setNotification({ visible: true, message: 'All clips deleted successfully', type: 'success' });
+		} catch (err) {
+			console.error('Error clearing clips:', err);
 			setShowDeleteConfirm(false);
-			setNotification({
-				visible: true,
-				message: 'Failed to delete all clips',
-				type: 'error'
-			});
+			setNotification({ visible: true, message: 'Failed to delete all clips', type: 'error' });
 		}
 	};
 
-	// Cancel delete operation
-	const cancelDelete = () => {
-		setShowDeleteConfirm(false);
-	};
+	const cancelDelete = () => setShowDeleteConfirm(false);
+	const handleCloseNotification = () => setNotification(prev => ({ ...prev, visible: false }));
 
-	// Handle notification close
-	const handleCloseNotification = () => {
-		setNotification({ ...notification, visible: false });
-	};
-
-	// Load videos when the component mounts
-	useEffect(() => {
-		loadVideos();
-		
-		// Clear notification after 3 seconds
-		if (notification.visible) {
-			const timer = setTimeout(() => {
-				handleCloseNotification();
-			}, 3000);
-			return () => clearTimeout(timer);
-		}
-	}, [notification.visible]);
-
-	// Remove a single video from state
-	const handleDeleteVideo = (id) => {
-		setVideos(prevVideos => prevVideos.filter(video => video.id !== id));
-	};
-
-	// Calculate slice of videos to show on current page.
-	const indexOfLastVideo = currentPage * videosPerPage;
-	const indexOfFirstVideo = indexOfLastVideo - videosPerPage;
-	const currentVideos = videos.slice(indexOfFirstVideo, indexOfLastVideo);
+	// pagination calculations
+	const indexOfLast = currentPage * videosPerPage;
+	const indexOfFirst = indexOfLast - videosPerPage;
+	const currentVideos = videos.slice(indexOfFirst, indexOfLast);
 	const totalPages = Math.ceil(videos.length / videosPerPage);
 
-	// Handlers to navigate pages.
 	const handleNextPage = () => {
 		if (currentPage < totalPages) {
-			const next = currentPage + 1;
-			setCurrentPage(next);
-			// scroll the clips section back to top
+			setCurrentPage(currentPage + 1);
 			topRef.current?.scrollIntoView();
 		}
 	};
 
 	const handlePrevPage = () => {
 		if (currentPage > 1) {
-			const prev = currentPage - 1;
-			setCurrentPage(prev);
-			// scroll the clips section back to top
+			setCurrentPage(currentPage - 1);
 			topRef.current?.scrollIntoView();
 		}
 	};
 
+	useEffect(() => {
+		loadVideos();
+	}, []);
+
+	useEffect(() => {
+		if (notification.visible) {
+			const t = setTimeout(handleCloseNotification, 3000);
+			return () => clearTimeout(t);
+		}
+	}, [notification.visible]);
+
 	return (
 		<div className="home-page">
-			{/* clips list */}
 			<div ref={topRef}></div>
 			<div className="page-header">
 				<h1>My Clips</h1>
@@ -139,21 +116,18 @@ const HomePage = () => {
 					</div>
 				)}
 			</div>
-			
+
 			<div className="button-group">
 				<button className="refresh-button" onClick={loadVideos}>
 					Refresh Videos
 				</button>
-				
-				{/* Only show delete all button if there are videos */}
 				{videos.length > 0 && (
 					<button className="refresh-button" onClick={promptDeleteAllClips}>
 						Delete All Recordings
 					</button>
 				)}
 			</div>
-			
-			{/* Delete confirmation modal */}
+
 			{showDeleteConfirm && (
 				<div className="delete-modal">
 					<div className="modal-content">
@@ -169,17 +143,22 @@ const HomePage = () => {
 					</div>
 				</div>
 			)}
-			
-			{/* Notification component */}
+
 			{notification.visible && (
 				<div className={`notification ${notification.type}`}>
 					{notification.message}
 				</div>
 			)}
-			
+
 			{videos.length > 0 ? (
-				<div>
-					<VideoGrid videos={currentVideos} onDelete={handleDeleteVideo} />
+				<>
+					<VideoGrid
+						videos={currentVideos}
+						onDelete={id => {
+							const video = videos.find(v => v.id === id);
+							if (video) handleDeleteVideo(id, video.filename);
+						}}
+					/>
 					{totalPages > 1 && (
 						<div className="pagination">
 							<button onClick={handlePrevPage} disabled={currentPage === 1}>
@@ -193,7 +172,7 @@ const HomePage = () => {
 							</button>
 						</div>
 					)}
-				</div>
+				</>
 			) : (
 				<div className="no-videos-message">
 					<p>No Videos Available</p>
