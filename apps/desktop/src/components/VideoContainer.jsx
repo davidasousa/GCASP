@@ -237,6 +237,7 @@ const VideoContainer = ({
 			{/* Show metadata if toggled */}
 			{showMetadata && metadata && (
 				<div className="video-metadata">
+					<p><strong>ID:</strong> {id}</p>
 					<p><strong>Resolution:</strong> {metadata.resolution || 'Unknown'}</p>
 					<p><strong>Duration:</strong> {formatDuration(metadata.duration)}</p>
 					<p><strong>Size:</strong> {formatFileSize(metadata.size)}</p>
